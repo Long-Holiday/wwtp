@@ -1,0 +1,15 @@
+services:
+  wwtp:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: wwtp-mmseg:1.2.2-cu121
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - /home/wz97172726/.cache/torch:/root/.cache/torch
+    shm_size: 16gb
+    ipc: host
+    gpus: all
+    environment:
+      WWTP_DATA_ROOT: /workspace/wwtp_semantic_dataset

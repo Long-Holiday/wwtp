@@ -1,0 +1,7 @@
+.git
+.pytest_cache
+__pycache__
+*.pyc
+wwtp_semantic_dataset
+wwtp_semantic_dataset.tar
+work_dirs

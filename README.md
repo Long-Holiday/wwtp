@@ -1,0 +1,194 @@
+# WWTP 遥感影像语义分割基线
+
+本项目基于 MMSegmentation 1.2.2，为污水处理厂（WWTP）二分类遥感语义分割提供统一、可复现、便于扩展的实验骨架。已接入以下模型：
+
+- U-Net（S5-D16）
+- DeepLabV3+（ResNet-50）
+- HRNet（W18）
+- SegFormer（MiT-B2）
+- SegNeXt（MSCAN-S + LightHamHead）
+- Mask2Former（Swin-T）
+- UNetFormer（ResNet-18）
+- RS-Mamba（Tiny，八方向 selective scan）
+
+数据、模型、训练策略、评价指标和命令入口彼此解耦。新增模型或消融实验通常只需增加一个注册模块和一份继承配置，不需要修改训练器。
+
+## 目录结构
+
+```text
+configs/
+├── _base_/
+│   ├── datasets/             # WWTP 数据与增强
+│   ├── models/               # 单一职责的模型定义
+│   ├── schedules/            # 优化器与训练周期
+│   └── default_runtime.py    # 日志、checkpoint、随机种子
+└── experiments/              # 8 个可直接运行的实验
+wwtpseg/
+├── datasets/                 # WWTPDataset
+├── evaluation/               # 前景、边界、Hausdorff 指标
+└── models/backbones/         # UNetFormer、RS-Mamba 插件
+tools/                        # train / test / smoke_test / 数据校验
+docker/                       # 固定 CUDA/PyTorch/OpenMMLab 环境
+```
+
+## 环境
+
+推荐镜像基于 `pytorch/pytorch:2.1.2-cuda12.1-cudnn8-devel`，固定核心版本如下：
+
+| 组件 | 版本 |
+| --- | --- |
+| PyTorch | 2.1.2 + CUDA 12.1 |
+| MMSegmentation | 1.2.2 |
+| MMCV | 2.1.0 |
+| MMEngine | 0.10.7 |
+| MMDetection | 3.3.0（Mask2Former 组件） |
+| timm | 0.9.16 |
+| mamba-ssm | 1.2.2 |
+
+使用 `devel` 而非 `runtime` 镜像是因为 RS-Mamba 的 fused selective-scan 需要 CUDA 编译工具链。宿主机只需要合适版本的 NVIDIA 驱动、Docker 和 NVIDIA Container Toolkit。
+
+```bash
+docker compose build
+```
+
+镜像构建时会编译 Mamba CUDA 扩展，首次构建时间较长。若 GPU 架构不在默认的 `7.0;7.5;8.0;8.6;8.9+PTX` 中，可这样覆盖：
+
+```bash
+docker compose build --build-arg TORCH_CUDA_ARCH_LIST="8.0;8.6+PTX"
+```
+
+## 数据校验与冒烟测试
+
+仓库默认数据路径是 `wwtp_semantic_dataset/`，也可通过环境变量 `WWTP_DATA_ROOT` 指向其他位置。掩膜是调色板 PNG；加载时必须保留调色板索引 0/1，项目使用 MMSeg 默认的 Pillow annotation backend 处理这一点。
+
+先校验全部 3044 对文件、尺寸和标签值：
+
+```bash
+docker compose run --rm wwtp \
+  python tools/validate_dataset.py /workspace/wwtp_semantic_dataset
+```
+
+再运行所有模型的极小合成输入 loss 前向、真实训练/验证样本读取、位置增强和指标不变量测试：
+
+```bash
+docker compose run --rm wwtp python tools/smoke_test.py
+```
+
+需要额外验证反向传播时：
+
+```bash
+docker compose run --rm wwtp \
+  python tools/smoke_test.py --backward
+```
+
+冒烟测试会临时缩小 RS-Mamba 的宽度和深度，并禁用预训练权重下载；正式训练配置不会被修改。无 CUDA 时 RS-Mamba 会使用很慢但可微的 PyTorch 参考扫描，它仅适合 32/64 像素测试，完整训练必须使用 fused CUDA selective-scan。
+
+## 训练
+
+单卡训练一个模型：
+
+```bash
+docker compose run --rm wwtp \
+  python tools/train.py configs/experiments/segformer.py \
+  --work-dir work_dirs/segformer
+```
+
+例如训练新增的 SegNeXt-MSCAN-S：
+
+```bash
+docker compose run --rm wwtp \
+  python tools/train.py configs/experiments/segnext.py \
+  --work-dir work_dirs/segnext
+```
+
+多卡训练：
+
+```bash
+docker compose run --rm wwtp \
+  torchrun --nproc-per-node=4 tools/train.py \
+  configs/experiments/deeplabv3plus.py \
+  --launcher pytorch --work-dir work_dirs/deeplabv3plus
+```
+
+依次训练全部模型：
+
+```bash
+docker compose run --rm -e GPU_COUNT=1 wwtp bash scripts/train_all.sh
+```
+
+断点恢复：
+
+```bash
+python tools/train.py configs/experiments/unet.py \
+  --work-dir work_dirs/unet --resume
+```
+
+所有参数都可从命令行覆盖，适合快速资源适配：
+
+```bash
+python tools/train.py configs/experiments/hrnet.py \
+  --cfg-options train_dataloader.batch_size=2 \
+                train_cfg.max_iters=20000 \
+                train_cfg.val_interval=1000
+```
+
+默认训练增强依次包含 0.5–1.5 倍随机缩放、随机任意角度旋转、前景感知位置裁剪、水平/垂直/对角翻转和光度扰动。针对目标集中在原图中央的位置偏置，正样本有 80% 概率把前景质心放到 512×512 裁剪窗口内 15%–85% 的随机位置；其余 20% 正样本和全部负样本仍使用均匀随机裁剪，以保留纯背景与困难上下文。该裁剪在前景非常小时也会尽量保留目标，避免增强后正样本大量退化为负样本。
+
+默认训练 40k iterations，每 2k iterations 验证并按 `binary/Foreground_IoU` 保存最佳权重。验证和测试不使用随机增强，在原始 2048×2048 影像上进行 512×512、stride 384 的滑窗推理，避免直接缩小影像导致小目标和边缘评价失真。RS-Mamba 默认 batch size 1、梯度累积 4 次，以维持有效 batch size 4。
+
+预训练权重会在首次正式训练时自动下载。若运行环境完全离线，请事先缓存权重，或者用配置覆盖相应 `init_cfg=None`；UNetFormer 的 timm encoder 可覆盖为 `model.backbone.pretrained=False`。
+
+## 测试
+
+```bash
+docker compose run --rm wwtp \
+  python tools/test.py configs/experiments/segformer.py \
+  work_dirs/segformer/best_binary_Foreground_IoU_iter_*.pth
+```
+
+结果同时写入终端和对应 `work_dirs/<model>/` 日志。
+
+## 指标定义
+
+MMSeg 原生 `IoUMetric` 输出 `aAcc`、`mIoU`、`mAcc`、`mDice`、`mFscore` 等常规指标；自定义 `BinaryBoundaryMetric` 额外输出：
+
+| 指标 | 含义 |
+| --- | --- |
+| `Foreground_IoU` | 仅类别 1（污水厂）的全局 IoU |
+| `Dice` / `F1` | 前景像素 Dice/F1，二者数值相同 |
+| `Precision` / `Recall` | 前景像素查准率/查全率 |
+| `Boundary_F1` / `BFScore` | 预测与真值轮廓在 3 px（1.5 m）容差内的全局边界 F1 |
+| `Boundary_Precision/Recall` | 边界匹配精度与召回率 |
+| `Hausdorff_px/m` | 每张图对称 Hausdorff distance 的均值 |
+| `HD95_px/m` | 每张图 95% Hausdorff distance 的均值，降低单个离群点影响 |
+
+重叠与 F1 类指标以百分数输出，距离指标保留像素或米。两张空掩膜的 HD 为 0；仅一张为空时，以图像对角线作为有限最差惩罚。全空负样本不人为抬高 Boundary F1，但错误预测出的边界会降低 Boundary Precision。
+
+## 新模型与消融实验
+
+新增 MMSeg 已有模型，只需在 `configs/_base_/models/` 写模型配置，并在 `configs/experiments/` 组合四类 base config。新增自定义模块时：
+
+1. 在 `wwtpseg/models/` 中实现并用 `@MODELS.register_module()` 注册；
+2. 在 `wwtpseg/models/__init__.py` 导出；
+3. 在模型 base config 中用注册名引用；
+4. 运行 `tools/smoke_test.py --models <实验名>`。
+
+消融配置建议继承目标实验，仅覆盖一个变量。例如对 UNetFormer 移除辅助头：
+
+```python
+_base_ = ['./unetformer.py']
+model = dict(auxiliary_head=None)
+```
+
+边缘改进模型可把边界分支、边界损失和结构模块分别注册成独立组件，再用配置开关组合；现有指标无需修改即可横向比较定位与轮廓完整性。
+
+数据增强同样采用注册组件与配置解耦。位置偏置消融可继承实验配置，把训练 pipeline 中 `RandomForegroundCrop` 的 `foreground_prob` 改为 `0.0`；其他参数不变即可与普通随机裁剪公平比较。
+
+## 实现来源
+
+- MMSeg 原生模型和配置遵循 [OpenMMLab MMSegmentation](https://github.com/open-mmlab/mmsegmentation) 1.2.2 的组件接口。
+- SegNeXt 使用 MMSeg 原生 MSCAN-S 骨干和 LightHamHead，并加载官方 MSCAN-S ImageNet 预训练权重。
+- UNetFormer 模块依据论文及 [GeoSeg 官方实现](https://github.com/WangLibo1995/GeoSeg) 的 global-local attention、weighted fusion 和 feature refinement 结构接入 MMSeg。
+- RS-Mamba 模块依据论文及 [官方 RS-Mamba 实现](https://github.com/NJU-LHRS/Official_Remote_Sensing_Mamba) 的八方向扫描、RSM block 与 U 形解码结构接入 MMSeg；CUDA 扫描由 `mamba-ssm` 提供。
+
+模型对比时请保留同一数据划分、裁剪尺度、训练 iterations 和评价脚本，并同时记录参数量、显存、吞吐与是否加载预训练权重，避免只比较最终精度。
