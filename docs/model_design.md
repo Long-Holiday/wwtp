@@ -1,193 +1,298 @@
-# 一、模型总体设计
+# RPGV-Net 完整实现设计
 
-模型暂命名为：
+本文档描述当前仓库中已实现的 RPGV-Net 网络、离线伪几何生成、三阶段训练和推理流程。代码实现是本文档的执行依据。
 
-**RPGV-Net：Reliability-aware Pseudo-Geometry Rectification and Validation Network**
-**可靠性感知伪几何校正与验证网络**
+模型全称为 **RPGV-Net：Reliability-aware Pseudo-Geometry Rectification and Validation Network（可靠性感知伪几何校正与验证网络）**。
 
-核心研究问题是：
+核心问题是：
 
-> 在没有真实 DSM/DEM 的条件下，如何校正单目模型生成的不可靠伪几何，并仅在其确实有助于分割时，将其用于厂区范围补全和边界精修。
+> 在没有真实 DSM/DEM 的条件下，如何校正单目模型产生的不可靠伪几何，并且仅在其确实有助于分割时，用它补全污水处理厂范围和精修边界。
 
-## 1. 整体结构
+模型遵循“可靠 RGB 主路径 + 受约束几何残差”的原则。伪深度不会与 RGB 对称融合，也不能无约束地演化成另一张分割掩膜；当几何不可靠时，门控可以关闭残差并退回 RGB 路径。
+
+主要实现文件：
+
+- 模型编排：[wwtpseg/models/segmentors/rpgv_net.py](../wwtpseg/models/segmentors/rpgv_net.py)
+- 网络模块：[wwtpseg/models/utils/rpgv_modules.py](../wwtpseg/models/utils/rpgv_modules.py)
+- RPGV 数据变换：[wwtpseg/datasets/transforms/rpgv_transforms.py](../wwtpseg/datasets/transforms/rpgv_transforms.py)
+- 伪几何加载：[wwtpseg/datasets/transforms/load_pseudo_geometry.py](../wwtpseg/datasets/transforms/load_pseudo_geometry.py)
+- 离线生成工具：[tools/generate_pseudo_geometry.py](../tools/generate_pseudo_geometry.py)
+- 三阶段训练脚本：[scripts/train_rpgv_stages.sh](../scripts/train_rpgv_stages.sh)
+
+---
+
+## 一、总体结构
 
 ```mermaid
 flowchart TD
-    I["RGB遥感影像"] --> R["RGB语义编码器"]
-    I --> D["Depth Anything伪深度生成"]
-    D --> N["全图归一化与可靠度估计"]
-    R --> P["RGB粗分割与粗边界"]
-    N --> G["可靠性感知可变形几何校正"]
-    P --> G
-    G --> E["轻量几何编码器"]
-    R --> V["双频几何验证模块"]
-    E --> V
-    V --> F["不确定性门控残差融合"]
-    R --> F
-    F --> C["多尺度分割解码器"]
-    C --> M["粗分割结果"]
-    C --> A["边界与SDF辅助头"]
-    M --> Q["边界引导残差精修"]
-    A --> Q
-    Q --> O["最终二值分割掩膜"]
+    I["RGB 遥感影像"] --> DA["离线 Depth Anything V2"]
+    DA --> D0["全图归一化伪深度 D0"]
+    DA --> Q0["增强一致性可靠度 Q0"]
+    I --> T["512×512 全图 thumbnail"]
+    T --> TG["共享 MiT-B2 全局 token"]
+    I --> C["1024×1024 局部 crop"]
+    C --> R["MiT-B2 RGB 编码器"]
+    TG --> FILM["四级 FiLM 调制"]
+    R --> FILM
+    FILM --> RA["RGB 辅助分割 / 粗边界 / 不确定度"]
+    D0 --> RGR["RGR 可靠性感知可变形校正"]
+    Q0 --> RGR
+    RA --> RGR
+    RGR --> GE["轻量几何编码器"]
+    FILM --> DFGV["Haar 双频几何验证"]
+    GE --> DFGV
+    RA --> DFGV
+    DFGV --> UGRF["1/4 与 1/16 残差门控融合"]
+    FILM --> UGRF
+    UGRF --> DEC["多尺度解码器"]
+    DEC --> AUX["粗分割 / 边界 / SDF 头"]
+    AUX --> REFINE["边界引导残差精修"]
+    REFINE --> OUT["最终二值分割掩膜"]
 ```
 
-## 2. 输入与训练尺度
+Depth Anything 全程离线、冻结，不进入分割训练计算图。几何阶段和联合阶段的局部输入为：
 
-原始影像约为 \(2048\times2048\)，建议采用：
+$$
+X=[B,G,R,D_0,Q_0].
+$$
 
-* 局部输入：\(1024\times1024\)；
-* 全图缩略图：\(512\times512\)；
-* 局部块重叠率：25%；
-* 全图缩略图用于提取全局厂区结构 token；
-* 推理时对局部 logits 加权拼接，恢复最终 \(2048\times2048\) 掩膜。
-
-全图 token 只是保证一图一厂区条件下的整体结构，不作为论文主要创新点。
+五个通道在数据管线中使用 $0\sim255$ 范围。模型内部将 BGR 转成 RGB 并做 ImageNet 归一化，深度和可靠度除以 255 恢复到 $[0,1]$。第一阶段是 RGB-only 预训练，只接收三通道 BGR，但仍使用完整场景 thumbnail。
 
 ---
 
-# 二、各模块具体实现
+## 二、离线伪深度和可靠度
 
-## 1. RGB语义主分支
+### 1. 深度模型
 
-为保证实现难度和实验可控性，推荐：
+默认使用 depth-anything/Depth-Anything-V2-Base-hf，由 transformers 4.44.2 加载：
 
-* 编码器：MiT-B2；
-* 解码器：UPerNet 式多尺度解码器；
-* 预训练：ImageNet；
-* Mask2Former-Swin-T 作为强基线，而不是直接作为主模型。
+```bash
+python tools/generate_pseudo_geometry.py \
+  wwtp_semantic_dataset \
+  --device cuda
+```
 
-对于 \(1024\times1024\) 输入，RGB 编码器输出：
+### 2. 高分辨率预测
 
-| 特征      |              分辨率 | 通道数 |
-| ------- | ---------------: | --: |
-| \(R_1\) | \(256\times256\) |  64 |
-| \(R_2\) | \(128\times128\) | 128 |
-| \(R_3\) |   \(64\times64\) | 320 |
-| \(R_4\) |   \(32\times32\) | 512 |
+对每张约 $2048\times2048$ 原图执行：
 
-全图缩略图经过共享编码器，由最深层特征全局池化得到 \(t_g\)，通过 FiLM 调制局部特征：
+1. 将全图长边缩放到 518，预测全局深度 $D_g$；
+2. 使用 $1024\times1024$ 局部块和 25% 重叠率预测 $D_k$；
+3. 用稳健最小二乘对齐局部尺度和平移：
 
-$$
-\widetilde R_i=\gamma_i(t_g)\odot R_i+\beta_i(t_g)
-$$
+   $$
+   D_k'=a_kD_k+b_k;
+   $$
 
-RGB 分支额外产生：
+4. 用下限为 0.05 的 Hann 窗融合重叠块；
+5. 在整张原图上进行百分位归一化：
 
-* RGB 辅助分割结果 \(Z_r\)；
-* 粗边界概率 \(B_r\)；
-* RGB 分割不确定度：
+   $$
+   D_0=\operatorname{clip}
+   \left(
+   \frac{D-P_2(D)}
+   {P_{98}(D)-P_2(D)+\epsilon},
+   0,1
+   \right).
+   $$
 
-$$
-U_r=-P_r\log P_r-(1-P_r)\log(1-P_r)
-$$
+归一化发生在裁剪训练块之前，训练 crop 不再独立归一化。
 
----
+### 3. 初始可靠度
 
-## 2. 伪深度生成与预处理
-
-### 模型选择
-
-建议先使用稳定、成本较低的 Depth Anything V2-Base 完成全部实验，再增加 DA3 作为深度源消融。
-
-Depth Anything 全程冻结并离线运行，不参与端到端反向传播。
-
-### 高分辨率生成
-
-不建议把整幅 2048 影像直接缩放至 518。采用：
-
-1. 全图低分辨率预测 \(D_g\)；
-2. 重叠局部块预测 \(D_k\)；
-3. 对每个局部深度进行 scale-shift 对齐：
+生成工具默认预测恒等、水平翻转、垂直翻转和 0.75 倍尺度四组深度。恢复坐标并对齐后计算：
 
 $$
-D_k'=a_kD_k+b_k
-$$
-
-4. 使用 Hann 权重拼接局部结果；
-5. 最终得到全图伪深度 \(D_0\)。
-
-归一化必须在整幅原始影像上完成，再裁剪训练块：
-
-$$
-D_0=\operatorname{clip}
-\left(
-\frac{D-P_2(D)}
-{P_{98}(D)-P_2(D)+\epsilon},
-0,1
-\right)
-$$
-
-不能对每个训练块独立归一化，否则相邻块之间会产生尺度不一致。
-
-### 伪深度可靠度
-
-训练集离线进行恒等、翻转和尺度增强，预测多张深度图，先做 scale-shift 对齐，再计算方差：
-
-$$
-U_d(x)=\operatorname{Var}\left\{
+U_d(x)=\operatorname{Var}
+\left\{
 T_k^{-1}[\operatorname{Align}(D(T_k(I)))]
-\right\}
+\right\},
 $$
 
 $$
-Q_0(x)=\exp[-U_d(x)/\tau]
+Q_0(x)=\exp[-U_d(x)/\tau],\qquad \tau=0.01.
 $$
 
-\(Q_0\) 表示 Depth Anything 在该像素上的初始可靠度。
+### 4. 存储
+
+```text
+wwtp_semantic_dataset/
+└── pseudo_geometry/
+    ├── train/<image_stem>.npz
+    ├── val/<image_stem>.npz
+    └── test/<image_stem>.npz
+```
+
+每个 NPZ 包含 uint16 的 depth 和 uint8 的 reliability。加载器将它们映射回 $[0,1]$，也兼容旧的浮点归档。可用环境变量 WWTP_PSEUDO_ROOT 指定其他目录。
+
+正式配置要求每张图都有伪几何；缺失时直接报错，不会静默使用灰度图或常量深度。
 
 ---
 
-## 3. 可靠性感知可变形几何校正模块 RGR
+## 三、输入尺度和数据增强
 
-输入包括：
+### 1. 局部块与全图上下文
+
+训练样本同时包含：
+
+- $1024\times1024$ 局部输入；
+- $512\times512$ 全图 thumbnail；
+- 与局部输入同步的分割标签。
+
+thumbnail 在局部随机缩放、旋转和裁剪之前保存，因此始终表示完整场景，并与局部图像共享 MiT-B2。
+
+### 2. 管线顺序
+
+RGB 第一阶段：
+
+1. 读取 RGB 和标签；
+2. RGB 颜色增强；
+3. 生成 512 thumbnail；
+4. 随机缩放、旋转、前景感知裁剪和翻转；
+5. 同时打包局部图、标签和 thumbnail。
+
+几何和联合阶段：
+
+1. 读取 RGB 和标签；
+2. 仅对 RGB 做颜色增强；
+3. 生成 512 thumbnail；
+4. 加载 $D_0,Q_0$，拼成五通道；
+5. 对五通道和标签同步做空间增强；
+6. 以 30% 概率破坏伪深度；
+7. 打包局部输入、标签和 thumbnail。
+
+空间增强参数：
+
+- 随机缩放 0.5–1.5；
+- 50% 概率执行 $\pm180^\circ$ 随机旋转；
+- 正样本 80% 概率使用前景感知 crop；
+- 75% 概率选择水平、垂直或对角翻转。
+
+### 3. 深度破坏增强
+
+RandomPseudoGeometryCorruption 以 30% 概率随机选择：
+
+- 高斯噪声；
+- 3/5/7 核高斯模糊；
+- 10%–30% 局部块置零；
+- 0.7–1.3 scale 和 ±0.15 shift；
+- 整幅深度置零。
+
+破坏时不修改输入中的 $Q_0$，但数据管线会生成仅用于损失监督的软有效度图：未破坏区域为 1，整幅置零区域为 0，噪声、模糊和尺度偏移按破坏强度给出软目标。该图不会拼入模型输入，任务可靠度仍必须根据 RGB/几何不一致性识别错误深度。
+
+---
+
+## 四、RGB 主分支和全图 FiLM
+
+### 1. MiT-B2 特征
+
+对于 $1024\times1024$ 局部输入：
+
+| 特征 | 分辨率 | 通道数 |
+| --- | ---: | ---: |
+| $R_1$ | $256\times256$ | 64 |
+| $R_2$ | $128\times128$ | 128 |
+| $R_3$ | $64\times64$ | 320 |
+| $R_4$ | $32\times32$ | 512 |
+
+MiT-B2 加载 ImageNet 预训练权重。
+
+### 2. 全图 token
+
+thumbnail 经过共享 MiT-B2，最深层全局平均池化：
 
 $$
-[D_0,\nabla_xD_0,\nabla_yD_0,|\nabla D_0|,
-\operatorname{Proj}(R_1),B_r,Q_0]
+t_g=\operatorname{GAP}(R_4^{global}).
 $$
 
-首先将深度及其梯度编码为 32 通道特征 \(F_d\)，RGB浅层特征投影为 32 通道 \(F_r\)。
-
-由联合特征预测可变形卷积的偏移和调制系数：
+四级局部特征分别执行：
 
 $$
-\Delta p=2\tanh
-\left(f_{\mathrm{offset}}([F_d,F_r,B_r])\right)
+\widetilde R_i=
+(1+\gamma_i(t_g))\odot R_i+\beta_i(t_g).
 $$
 
-偏移限制在特征空间的 \(\pm2\) 像素内，避免采样位置失控。
+FiLM 线性层零初始化，初始时 $\widetilde R_i=R_i$。滑窗推理只计算一次全图 token，并在所有局部窗口间复用。
 
-随后：
+### 3. RGB 辅助输出
+
+在 $\widetilde R_1$ 上产生 RGB 辅助分割 $Z_r$、粗边界 $Z_{br}$ 和归一化二元熵：
 
 $$
-F_d'=\operatorname{DCNv2}(F_d,\Delta p,M)
+B_r=\sigma(Z_{br}),
 $$
 
-校正采用受限残差形式：
+$$
+U_r=
+-\frac{P_r\log P_r+(1-P_r)\log(1-P_r)}
+{\log2},
+\qquad P_r=\sigma(Z_r).
+$$
+
+RGB 是基础路径，几何只在两个尺度做残差修改。
+
+---
+
+## 五、RGR 可靠性感知几何校正
+
+$D_0,Q_0$ 插值到 $\widetilde R_1$ 的 $1/4$ 尺度：
+
+$$
+F_d=f_d[
+D_0,\partial_xD_0,\partial_yD_0,|\nabla D_0|
+]\in\mathbb R^{32\times H/4\times W/4},
+$$
+
+$$
+F_r=\operatorname{Proj}(\widetilde R_1).
+$$
+
+联合特征预测 3×3 调制可变形卷积的 18 个偏移和 9 个调制通道：
+
+$$
+[\Delta p,M]=f_{om}[F_d,F_r,B_r],
+$$
+
+$$
+\Delta p=2\tanh(\Delta p),\qquad M=\sigma(M).
+$$
+
+偏移限制在特征空间的 $\pm2$ 像素。实现使用 grid_sample 完成可移植的调制可变形采样：
+
+$$
+F_d'=\operatorname{DeformConv}(F_d,\Delta p,M).
+$$
+
+任务可靠度：
+
+$$
+Q_{learn}=\sigma(f_q[F_d',F_r,Q_0]),
+$$
+
+$$
+Q_d=Q_0\odot Q_{learn}.
+$$
+
+$Q_{learn}$ 被定义为对离线先验的衰减因子，输出层零权重并以 0.95 初始化，因此训练开始时 $Q_d\approx0.95Q_0$，而不是意外退化为 $Q_0^2$。可靠度只由干净/破坏有效度目标训练；下游分割梯度在可靠度处停止，防止其演化成语义掩膜。
+
+有界残差校正：
 
 $$
 \widehat D=
 \operatorname{clip}
 \left[
-D_0+\alpha Q_d\odot\tanh(f_{\mathrm{res}}(F_d')),
+D_0+\alpha Q_d\odot\tanh(f_{res}[F_d',B_r]),
 0,1
-\right]
+\right].
 $$
 
-其中：
-
-* \(\alpha\) 为可学习系数，初始化为 0.1；
-* \(Q_d=Q_0\odot Q_{\mathrm{learn}}\)；
-* \(Q_{\mathrm{learn}}\) 为校正模块预测的任务可靠度。
-
-这样模型只能对原始深度进行小范围修正，不能将深度分支直接训练成另一张分割掩膜。
+其中 $\alpha=0.25\sigma(\theta)$，初始值 0.1、最大值 0.25。偏移输出层和深度残差层零初始化，因此 RGR 初始接近恒等映射。
 
 ---
 
-## 4. 轻量几何编码器
+## 六、轻量几何编码器
 
-将校正后的伪深度转换成几何描述：
+几何描述符：
 
 $$
 G_0=[
@@ -198,435 +303,417 @@ G_0=[
 \nabla^2\widehat D,
 R_3(\widehat D),
 R_7(\widehat D),
-Q_d]
+Q_d
+],
 $$
-
-其中局部起伏量为：
 
 $$
 R_k(\widehat D)=
-\widehat D-\operatorname{AvgPool}_k(\widehat D)
+\widehat D-\operatorname{AvgPool}_k(\widehat D).
 $$
 
-不建议计算表面法向量，因为正射遥感影像通常缺少可靠的透视相机模型。
+编码器使用 GroupNorm、GELU 和深度可分离卷积：
 
-几何编码器采用轻量深度可分离卷积：
+| 特征 | 分辨率 | 通道数 |
+| --- | ---: | ---: |
+| $G_1$ | $256\times256$ | 32 |
+| $G_2$ | $128\times128$ | 64 |
+| $G_3$ | $64\times64$ | 128 |
+| $G_4$ | $32\times32$ | 256 |
 
-| 特征      |              分辨率 | 通道数 |
-| ------- | ---------------: | --: |
-| \(G_1\) | \(256\times256\) |  32 |
-| \(G_2\) | \(128\times128\) |  64 |
-| \(G_3\) |   \(64\times64\) | 128 |
-| \(G_4\) |   \(32\times32\) | 256 |
-
-几何分支输出辅助几何分割结果 \(Z_g\)，仅用于辅助损失和门控学习，不作为最终输出。
+$G_1$ 产生几何辅助 logit $Z_g$。第二阶段验证直接评估 $Z_g$，最终推理不把它作为结果。
 
 ---
 
-## 5. 双频几何验证模块 DFGV
+## 七、DFGV 双频几何验证
 
-使用一级二维 DWT，而不是全局 FFT。DWT 保留空间位置，更适合边界任务。
-
-先将 \(R_1\) 与 \(G_1\) 投影到相同通道：
+$\widetilde R_1$ 和 $G_1$ 投影到 32 通道后执行一级正交 Haar DWT：
 
 $$
-(L_r,H_r)=\operatorname{DWT}(R_1)
+(L_r,H_r)=\operatorname{DWT}(\widetilde R_1),
+\qquad
+(L_g,H_g)=\operatorname{DWT}(G_1).
 $$
 
-$$
-(L_g,H_g)=\operatorname{DWT}(G_1)
-$$
+$L$ 是 LL 低频，$H$ 是拼接的 LH、HL、HH 高频。实现支持奇数尺寸的复制填充和恢复裁剪。
 
-其中：
-
-* \(L\)：LL 低频分量；
-* \(H=\{LH,HL,HH\}\)：三个高频分量。
-
-### 高频边界验证
+高频验证：
 
 $$
-W_h=\sigma\left(
+W_h=\sigma
+\left(
 f_h[H_r,H_g,|H_r-H_g|,Q_d,B_r]
-\right)
+\right),
 $$
 
 $$
-\Delta F_h=Q_d\odot W_h\odot\operatorname{Proj}(H_g)
+\Delta H=
+W_h\odot\operatorname{Proj}(H_g).
 $$
 
-高频几何只在以下条件下介入：
+零低频与 $\Delta H$ 经过逆 DWT 得到 $1/4$ 边界修正 $\Delta F_h$。
 
-* 深度可靠；
-* RGB 与几何边缘具有一致性；
-* RGB 主分支认为该区域接近边界。
-
-### 低频区域验证
+低频验证：
 
 $$
-W_l=\sigma\left(
+W_l=\sigma
+\left(
 f_l[L_r,L_g,|L_r-L_g|,Q_d,U_r]
-\right)
+\right),
 $$
 
 $$
-\Delta F_l=Q_d\odot W_l\odot\operatorname{Proj}(L_g)
+\Delta F_l=
+W_l\odot\operatorname{Proj}(L_g).
 $$
 
-低频部分主要解决：
-
-* 主体范围缺失；
-* 厂区外围漏分；
-* 局部预测缺乏整体结构的问题。
-
-经过逆小波变换得到浅层边界修正特征，同时将低频特征继续下采样到 \(1/16\) 尺度，参与整体区域验证。
+$\Delta F_l$ 产生于 $1/8$，随后插值到 $1/16$ 参与区域补全。
 
 ---
 
-## 6. 不确定性门控残差融合 UGRF
+## 八、UGRF 不确定性门控融合
 
-不采用 RGB 与伪深度直接 concat。伪深度来自 RGB，不是独立传感器，因此必须采用非对称融合。
-
-门控输入为：
+门控输入：
 
 $$
-[R_i,G_i,|R_i-G_i|,Q_d,U_r,|P_r-P_g|]
+[
+\operatorname{Proj}(R_i),
+\operatorname{Proj}(G_i),
+|\operatorname{Proj}(R_i)-\operatorname{Proj}(G_i)|,
+Q_d,U_r,|P_r-P_g|
+].
 $$
 
-门控权重：
+内部门控和有效门控：
 
 $$
-W_i=Q_d\odot
-\sigma\left(f_i(\cdot)\right)
+\widetilde W_i=\sigma(f_i(\cdot)),
+\qquad
+W_i=Q_d\odot\widetilde W_i.
 $$
 
-融合结果：
+融合：
 
 $$
-X_i=R_i+W_i\odot\Delta F_i
+X_i=R_i+
+W_i\odot\operatorname{Proj}(\Delta F_i).
 $$
 
 只在两个位置融合：
 
-* \(1/4\) 尺度：高频边界修正；
-* \(1/16\) 尺度：低频结构补全。
+- $1/4$：高频边界修正；
+- $1/16$：低频区域补全。
 
-不建议在四个编码阶段全部融合，否则参数量增加且容易造成伪深度污染。
+$R_2,R_4$ 保持纯 RGB。可靠度只在这里乘入一次。门控输出偏置初始化为 -2，残差投影零初始化，使联合训练第一步严格等价于 RGB 路径。
 
-### 门控监督
-
-根据 RGB 专家和几何专家的像素误差生成软门控目标：
+根据 RGB 和几何专家的逐像素 BCE 误差构造软目标：
 
 $$
 W^*=
-\sigma\left(
-\frac{\ell_r-\ell_g}{T}
-\right)
+1-\exp\left[
+-\frac{\max(\ell_r-\ell_g-m,0)}{T}
+\right],
+\qquad T=0.5,\quad m=0.05.
 $$
 
-$$
-L_{\mathrm{gate}}=
-\operatorname{BCE}
-\left(W,\operatorname{stopgrad}(W^*)\right)
-$$
-
-当几何分支比 RGB 分支更准确时，门控应增大；反之应退回 RGB。
+因此几何没有明确正收益时目标严格为零。停止 $W^*$ 的梯度后，高频门只在扩张后的边界带监督，低频门只在区域内部监督；损失作用于乘入可靠度后的有效门控。
 
 ---
 
-## 7. 解码与最终分割输出
+## 九、解码和边界残差精修
 
-融合后的多尺度特征统一投影到 128 通道，全部上采样至 \(1/4\) 尺度，拼接并通过两层卷积，得到解码特征 \(F_{\mathrm{dec}}\)。
+四级特征各投影到 128 通道并上采样到 $1/4$，拼接后得到 $F_{dec}$。内部头包括：
 
-内部设置三个头：
+1. 粗分割 $Z_c$；
+2. 边界 $\widehat B$；
+3. SDF $\widehat S$。
 
-1. 粗分割头：输出 \(Z_c\)；
-2. 边界辅助头：输出 \(\widehat B\)；
-3. SDF辅助头：输出 \(\widehat S\)。
-
-边界和 SDF 用于生成最终残差：
+精修门控：
 
 $$
-G_b=\sigma\left(
-f_b[\widehat B,1-|\widehat S|,U_c,Q_d]
-\right)
+G_b=
+\sigma
+\left(
+f_b[
+\sigma(\widehat B),
+1-|\tanh(\widehat S)|,
+U_c,Q_d
+]
+\right).
 $$
 
-$$
-\Delta Z=f_{\mathrm{refine}}
-[F_{\mathrm{dec}},Z_c,\widehat B,\widehat S]
-$$
+最终 logit：
 
 $$
-Z_{\mathrm{final}}=Z_c+G_b\odot\Delta Z
-$$
-
-最终输出：
-
-$$
-P_{\mathrm{final}}=\sigma(Z_{\mathrm{final}})
+\Delta Z=
+f_{refine}[F_{dec},Z_c,\widehat B,\widehat S],
 $$
 
 $$
-M_{\mathrm{final}}=
-\mathbb I(P_{\mathrm{final}}>0.5)
+Z_{final}=Z_c+G_b\odot\Delta Z.
 $$
 
-因此推理阶段的唯一输出是：
+精修输出层零初始化，初始时 $Z_{final}=Z_c$。
+
+为兼容 MMSeg 二分类接口，模型返回：
 
 $$
-\boxed{2048\times2048\text{ 污水处理厂二值分割掩膜}}
+Z_{mmseg}=[0,Z_{final}].
 $$
+
+前景 softmax 等价于 $\sigma(Z_{final})$，最终输出仍是一张类别 1 的二值掩膜。
 
 ---
 
-# 三、损失函数设计
+## 十、损失函数
 
-主分割损失统一采用 BCE+Dice：
+最终、RGB、几何和边界预测使用带 ignore mask 的：
 
 $$
-L_{\mathrm{seg}}=
-0.5L_{\mathrm{BCE}}+0.5L_{\mathrm{Dice}}
+L_{seg}=0.5L_{BCE}+0.5L_{Dice}.
 $$
 
-总损失建议初始化为：
+标签 255 不参与损失。
+
+边界标签由 $1/4$ GT 的 3×3 形态学梯度产生。联合阶段同时监督 RGB 粗边界和最终边界，两者取平均。
+
+SDF 使用精确欧氏距离变换：
+
+$$
+S^*=
+\operatorname{clip}
+\left(
+\frac{d_{fg}-d_{bg}}{5},
+-1,1
+\right),
+$$
+
+距离在 $1/4$ 特征尺度计算，截断 5 个特征像素等价于输入尺度约 20 像素，并用 Smooth L1 监督 $\tanh(\widehat S)$。
+
+可靠度与保持损失：
+
+$$
+L_{reliability}=
+\operatorname{BCE}(Q_{learn},Q_{valid}),
+$$
+
+$$
+L_{preserve}=
+\|\widehat D-D_0\|_1.
+$$
+
+等变损失在第二、三阶段随机采用水平或垂直翻转：
+
+$$
+L_{equivariance}=
+\operatorname{SmoothL1}
+\left(
+T^{-1}[\widehat D(T(X))],
+\operatorname{stopgrad}(\widehat D(X))
+\right).
+$$
+
+两分支共享同一个全图 token。
+
+联合阶段总损失：
 
 $$
 \begin{aligned}
-L={}&L_{\mathrm{final}}
-+0.3L_{\mathrm{rgb}}
-+0.2L_{\mathrm{geo}}
-+0.2L_{\mathrm{boundary}}\\
-&+0.1L_{\mathrm{SDF}}
-+0.05L_{\mathrm{reliability}}
-+0.05L_{\mathrm{preserve}}\\
-&+0.05L_{\mathrm{equivariance}}
-+0.1L_{\mathrm{gate}}
+L={}&L_{final}
++0.3L_{rgb}
++0.2L_{geo}
++0.2L_{boundary}\\
+&+0.1L_{SDF}
++0.05L_{reliability}
++0.05L_{preserve}\\
+&+0.05L_{equivariance}
++0.1L_{gate}.
 \end{aligned}
 $$
 
-各损失作用如下：
-
-| 损失                            | 作用                 |
-| ----------------------------- | ------------------ |
-| \(L_{\mathrm{final}}\)        | 监督最终分割结果           |
-| \(L_{\mathrm{rgb}}\)          | 保证模型具备可靠的 RGB 退化路径 |
-| \(L_{\mathrm{geo}}\)          | 使几何支路具备基础判别能力      |
-| \(L_{\mathrm{boundary}}\)     | 监督内部辅助边界           |
-| \(L_{\mathrm{SDF}}\)          | 保证轮廓方向和距离连续性       |
-| \(L_{\mathrm{reliability}}\)  | 拟合增强一致性可靠度 \(Q_0\) |
-| \(L_{\mathrm{preserve}}\)     | 防止校正深度偏离原始伪深度      |
-| \(L_{\mathrm{equivariance}}\) | 保证翻转、旋转前后的几何一致性    |
-| \(L_{\mathrm{gate}}\)         | 监督 RGB 与几何之间的选择    |
-
-边界标签可由 GT 掩膜进行半径 3 像素的形态学梯度生成；SDF 截断范围建议为 \(\pm20\) 像素，并归一化至 \([-1,1]\)。
+| 损失 | 实现 | 作用 |
+| --- | --- | --- |
+| $L_{final}$ | BCE + Dice | 最终分割 |
+| $L_{rgb}$ | BCE + Dice | RGB 退化路径 |
+| $L_{geo}$ | BCE + Dice | 几何判别能力 |
+| $L_{boundary}$ | BCE + Dice | RGB 和最终边界 |
+| $L_{SDF}$ | Smooth L1 | 连续轮廓距离 |
+| $L_{reliability}$ | BCE | 拟合训练期软几何有效度 |
+| $L_{preserve}$ | L1 | 限制深度校正 |
+| $L_{equivariance}$ | Smooth L1 | 翻转一致性 |
+| $L_{gate}$ | BCE | 专家选择 |
 
 ---
 
-# 四、训练配置
+## 十一、三阶段训练
 
-## 1. 推荐参数
+三个阶段使用相同参数结构，checkpoint 可以严格加载。training_stage 只控制输入、前向出口、损失和 requires_grad。
 
-| 项目            | 设置                                 |
-| ------------- | ---------------------------------- |
-| 输入尺寸          | 局部 1024×1024，全图缩略图 512×512         |
-| 优化器           | AdamW                              |
-| 主干学习率         | \(6\times10^{-5}\)                 |
-| 新模块学习率        | \(6\times10^{-4}\)                 |
-| Weight decay  | 0.01                               |
-| 学习率策略         | 1500 iter warm-up + Poly，power=0.9 |
-| 有效 batch size | 8                                  |
-| 训练总步数         | 约 100k iterations                  |
-| 混合精度          | AMP                                |
-| 推理阈值          | 验证集固定，初始为 0.5                      |
-| 深度教师          | 全程冻结                               |
+### 阶段一：RGB 预训练
 
-增强采用：
+配置：configs/experiments/rpgv_stage1_rgb.py
 
-* 水平、垂直翻转；
-* 90°旋转；
-* 0.75–1.25随机尺度；
-* 轻度颜色扰动；
-* RGB、深度、标签同步进行几何变换；
-* 不使用任意透视变换。
+- 输入三通道 RGB 和 512 thumbnail；
+- 训练 MiT-B2、FiLM、RGB 辅助头、解码器和精修头；
+- 冻结且不执行几何相关模块；
+- 损失为 $L_{final}+0.3L_{rgb}+0.2L_{boundary}+0.1L_{SDF}$；
+- 验证输出为 RGB 解码后的最终分割；
+- 训练 40k iterations。
 
-训练时以 30% 概率破坏伪深度：
+### 阶段二：几何预训练
 
-* 高斯噪声；
-* 高斯模糊；
-* 局部块遮挡；
-* scale-shift 扰动；
-* 深度置零。
+配置：configs/experiments/rpgv_stage2_geometry.py
 
-目的是让门控真正学会拒绝错误几何。
+- 从阶段一 checkpoint 初始化；
+- 输入五通道局部块和 512 thumbnail；
+- RGB 编码器、FiLM、RGB 辅助头、解码器、DFGV 和 UGRF 冻结；
+- 冻结 RGB 教师保持 eval，关闭 DropPath 随机性；
+- 只训练 RGR、几何编码器和几何辅助头；
+- 损失为 $0.2L_{geo}+0.05L_{reliability}+0.05L_{preserve}+0.05L_{equivariance}$；
+- 验证输出为 $Z_g$；
+- 训练 20k iterations。
 
-## 2. 三阶段训练
+原草案只要求冻结 RGB 前两阶段。当前冻结完整 RGB 专家，是为了在没有最终融合监督时保护阶段一得到的 RGB 表征。
 
-### 阶段一：RGB基线预训练
+### 阶段三：联合微调
 
-* 只训练 MiT-B2 + RGB 解码器；
-* 约 30k–40k iterations；
-* 保存性能最好的 RGB baseline。
+配置：configs/experiments/rpgv_stage3_joint.py
 
-### 阶段二：几何分支预训练
+- 从阶段二 checkpoint 初始化；
+- 全部模块解冻；
+- MiT-B2 学习率为新模块的 0.1 倍；
+- 已训练的 FiLM、RGB 辅助头、解码器和精修器学习率为新模块的 0.25 倍；
+- 15% 概率令整幅有效可靠度为零，以持续监督 RGB-only 退化路径；
+- 启用完整总损失；
+- 验证输出最终融合分割；
+- 训练 40k iterations。
 
-* 加载 RGB baseline；
-* 冻结 RGB 编码器前两阶段；
-* 训练 RGR、几何编码器、几何辅助头；
-* 约 20k iterations。
+### 共同训练参数
 
-### 阶段三：联合训练
+| 项目 | 设置 |
+| --- | --- |
+| 局部 crop | $1024\times1024$ |
+| thumbnail | $512\times512$ |
+| 单卡 batch size | 1 |
+| 梯度累积 | 8 |
+| 有效 batch size | 8 |
+| 优化器 | AdamW |
+| 新模块学习率 | $6\times10^{-4}$ |
+| MiT-B2 学习率 | $6\times10^{-5}$ |
+| Weight decay | 0.01 |
+| 梯度裁剪 | 最大范数 10 |
+| 混合精度 | AMP |
+| 阶段一/三 warm-up | 1500 iterations |
+| 阶段二 warm-up | 1000 iterations |
+| 学习率策略 | PolyLR，power=0.9 |
+| 验证/checkpoint 间隔 | 2000 iterations |
+| 最佳模型指标 | binary/Foreground_IoU |
 
-* Depth Anything 保持冻结；
-* 其余模块全部解冻；
-* 主干使用较小学习率；
-* 训练 DFGV、门控融合和最终精修头；
-* 约 40k iterations。
+### 自动串联
 
----
+```bash
+bash scripts/train_rpgv_stages.sh
+```
 
-# 五、完整实验任务规划
+默认目录：
 
-## 任务0：伪深度可用性预实验
+```text
+work_dirs/rpgv_staged/
+├── stage1_rgb/
+├── stage2_geometry/
+└── stage3_joint/
+```
 
-这是继续投入前必须完成的实验。
+脚本优先选择每阶段最佳 Foreground IoU checkpoint，并传给下一阶段。可用 RPGV_WORK_ROOT 修改根目录。阶段二和三缺少前一阶段 checkpoint 时，训练入口会直接报错。
 
-### 深度源比较
-
-* DA2-Small；
-* DA2-Base；
-* DA3单图模型；
-* 可选 Depth Pro。
-
-### 分析内容
-
-* 深度梯度与 GT 边界的 Boundary Recall；
-* 2、4、8像素容差下的边界匹配率；
-* RGB Sobel 边缘、伪深度边缘和随机边缘对照；
-* 不同厂区、阴影和复杂背景下的可靠度可视化。
-
-### 简单融合验证
-
-* RGB baseline；
-* RGB+深度四通道输入；
-* RGB与深度后期 concat；
-* 双分支直接相加；
-* 双分支普通门控。
-
-若所有简单融合均无稳定提升，且伪深度边缘与厂区边界几乎无相关性，应暂停完整模型开发。
-
-## 任务1：完整模型递进消融
-
-| 编号 | 设置                 |
-| -- | ------------------ |
-| M0 | RGB baseline       |
-| M1 | M0 + 原始伪深度直接融合     |
-| M2 | M1 + RGR可变形校正      |
-| M3 | M2 + 仅高频边界验证       |
-| M4 | M2 + 仅低频区域验证       |
-| M5 | M2 + 完整双频验证        |
-| M6 | M5 + 不确定性门控融合      |
-| M7 | M6 + 边界辅助头         |
-| M8 | M7 + SDF残差精修，即完整模型 |
-
-这张表将作为论文最重要的消融表。
-
-## 任务2：关键模块横向对比
-
-### 深度校正方式
-
-* 不校正；
-* 普通卷积；
-* 空洞卷积；
-* DCNv2；
-* 受限残差 DCNv2，即本文方法。
-
-### 频域方法
-
-* 无频域；
-* FFT；
-* DWT-Haar；
-* DWT-db2；
-* DWT-db4。
-
-### 融合方法
-
-* Add；
-* Concatenation；
-* SE/CBAM门控；
-* Cross-Attention；
-* 本文可靠性残差门控。
-
-不需要进行完全组合实验，每次只改变一个变量。
-
-## 任务3：负对照实验
-
-这是证明“模型真的使用几何”的关键。
-
-* 正常伪深度；
-* 空间打乱的伪深度；
-* RGB灰度图代替伪深度；
-* 全零深度；
-* 强模糊深度；
-* 随机噪声深度。
-
-如果打乱深度与真实深度性能相同，就说明所谓几何提升实际上来自参数量或额外网络，而不是几何信息。
-
-## 任务4：鲁棒性实验
-
-对深度图逐渐施加：
-
-* 高斯噪声；
-* 模糊；
-* 10%、30%、50%局部缺失；
-* scale-shift 扰动；
-* 全模态缺失。
-
-比较：
-
-* 普通融合模型；
-* CMX式融合；
-* RPGV-Net。
-
-理想结果是伪深度越差，模型门控越接近零，性能逐步退回 RGB baseline，而不是显著低于 RGB baseline。
-
-## 任务5：边界专项模型对比
-
-除主流语义分割基线外，建议选择3个边界方法：
-
-* PointRend；
-* FDEG-Net；
-* PEEN或GSCNN。
-
-这样可以证明模型提升并非单纯来自边界监督，而是伪几何验证与融合。
-
-## 任务6：公开数据集验证
-
-强烈建议增加 ISPRS Potsdam 或 Vaihingen：
-
-1. 训练时仍然只输入 RGB；
-2. 使用 Depth Anything 生成伪深度；
-3. RGB-only 为基础对照；
-4. RGB+伪深度为本文设置；
-5. RGB+真实 DSM 作为 oracle 上限。
+configs/experiments/rpgv_net.py 保留为 3k iterations 的直接联合训练消融，不代表完整三阶段实验。
 
 ---
 
-# 六、评价指标
+## 十二、推理
 
-## 常规指标
+验证和测试保留原始约 $2048\times2048$ 分辨率：
 
-* 目标类别 IoU；
-* mIoU；
-* Precision；
-* Recall；
-* F1/Dice；
-* OA。
+- crop：$1024\times1024$；
+- stride：$768\times768$；
+- 重叠率：25%。
 
-二分类任务不能只报告 mIoU，因为大面积背景可能抬高结果，必须突出目标 IoU 和目标 Recall。
+推理先从完整 RGB 生成 512 thumbnail，只计算一次全图 token；所有滑窗复用该 token。重叠区域使用下限为 0.05 的二维 Hann 窗对 logits 加权平均，以降低窗口边缘拼接缝。
 
-## 边界指标
+```bash
+python tools/test.py \
+  configs/experiments/rpgv_stage3_joint.py \
+  work_dirs/rpgv_staged/stage3_joint/best_binary_Foreground_IoU_iter_*.pth
+```
 
-* Boundary IoU；
-* Boundary F1；
-* HD95；
-* ASSD；
+tools/test.py 直接加载命令行 checkpoint，不要求设置阶段二环境变量。
+
+---
+
+## 十三、评价指标
+
+MMSeg IoUMetric 输出 aAcc、mIoU、mAcc、mDice 和 mFscore。
+
+BinaryBoundaryMetric 输出：
+
+| 指标 | 含义 |
+| --- | --- |
+| Foreground_IoU | 类别 1 的全局 IoU |
+| Dice / F1 | 前景 Dice/F1 |
+| Precision / Recall | 前景查准率和查全率 |
+| Boundary_F1 / BFScore | 3 px 容差内边界 F1 |
+| Boundary_Precision/Recall | 边界精度和召回率 |
+| Hausdorff_px/m | 对称 Hausdorff 均值 |
+| HD95_px/m | 95% Hausdorff 均值 |
+
+当前项目没有 Boundary IoU 或 ASSD，不应在默认结果中声明它们。
+
+---
+
+## 十四、工程调整
+
+| 原始描述 | 当前实现 | 原因 |
+| --- | --- | --- |
+| MMCV DCNv2 | grid_sample 调制可变形卷积 | 支持 CPU 和不同后端 |
+| 全分辨率校正 | $1/4$ 尺度校正 | 控制显存和计算量 |
+| 阶段二冻结 RGB 前两层 | 冻结完整 RGB 专家 | 保护阶段一基线 |
+| 浮点伪几何 | uint16 深度 + uint8 可靠度 | 降低存储 |
+| 滑窗 Hann 融合 | 下限 0.05 的 Hann logits 加权 | 降低窗口边缘拼接缝 |
+| 任意旋转等变双前向 | 水平/垂直翻转等变 | 避免再次插值深度 |
+
+这些调整不改变核心假设：先校正几何，再验证频率一致性，最后以可靠度约束的非对称残差形式注入 RGB。
+
+---
+
+## 十五、验证
+
+```bash
+python tools/smoke_test.py \
+  --models rpgv_stage1_rgb \
+  --input-size 64 --backward
+
+python tools/smoke_test.py \
+  --models rpgv_stage2_geometry \
+  --input-size 64 --backward
+
+python tools/smoke_test.py \
+  --models rpgv_stage3_joint \
+  --input-size 64 --backward
+```
+
+测试覆盖：
+
+- 三阶段配置注册；
+- 阶段专属参数冻结；
+- RGB-only 和五通道输入；
+- thumbnail 打包与 FiLM；
+- 伪几何读取和破坏增强；
+- 五通道空间增强同步；
+- Haar DWT 正逆变换；
+- 阶段专属损失；
+- 等变分支；
+- 反向传播；
+- 阶段对应的验证输出；
+- 滑窗推理和输出尺寸。
+
+默认完整模型约 27.01M 参数。

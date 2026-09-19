@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -70,17 +71,57 @@ def _sample(size: int, offset: int = 0) -> tuple[torch.Tensor, SegDataSample]:
     return image, sample
 
 
+def _add_pseudo_geometry(image: torch.Tensor) -> torch.Tensor:
+    """Create deterministic, well-scaled geometry for RPGV smoke passes."""
+    depth = image.mean(dim=0, keepdim=True)
+    depth = 255.0 * (depth - depth.amin()) / (
+        depth.amax() - depth.amin() + 1e-6)
+    reliability = torch.full_like(depth, 192.0)
+    return torch.cat([image, depth, reliability], dim=0)
+
+
+def _check_rpgv_stage_freezing(model, stage: str) -> None:
+    rgb_trainable = any(
+        parameter.requires_grad for parameter in model.rgb_encoder.parameters())
+    geometry_trainable = any(
+        parameter.requires_grad for parameter in model.rectifier.parameters())
+    decoder_trainable = any(
+        parameter.requires_grad for parameter in model.decoder.parameters())
+    expected = {
+        'rgb': (True, False, True),
+        'geometry': (False, True, False),
+        'joint': (True, True, True),
+    }[stage]
+    actual = (rgb_trainable, geometry_trainable, decoder_trainable)
+    if actual != expected:
+        raise AssertionError(
+            f'RPGV {stage} trainable groups are {actual}, expected {expected}')
+
+
 def smoke_model(name: str, config_path: Path, size: int, backward: bool) -> None:
     cfg = Config.fromfile(config_path)
     import_modules_from_strings(**cfg.custom_imports)
     model_cfg = copy.deepcopy(cfg.model)
     _disable_pretraining(model_cfg)
     _small_rs_mamba(model_cfg)
+    if model_cfg.get('type') == 'RPGVNet':
+        model_cfg['global_thumbnail_size'] = size
     # A synthetic smoke pass should not pad a 64 px input back to 512 px.
     model_cfg['data_preprocessor']['size'] = (size, size)
     model = revert_sync_batchnorm(MODELS.build(model_cfg))
     model.train()
+    if model_cfg.get('type') == 'RPGVNet':
+        _check_rpgv_stage_freezing(
+            model, model_cfg.get('training_stage', 'joint'))
     items = [_sample(size, index) for index in range(2)]
+    if model_cfg.get('type') == 'RPGVNet':
+        staged_items = []
+        for image, sample in items:
+            sample.global_img = PixelData(data=image.clone())
+            if model_cfg.get('training_stage', 'joint') != 'rgb':
+                image = _add_pseudo_geometry(image)
+            staged_items.append((image, sample))
+        items = staged_items
     batch = dict(
         inputs=[item[0] for item in items],
         data_samples=[item[1] for item in items])
@@ -96,8 +137,38 @@ def smoke_model(name: str, config_path: Path, size: int, backward: bool) -> None
         raise RuntimeError(f'{name}: non-finite loss {total.item()}')
     if backward:
         total.backward()
+        if (
+            model_cfg.get('type') == 'RPGVNet'
+            and model_cfg.get('training_stage', 'joint') != 'rgb'
+        ):
+            reliability_grad = model.rectifier.learned_reliability[-1].weight.grad
+            if reliability_grad is None or not reliability_grad.abs().sum():
+                raise AssertionError(
+                    f'{name}: reliability head received no gradient')
+        if (
+            model_cfg.get('type') == 'RPGVNet'
+            and model_cfg.get('training_stage', 'joint') == 'joint'
+        ):
+            projection_grad = model.high_fusion.delta_projection[0].weight.grad
+            if projection_grad is None or not projection_grad.abs().sum():
+                raise AssertionError(
+                    f'{name}: zero-init fusion projection received no gradient')
+    if model_cfg.get('type') == 'RPGVNet':
+        model.eval()
+        with torch.no_grad():
+            predictions = model.predict(**processed)
+        prediction_shape = tuple(predictions[0].pred_sem_seg.data.shape)
+        if prediction_shape != (1, size, size):
+            raise AssertionError(
+                f'RPGV prediction has shape {prediction_shape}, '
+                f'expected {(1, size, size)}')
     parameters = sum(parameter.numel() for parameter in model.parameters())
-    print(f'[OK] {name:14s} params={parameters / 1e6:7.2f}M loss={total.item():.4f}')
+    trainable = sum(
+        parameter.numel() for parameter in model.parameters()
+        if parameter.requires_grad)
+    print(
+        f'[OK] {name:21s} params={parameters / 1e6:7.2f}M '
+        f'trainable={trainable / 1e6:7.2f}M loss={total.item():.4f}')
 
 
 def smoke_metric(size: int) -> None:
@@ -175,6 +246,118 @@ def smoke_location_augmentation(crop_size: int = 512) -> None:
         f'target-centre spread=(y={spread_y:.1f}, x={spread_x:.1f})')
 
 
+def smoke_pseudo_geometry(size: int) -> None:
+    """Check archive loading, five-channel rotation and Haar invertibility."""
+    with tempfile.TemporaryDirectory() as temporary_dir:
+        pseudo_root = Path(temporary_dir)
+        split_dir = pseudo_root / 'train'
+        split_dir.mkdir()
+        depth = np.linspace(0.0, 1.0, size * size, dtype=np.float32).reshape(
+            size, size)
+        reliability = np.full((size, size), 0.75, dtype=np.float32)
+        np.savez_compressed(
+            split_dir / 'example.npz',
+            depth=np.round(depth * 65535.0).astype(np.uint16),
+            reliability=np.round(reliability * 255.0).astype(np.uint8))
+        loader = TRANSFORMS.build(dict(
+            type='LoadPseudoGeometry', pseudo_root=str(pseudo_root)))
+        results = loader(dict(
+            img=np.zeros((size, size, 3), dtype=np.uint8),
+            img_path='/unused/train/example.png'))
+        if results['img'].shape != (size, size, 5):
+            raise AssertionError(
+                'pseudo geometry was not appended as two channels')
+
+        rotation = TRANSFORMS.build(dict(
+            type='RandomRotate', prob=1.0, degree=10,
+            pad_val=0, seg_pad_val=255))
+        results.update(
+            gt_seg_map=np.zeros((size, size), dtype=np.uint8),
+            seg_fields=['gt_seg_map'])
+        rotated = rotation(results)
+        if rotated['img'].shape[-1] != 5:
+            raise AssertionError('spatial augmentation dropped geometry channels')
+        resize = TRANSFORMS.build(dict(
+            type='RandomResize', scale=(2 * size, 2 * size),
+            ratio_range=(1.0, 1.0), keep_ratio=True))
+        crop = TRANSFORMS.build(dict(
+            type='RandomForegroundCrop', crop_size=(size, size),
+            foreground_prob=0.0))
+        flip = TRANSFORMS.build(dict(
+            type='RandomFlip', prob=1.0, direction='horizontal'))
+        augmented = flip(crop(resize(rotated)))
+        if augmented['img'].shape != (size, size, 5):
+            raise AssertionError(
+                'joint geometry augmentation produced '
+                f'{augmented["img"].shape}')
+        corruption = TRANSFORMS.build(dict(
+            type='RandomPseudoGeometryCorruption', prob=1.0,
+            modes=('zero',)))
+        corrupted = corruption(augmented)
+        if np.any(corrupted['img'][..., 3] != 0):
+            raise AssertionError('forced zero-depth corruption did not run')
+        if np.any(corrupted['pseudo_validity'] != 0):
+            raise AssertionError(
+                'zero-depth corruption did not create a zero validity target')
+
+        thumbnail = TRANSFORMS.build(dict(
+            type='GenerateGlobalThumbnail', size=(size // 2, size // 2)))
+        packed_results = thumbnail(dict(
+            img=np.zeros((size, size, 3), dtype=np.uint8),
+            img_path='/unused/train/example.png',
+            gt_seg_map=np.zeros((size, size), dtype=np.uint8),
+            seg_fields=['gt_seg_map'],
+            ori_shape=(size, size),
+            img_shape=(size, size)))
+        packer = TRANSFORMS.build(dict(type='PackRPGVInputs'))
+        packed = packer(packed_results)
+        global_shape = tuple(packed['data_samples'].global_img.data.shape)
+        if global_shape != (3, size // 2, size // 2):
+            raise AssertionError(f'global thumbnail has shape {global_shape}')
+        validity_shape = tuple(
+            packed['data_samples'].pseudo_validity.data.shape)
+        if validity_shape != (1, size, size):
+            raise AssertionError(
+                f'pseudo validity target has shape {validity_shape}')
+
+    from wwtpseg.models.utils import (
+        BoundaryResidualRefiner,
+        HaarWavelet2D,
+        UncertaintyGatedResidualFusion,
+    )
+    wavelet = HaarWavelet2D()
+    value = torch.randn(2, 3, size + 1, size - 1)
+    low, high = wavelet(value)
+    reconstructed = wavelet.inverse(low, high, value.shape[-2:])
+    torch.testing.assert_close(reconstructed, value, rtol=1e-5, atol=1e-6)
+
+    fusion = UncertaintyGatedResidualFusion(
+        rgb_channels=8, geometry_channels=4, delta_channels=6,
+        gate_channels=4)
+    rgb = torch.randn(2, 8, size, size)
+    fused, _ = fusion(
+        rgb,
+        torch.randn(2, 4, size // 2, size // 2),
+        torch.randn(2, 6, size // 2, size // 2),
+        torch.rand(2, 1, size, size),
+        torch.rand(2, 1, size, size),
+        torch.rand(2, 1, size, size))
+    torch.testing.assert_close(fused, rgb, rtol=0.0, atol=0.0)
+
+    refiner = BoundaryResidualRefiner(channels=8)
+    torch.nn.init.normal_(refiner.refinement[-1].weight, std=0.02)
+    decoder_feature = torch.randn(2, 8, size, size)
+    without_geometry = refiner(
+        decoder_feature, torch.zeros(2, 1, size, size))['final']
+    with_geometry = refiner(
+        decoder_feature, torch.rand(2, 1, size, size))['final']
+    torch.testing.assert_close(
+        with_geometry, without_geometry, rtol=0.0, atol=0.0)
+    print(
+        '[OK] pseudo-geometry augmentation, validity target, exact RGB '
+        'initialization, global thumbnail and Haar DWT invariant')
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -194,7 +377,10 @@ def main() -> None:
     import wwtpseg  # noqa: F401
 
     smoke_dataset(next(iter(EXPERIMENTS.values())), args.data_root)
+    if 'rpgv_stage1_rgb' in args.models:
+        smoke_dataset(EXPERIMENTS['rpgv_stage1_rgb'], args.data_root)
     smoke_location_augmentation()
+    smoke_pseudo_geometry(args.input_size)
     smoke_metric(args.input_size)
     for name in args.models:
         smoke_model(name, EXPERIMENTS[name], args.input_size, args.backward)

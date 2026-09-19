@@ -10,6 +10,7 @@
 - Mask2Former（Swin-T）
 - UNetFormer（ResNet-18）
 - RS-Mamba（Tiny，八方向 selective scan）
+- RPGV-Net（MiT-B2 + 可靠性感知伪几何校正与双频验证）
 
 数据、模型、训练策略、评价指标和命令入口彼此解耦。新增模型或消融实验通常只需增加一个注册模块和一份继承配置，不需要修改训练器。
 
@@ -26,7 +27,7 @@ configs/
 wwtpseg/
 ├── datasets/                 # WWTPDataset
 ├── evaluation/               # 前景、边界、Hausdorff 指标
-└── models/backbones/         # UNetFormer、RS-Mamba 插件
+└── models/                   # 自定义 backbone 与 RPGV-Net 分割器
 tools/                        # train / test / smoke_test / 数据校验
 docker/                       # 固定 CUDA/PyTorch/OpenMMLab 环境
 ```
@@ -85,6 +86,30 @@ docker compose run --rm wwtp \
 
 ## 训练
 
+### RPGV-Net 伪几何预处理
+
+RPGV-Net 使用离线冻结的 Depth Anything V2，不会在分割训练时更新或重复运行深度模型。先为 train/val/test 生成整图归一化的伪深度和增强一致性可靠度：
+
+```bash
+docker compose run --rm wwtp \
+  python tools/generate_pseudo_geometry.py \
+  /workspace/wwtp_semantic_dataset \
+  --device cuda
+```
+
+默认对 2048 图像使用 1024、25% 重叠的局部块，与 518 全图预测做 scale-shift 对齐后以 Hann 权重拼接；随后用恒等、水平/垂直翻转及尺度变换的预测方差生成可靠度。结果以 16-bit 深度和 8-bit 可靠度压缩写入 `wwtp_semantic_dataset/pseudo_geometry/<split>/<stem>.npz`。可用 `WWTP_PSEUDO_ROOT` 指定其他目录。
+
+生成后按 RGB 预训练、几何预训练和联合微调三个阶段训练：
+
+```bash
+docker compose run --rm wwtp \
+  bash scripts/train_rpgv_stages.sh
+```
+
+三个阶段分别训练 40k、20k 和 40k iterations，脚本会验证并自动传递阶段间 checkpoint。可通过 `RPGV_WORK_ROOT` 修改工作目录。`configs/experiments/rpgv_net.py` 保留为不经过分阶段预训练的直接联合训练消融配置。
+
+RPGV-Net 的训练 crop 为 1024，batch size 1 并累积 8 步；推理采用 crop 1024、stride 768 的 Hann 加权滑窗。数据管线在局部增强前保留 512 全图 thumbnail，用共享 MiT-B2 生成 FiLM token；颜色增强只作用于 RGB，后续 resize/rotate/crop/flip 对 RGB、深度和可靠度同步执行。几何训练阶段以 30% 概率注入噪声、模糊、块缺失、scale-shift 或全零深度，并生成不作为模型输入的软有效度监督；联合阶段另以 15% 概率关闭几何门控，用于维持 RGB-only 退化能力。
+
 单卡训练一个模型：
 
 ```bash
@@ -110,7 +135,7 @@ docker compose run --rm wwtp \
   --launcher pytorch --work-dir work_dirs/deeplabv3plus
 ```
 
-依次训练全部模型：
+依次训练全部不依赖伪几何预处理的基线模型：
 
 ```bash
 docker compose run --rm -e GPU_COUNT=1 wwtp bash scripts/train_all.sh

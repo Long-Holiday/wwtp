@@ -61,6 +61,12 @@ def main() -> None:
     elif args.resume:
         cfg.resume = True
         cfg.load_from = args.resume
+    required_previous_stage = cfg.pop('required_previous_stage', None)
+    if required_previous_stage and not cfg.get('load_from') and not cfg.get('resume'):
+        raise RuntimeError(
+            f'{required_previous_stage} is required. Use '
+            '`scripts/train_rpgv_stages.sh`, set the documented checkpoint '
+            'environment variable, or pass --resume for an interrupted stage.')
     Runner.from_cfg(cfg).train()
 
 

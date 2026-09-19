@@ -5,7 +5,7 @@ scipy==1.11.4
 opencv-python==4.9.0.80
 timm==0.9.16
 einops==0.7.0
-transformers==4.38.2
+transformers==4.44.2
 matplotlib==3.8.4
 prettytable==3.10.0
 ftfy==6.2.0
