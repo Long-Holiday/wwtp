@@ -34,11 +34,10 @@ model = dict(
     geometry_channels=[32, 64, 128, 256],
     validation_channels=32,
     decoder_channels=128,
+    detail_channels=32,
     correction_scale=0.1,
     max_correction_scale=0.25,
     max_offset=2.0,
-    gate_temperature=0.5,
-    gate_margin=0.05,
     # Joint training randomly disables geometry for whole samples so the
     # final decoder retains a supervised RGB-only fallback.
     geometry_dropout_prob=0.15,
@@ -47,6 +46,17 @@ model = dict(
     training_stage='joint',
     use_global_context=True,
     global_thumbnail_size=512,
+    # Components remain instantiated when disabled so checkpoints are shared
+    # across the full model and all controlled ablations.
+    component_cfg=dict(
+        depth_rectification=True,
+        learned_reliability=True,
+        frequency_validation=True,
+        boundary_fusion=True,
+        region_fusion=True,
+        reliability_weighting=True,
+        boundary_refinement=True,
+        detail_refinement=True),
     loss_weights=dict(
         final=1.0,
         rgb=0.3,
@@ -55,7 +65,6 @@ model = dict(
         sdf=0.1,
         reliability=0.05,
         preserve=0.05,
-        equivariance=0.05,
-        gate=0.1),
+        equivariance=0.05),
     train_cfg=dict(),
     test_cfg=dict(mode='slide', crop_size=(1024, 1024), stride=(768, 768)))

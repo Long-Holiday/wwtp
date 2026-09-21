@@ -60,22 +60,36 @@ class DepthAnythingPredictor:
         self.processor = AutoImageProcessor.from_pretrained(model_name)
         self.model = AutoModelForDepthEstimation.from_pretrained(model_name)
         self.device = torch.device(device)
+        if self.device.type == 'cuda':
+            self.model = self.model.half()
         self.model.to(self.device).eval()
 
     @torch.inference_mode()
     def __call__(self, image: np.ndarray) -> np.ndarray:
-        height, width = image.shape[:2]
-        values = self.processor(
-            images=Image.fromarray(image), return_tensors='pt')
+        return self.predict_batch([image])[0]
+
+    @torch.inference_mode()
+    def predict_batch(self, images: list[np.ndarray]) -> list[np.ndarray]:
+        shapes = [img.shape[:2] for img in images]
+        pil_images = [Image.fromarray(img) for img in images]
+        values = self.processor(images=pil_images, return_tensors='pt')
+        is_cuda = (self.device.type == 'cuda')
         values = {
-            key: value.to(self.device) if torch.is_tensor(value) else value
+            key: value.to(self.device, dtype=torch.float16) if (
+                torch.is_tensor(value) and torch.is_floating_point(value) and is_cuda
+            ) else (value.to(self.device) if torch.is_tensor(value) else value)
             for key, value in values.items()
         }
-        prediction = self.model(**values).predicted_depth.unsqueeze(1)
-        prediction = torch.nn.functional.interpolate(
-            prediction, size=(height, width), mode='bicubic',
-            align_corners=False)
-        return prediction[0, 0].float().cpu().numpy()
+        predictions = self.model(**values).predicted_depth.unsqueeze(1)
+        results = []
+        for i, (height, width) in enumerate(shapes):
+            pred = predictions[i:i + 1]
+            if pred.shape[-2:] != (height, width):
+                pred = torch.nn.functional.interpolate(
+                    pred, size=(height, width), mode='bicubic',
+                    align_corners=False)
+            results.append(pred[0, 0].float().cpu().numpy())
+        return results
 
 
 def _positions(length: int, tile: int, stride: int) -> list[int]:
@@ -135,27 +149,33 @@ def predict_tiled(
     """Align overlapping local estimates to a global reference and blend."""
     height, width = image.shape[:2]
     thumbnail = _resize_long_side(image, global_size)
-    global_depth = predictor(thumbnail)
-    global_depth = cv2.resize(
-        global_depth, (width, height), interpolation=cv2.INTER_LINEAR)
     stride = max(1, round(tile_size * (1.0 - overlap)))
     y_positions = _positions(height, tile_size, stride)
     x_positions = _positions(width, tile_size, stride)
     weighted_sum = np.zeros((height, width), dtype=np.float64)
     weight_sum = np.zeros((height, width), dtype=np.float64)
 
+    tiles = [thumbnail]
+    tile_coords = []
     for y in y_positions:
         for x in x_positions:
             y2, x2 = min(y + tile_size, height), min(x + tile_size, width)
-            tile = image[y:y2, x:x2]
-            local_depth = predictor(tile)
-            reference = global_depth[y:y2, x:x2]
-            local_depth = _scale_shift_align(local_depth, reference)
-            window_y = np.hanning(max(3, y2 - y))[:y2 - y]
-            window_x = np.hanning(max(3, x2 - x))[:x2 - x]
-            window = np.maximum(np.outer(window_y, window_x), 0.05)
-            weighted_sum[y:y2, x:x2] += local_depth * window
-            weight_sum[y:y2, x:x2] += window
+            tile_coords.append((y, y2, x, x2))
+            tiles.append(image[y:y2, x:x2])
+
+    depth_maps = predictor.predict_batch(tiles)
+    global_depth = depth_maps[0]
+    global_depth = cv2.resize(
+        global_depth, (width, height), interpolation=cv2.INTER_LINEAR)
+
+    for (y, y2, x, x2), local_depth in zip(tile_coords, depth_maps[1:]):
+        reference = global_depth[y:y2, x:x2]
+        local_depth = _scale_shift_align(local_depth, reference)
+        window_y = np.hanning(max(3, y2 - y))[:y2 - y]
+        window_x = np.hanning(max(3, x2 - x))[:x2 - x]
+        window = np.maximum(np.outer(window_y, window_x), 0.05)
+        weighted_sum[y:y2, x:x2] += local_depth * window
+        weight_sum[y:y2, x:x2] += window
     return (weighted_sum / np.maximum(weight_sum, 1e-8)).astype(np.float32)
 
 

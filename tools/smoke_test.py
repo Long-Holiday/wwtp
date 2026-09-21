@@ -23,7 +23,9 @@ from mmseg.utils import register_all_modules
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPERIMENTS = {
-    path.stem: path for path in sorted((ROOT / 'configs/experiments').glob('*.py'))
+    path.stem: path
+    for directory in ('experiments', 'ablations')
+    for path in sorted((ROOT / 'configs' / directory).glob('*.py'))
 }
 
 
@@ -83,19 +85,78 @@ def _add_pseudo_geometry(image: torch.Tensor) -> torch.Tensor:
 def _check_rpgv_stage_freezing(model, stage: str) -> None:
     rgb_trainable = any(
         parameter.requires_grad for parameter in model.rgb_encoder.parameters())
-    geometry_trainable = any(
+    rectifier_trainable = any(
         parameter.requires_grad for parameter in model.rectifier.parameters())
+    geometry_trainable = any(
+        parameter.requires_grad
+        for parameter in model.geometry_encoder.parameters())
     decoder_trainable = any(
         parameter.requires_grad for parameter in model.decoder.parameters())
+    rectifier_expected = (
+        stage != 'rgb'
+        and (
+            model.component_enabled('depth_rectification')
+            or model.component_enabled('learned_reliability')
+        ))
     expected = {
-        'rgb': (True, False, True),
-        'geometry': (False, True, False),
-        'joint': (True, True, True),
+        'rgb': (True, False, False, True),
+        'geometry': (False, rectifier_expected, True, False),
+        'joint': (True, rectifier_expected, True, True),
     }[stage]
-    actual = (rgb_trainable, geometry_trainable, decoder_trainable)
+    actual = (
+        rgb_trainable,
+        rectifier_trainable,
+        geometry_trainable,
+        decoder_trainable,
+    )
     if actual != expected:
         raise AssertionError(
             f'RPGV {stage} trainable groups are {actual}, expected {expected}')
+
+    components = model.component_cfg
+    disabled_modules = []
+    if not components['global_context']:
+        disabled_modules.append(('global context', model.global_film))
+    if not components['boundary_fusion']:
+        disabled_modules.append(('boundary fusion', model.high_fusion))
+    if not components['region_fusion']:
+        disabled_modules.append(('region fusion', model.low_fusion))
+    if not components['detail_refinement']:
+        disabled_modules.append(('detail refinement', model.detail_refiner))
+    for label, module in disabled_modules:
+        if any(parameter.requires_grad for parameter in module.parameters()):
+            raise AssertionError(f'disabled RPGV {label} remains trainable')
+
+
+def _check_rpgv_backward_paths(model, stage: str) -> None:
+    """Ensure every intended RPGV scale is connected to a stage loss."""
+    if stage != 'rgb':
+        geometry_stages = [
+            model.geometry_encoder.stem,
+            *model.geometry_encoder.downsamples,
+        ]
+        for index, module in enumerate(geometry_stages, start=1):
+            gradients = [
+                parameter.grad for parameter in module.parameters()
+                if parameter.requires_grad
+            ]
+            if not gradients or not any(
+                gradient is not None and gradient.abs().sum()
+                for gradient in gradients
+            ):
+                raise AssertionError(
+                    f'RPGV {stage} geometry G{index} received no gradient')
+        deepest_pyramid = list(model.geometry_pyramid.laterals[-1].parameters())
+        if not any(
+            parameter.grad is not None and parameter.grad.abs().sum()
+            for parameter in deepest_pyramid
+        ):
+            raise AssertionError(
+                f'RPGV {stage} deepest geometry pyramid received no gradient')
+    elif model.component_enabled('detail_refinement'):
+        detail_output = model.detail_refiner.residual[-1].weight.grad
+        if detail_output is None or not detail_output.abs().sum():
+            raise AssertionError('RPGV RGB detail refiner received no gradient')
 
 
 def smoke_model(name: str, config_path: Path, size: int, backward: bool) -> None:
@@ -137,9 +198,13 @@ def smoke_model(name: str, config_path: Path, size: int, backward: bool) -> None
         raise RuntimeError(f'{name}: non-finite loss {total.item()}')
     if backward:
         total.backward()
+        if model_cfg.get('type') == 'RPGVNet':
+            _check_rpgv_backward_paths(
+                model, model_cfg.get('training_stage', 'joint'))
         if (
             model_cfg.get('type') == 'RPGVNet'
             and model_cfg.get('training_stage', 'joint') != 'rgb'
+            and model.component_enabled('learned_reliability')
         ):
             reliability_grad = model.rectifier.learned_reliability[-1].weight.grad
             if reliability_grad is None or not reliability_grad.abs().sum():
@@ -149,8 +214,16 @@ def smoke_model(name: str, config_path: Path, size: int, backward: bool) -> None
             model_cfg.get('type') == 'RPGVNet'
             and model_cfg.get('training_stage', 'joint') == 'joint'
         ):
-            projection_grad = model.high_fusion.delta_projection[0].weight.grad
-            if projection_grad is None or not projection_grad.abs().sum():
+            if model.component_enabled('boundary_fusion'):
+                projection = model.high_fusion.delta_projection[0]
+            elif model.component_enabled('region_fusion'):
+                projection = model.low_fusion.delta_projection[0]
+            else:
+                projection = None
+            projection_grad = None if projection is None else projection.weight.grad
+            if projection is not None and (
+                projection_grad is None or not projection_grad.abs().sum()
+            ):
                 raise AssertionError(
                     f'{name}: zero-init fusion projection received no gradient')
     if model_cfg.get('type') == 'RPGVNet':
@@ -323,7 +396,12 @@ def smoke_pseudo_geometry(size: int) -> None:
     from wwtpseg.models.utils import (
         BoundaryResidualRefiner,
         HaarWavelet2D,
-        UncertaintyGatedResidualFusion,
+        HighResolutionDetailRefiner,
+        ReliabilityWeightedResidualFusion,
+    )
+    from wwtpseg.models.segmentors.rpgv_net import (
+        RPGVNet,
+        _binary_segmentation_loss,
     )
     wavelet = HaarWavelet2D()
     value = torch.randn(2, 3, size + 1, size - 1)
@@ -331,18 +409,35 @@ def smoke_pseudo_geometry(size: int) -> None:
     reconstructed = wavelet.inverse(low, high, value.shape[-2:])
     torch.testing.assert_close(reconstructed, value, rtol=1e-5, atol=1e-6)
 
-    fusion = UncertaintyGatedResidualFusion(
-        rgb_channels=8, geometry_channels=4, delta_channels=6,
-        gate_channels=4)
+    fusion = ReliabilityWeightedResidualFusion(
+        rgb_channels=8, delta_channels=6)
     rgb = torch.randn(2, 8, size, size)
-    fused, _ = fusion(
+    fused = fusion(
         rgb,
-        torch.randn(2, 4, size // 2, size // 2),
         torch.randn(2, 6, size // 2, size // 2),
-        torch.rand(2, 1, size, size),
-        torch.rand(2, 1, size, size),
         torch.rand(2, 1, size, size))
     torch.testing.assert_close(fused, rgb, rtol=0.0, atol=0.0)
+    torch.nn.init.normal_(fusion.delta_projection[0].weight, std=0.1)
+    bounded_fused = fusion(
+        rgb,
+        torch.randn(2, 6, size // 2, size // 2),
+        torch.ones(2, 1, size, size))
+    if (bounded_fused - rgb).abs().amax() > 1.0 + 1e-6:
+        raise AssertionError('geometry residual is not bounded by tanh')
+
+    # Check FP16 inputs with explicit FP32 reductions at full resolution.
+    # This CPU check does not replace the CUDA autocast regression suite.
+    large_logits = torch.full((1, 1, 1024, 1024), 20.0, dtype=torch.float16)
+    large_target = torch.ones_like(large_logits)
+    large_valid = torch.ones_like(large_logits, dtype=torch.bool)
+    large_loss = _binary_segmentation_loss(
+        large_logits, large_target, large_valid)
+    if not torch.isfinite(large_loss):
+        raise AssertionError('full-resolution FP16 segmentation loss is NaN')
+    entropy = RPGVNet._entropy(torch.tensor(
+        [[[[20.0, -20.0]]]], dtype=torch.float16))
+    if not torch.isfinite(entropy).all():
+        raise AssertionError('FP16 binary entropy contains NaN')
 
     refiner = BoundaryResidualRefiner(channels=8)
     torch.nn.init.normal_(refiner.refinement[-1].weight, std=0.02)
@@ -353,9 +448,26 @@ def smoke_pseudo_geometry(size: int) -> None:
         decoder_feature, torch.rand(2, 1, size, size))['final']
     torch.testing.assert_close(
         with_geometry, without_geometry, rtol=0.0, atol=0.0)
+
+    detail_refiner = HighResolutionDetailRefiner(
+        decoder_channels=8, channels=4)
+    detail_rgb = torch.randn(2, 3, 2 * size, 2 * size)
+    detail_base = torch.randn(2, 1, size // 2, size // 2)
+    detail_output = detail_refiner(
+        detail_rgb,
+        torch.randn(2, 8, size // 2, size // 2),
+        detail_base,
+        torch.rand(2, 1, size // 2, size // 2))
+    expected_detail = torch.nn.functional.interpolate(
+        detail_base, size=(size, size), mode='bilinear',
+        align_corners=False)
+    torch.testing.assert_close(
+        detail_output['final'], expected_detail, rtol=0.0, atol=0.0)
     print(
         '[OK] pseudo-geometry augmentation, validity target, exact RGB '
-        'initialization, global thumbnail and Haar DWT invariant')
+        'initialization, bounded ungated residual, FP16-input full-resolution '
+        'loss, half-resolution detail refinement, global thumbnail and Haar '
+        'DWT invariant')
 
 
 def main() -> None:

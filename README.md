@@ -84,6 +84,24 @@ docker compose run --rm wwtp \
 
 冒烟测试会临时缩小 RS-Mamba 的宽度和深度，并禁用预训练权重下载；正式训练配置不会被修改。无 CUDA 时 RS-Mamba 会使用很慢但可微的 PyTorch 参考扫描，它仅适合 32/64 像素测试，完整训练必须使用 fused CUDA selective-scan。
 
+RPGV 的 CUDA FP16 数值回归（含三阶段 AdamW 更新、8 步梯度累积、饱和熵与
+1024 分辨率损失反向测试）：
+
+```bash
+docker compose run --rm wwtp python tools/test_rpgv_numerics.py -v
+```
+
+三阶段更新测试使用 64 像素合成输入，不下载预训练权重；无 CUDA 时会明确跳过
+GPU 用例。训练现在会在非有限前向 loss 出现时立即报出阶段与损失项，避免继续
+更新并保存无效权重。如果旧 checkpoint 已含 NaN/Inf，或 AMP `loss_scaler.scale`
+已为 0，不能用 `--resume` 恢复它。应选用已验证正常的断点，或从第一阶段在新
+工作目录重新训练（保留旧目录用于排查）：
+
+```bash
+docker compose run --rm -e RPGV_WORK_ROOT=work_dirs/rpgv_staged_amp_fixed wwtp \
+  bash scripts/train_rpgv_stages.sh
+```
+
 ## 训练
 
 ### RPGV-Net 伪几何预处理
@@ -108,7 +126,7 @@ docker compose run --rm wwtp \
 
 三个阶段分别训练 40k、20k 和 40k iterations，脚本会验证并自动传递阶段间 checkpoint。可通过 `RPGV_WORK_ROOT` 修改工作目录。`configs/experiments/rpgv_net.py` 保留为不经过分阶段预训练的直接联合训练消融配置。
 
-RPGV-Net 的训练 crop 为 1024，batch size 1 并累积 8 步；推理采用 crop 1024、stride 768 的 Hann 加权滑窗。数据管线在局部增强前保留 512 全图 thumbnail，用共享 MiT-B2 生成 FiLM token；颜色增强只作用于 RGB，后续 resize/rotate/crop/flip 对 RGB、深度和可靠度同步执行。几何训练阶段以 30% 概率注入噪声、模糊、块缺失、scale-shift 或全零深度，并生成不作为模型输入的软有效度监督；联合阶段另以 15% 概率关闭几何门控，用于维持 RGB-only 退化能力。
+RPGV-Net 的训练 crop 为 1024，batch size 1 并累积 8 步；推理采用 crop 1024、stride 768 的 Hann 加权滑窗。数据管线在局部增强前保留 512 全图 thumbnail，用共享 MiT-B2 生成 FiLM token；颜色增强只作用于 RGB，后续 resize/rotate/crop/flip 对 RGB、深度和可靠度同步执行。几何分支使用自顶向下 FPN，使四级几何编码器都能从辅助分割得到监督；高频边界残差在 1/4 融合，深层区域残差在 1/16 融合，解码后再以 1/2 RGB 细节分支精修边界。几何训练阶段以 30% 概率注入噪声、模糊、块缺失、scale-shift 或全零深度，并生成不作为模型输入的软有效度监督；联合阶段另以 15% 概率将整幅几何可靠度置零，用于维持 RGB-only 退化能力。
 
 单卡训练一个模型：
 
@@ -208,6 +226,24 @@ model = dict(auxiliary_head=None)
 边缘改进模型可把边界分支、边界损失和结构模块分别注册成独立组件，再用配置开关组合；现有指标无需修改即可横向比较定位与轮廓完整性。
 
 数据增强同样采用注册组件与配置解耦。位置偏置消融可继承实验配置，把训练 pipeline 中 `RandomForegroundCrop` 的 `foreground_prob` 改为 `0.0`；其他参数不变即可与普通随机裁剪公平比较。
+
+RPGV-Net 的结构消融集中在 `configs/ablations/`，通过 `component_cfg` 旁路组件且
+保持 checkpoint 参数结构不变。正式对比使用同一三阶段协议完整重训：
+
+```bash
+bash scripts/train_rpgv_ablations.sh
+python tools/summarize_rpgv_ablations.py work_dirs/rpgv_ablations
+```
+
+若要复用已经训练好的统一阶段二 checkpoint，仅重跑各变体的阶段三：
+
+```bash
+bash scripts/train_rpgv_ablations_from_stage2.sh
+python tools/summarize_rpgv_ablations.py work_dirs/rpgv_ablations_stage3
+```
+
+开关语义、单因素控制方式、选择部分实验和快速阶段三诊断方法见
+[`docs/model_design.md`](docs/model_design.md#十六消融实验)。
 
 ## 实现来源
 

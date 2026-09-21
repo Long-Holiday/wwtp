@@ -21,6 +21,7 @@ optim_wrapper = dict(
             rgb_boundary_head=dict(lr_mult=0.25),
             decoder=dict(lr_mult=0.25),
             refiner=dict(lr_mult=0.25),
+            detail_refiner=dict(lr_mult=0.25),
             norm=dict(decay_mult=0.0)),
         norm_decay_mult=0.0))
 

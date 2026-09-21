@@ -3,6 +3,10 @@
 
 import argparse
 
+import torch
+if torch.cuda.is_available():
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 import torch.nn.functional as F
 from mmengine.config import Config, DictAction
 from mmengine.runner import Runner
@@ -42,7 +46,23 @@ def main() -> None:
     cfg.load_from = args.checkpoint
     if args.work_dir:
         cfg.work_dir = args.work_dir
-    Runner.from_cfg(cfg).test()
+    elif not cfg.get('work_dir'):
+        import os
+        model_name = os.path.splitext(os.path.basename(args.config))[0]
+        cfg.work_dir = os.path.join('work_dirs', model_name)
+    metrics = Runner.from_cfg(cfg).test()
+    if args.work_dir and isinstance(metrics, dict):
+        import json
+        from pathlib import Path
+        import time
+        out_dir = Path(args.work_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        ts = time.strftime('%Y%m%d_%H%M%S')
+        out_path = out_dir / f'{ts}.json'
+        with open(out_path, 'w', encoding='utf-8') as f:
+            json.dump(metrics, f, indent=2)
+        print(f'Test metrics saved to {out_path}')
+
 
 
 if __name__ == '__main__':

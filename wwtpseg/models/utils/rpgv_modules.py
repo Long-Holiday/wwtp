@@ -10,6 +10,19 @@ from torch import nn
 from torch.nn import functional as F
 
 
+def binary_entropy_from_logits(logits: torch.Tensor) -> torch.Tensor:
+    """Normalized binary entropy, evaluated in FP32 even under autocast.
+
+    H(sigmoid(z)) = softplus(-|z|) + |z| * sigmoid(-|z|).
+    Unlike probability-space log/clamp, this stays finite for saturated
+    finite logits and never relies on representing 1 - epsilon in FP16.
+    """
+    magnitude = logits.float().abs()
+    return (
+        F.softplus(-magnitude) + magnitude * torch.sigmoid(-magnitude)
+    ) / math.log(2.0)
+
+
 def _group_norm(channels: int) -> nn.GroupNorm:
     """Return a batch-size independent normalization layer."""
     groups = min(8, channels)
@@ -239,12 +252,33 @@ class ReliabilityGuidedRectifier(nn.Module):
         reliability: torch.Tensor,
         rgb_feature: torch.Tensor,
         rgb_boundary: torch.Tensor,
+        use_depth_correction: bool = True,
+        use_learned_reliability: bool = True,
     ) -> dict[str, torch.Tensor]:
+        """Rectify pseudo depth and calibrate its reliability.
+
+        The two switches deliberately live inside the module rather than in
+        separate ablation-only implementations.  This keeps checkpoint keys
+        identical between the full model and every ablation while allowing
+        correction and reliability calibration to be studied independently.
+        """
         size = rgb_feature.shape[-2:]
         depth = F.interpolate(
             depth, size=size, mode='bilinear', align_corners=False)
         reliability = F.interpolate(
             reliability, size=size, mode='bilinear', align_corners=False)
+        if not use_depth_correction and not use_learned_reliability:
+            # Complete RGR ablation: preserve raw pseudo geometry without
+            # spending compute in the otherwise fully frozen rectifier.
+            learned = torch.ones_like(reliability, dtype=torch.float32)
+            return dict(
+                corrected_depth=depth,
+                base_depth=depth,
+                reliability=reliability,
+                learned_reliability=learned,
+                learned_reliability_logits=torch.full_like(learned, 20.0),
+                offsets=depth.new_zeros(depth.shape[0], 18, *size),
+            )
         dx, dy, magnitude, _ = spatial_derivatives(depth)
         depth_feature = self.depth_encoder(
             torch.cat([depth, dx, dy, magnitude], dim=1))
@@ -254,21 +288,34 @@ class ReliabilityGuidedRectifier(nn.Module):
         offsets = self.max_offset * torch.tanh(offset_mask[:, :18])
         modulation = offset_mask[:, 18:].sigmoid()
         deformed = self.deform(depth_feature, offsets, modulation)
-        learned = self.learned_reliability(
-            torch.cat([deformed, rgb_feature, reliability], dim=1)).sigmoid()
-        task_reliability = reliability * learned
-        correction = torch.tanh(self.residual(torch.cat([
-            deformed, rgb_boundary,
-        ], dim=1)))
-        corrected = torch.clamp(
-            depth
-            + self.correction_scale * task_reliability.detach() * correction,
-            0.0, 1.0)
+        if use_learned_reliability:
+            learned_logits = self.learned_reliability(
+                torch.cat([deformed, rgb_feature, reliability], dim=1))
+            learned = learned_logits.float().sigmoid()
+            task_reliability = reliability * learned
+        else:
+            # A finite constant keeps diagnostic outputs well behaved.  The
+            # corresponding supervision is omitted by RPGVNet in this mode.
+            learned = torch.ones_like(reliability, dtype=torch.float32)
+            learned_logits = torch.full_like(learned, 20.0)
+            task_reliability = reliability
+
+        if use_depth_correction:
+            correction = torch.tanh(self.residual(torch.cat([
+                deformed, rgb_boundary,
+            ], dim=1)))
+            corrected = torch.clamp(
+                depth + self.correction_scale
+                * task_reliability.detach() * correction,
+                0.0, 1.0)
+        else:
+            corrected = depth
         return dict(
             corrected_depth=corrected,
             base_depth=depth,
             reliability=task_reliability,
             learned_reliability=learned,
+            learned_reliability_logits=learned_logits,
             offsets=offsets,
         )
 
@@ -303,6 +350,49 @@ class GeometryEncoder(nn.Module):
         for downsample in self.downsamples:
             features.append(downsample(features[-1]))
         return tuple(features)
+
+
+class GeometryFeaturePyramid(nn.Module):
+    """Propagate deep geometry context to every prediction scale.
+
+    The geometry pretraining head operates at stride four.  Without a
+    top-down path that loss cannot reach the deeper encoder stages.  This
+    lightweight pyramid keeps the original channel contract while making all
+    four stages useful to both the auxiliary geometry task and joint fusion.
+    """
+
+    def __init__(self, channels: Sequence[int] = (32, 64, 128, 256)):
+        super().__init__()
+        if len(channels) != 4:
+            raise ValueError('GeometryFeaturePyramid requires four stages')
+        self.laterals = nn.ModuleList([
+            ConvNormAct(value, value, kernel_size=1) for value in channels
+        ])
+        self.top_down = nn.ModuleList([
+            ConvNormAct(channels[index + 1], channels[index], kernel_size=1)
+            for index in range(3)
+        ])
+        self.refine = nn.ModuleList([
+            DepthwiseSeparableBlock(channels[index], channels[index])
+            for index in range(3)
+        ])
+
+    def forward(
+        self, features: Sequence[torch.Tensor]
+    ) -> tuple[torch.Tensor, ...]:
+        if len(features) != 4:
+            raise ValueError('GeometryFeaturePyramid expects four features')
+        outputs = [
+            lateral(feature)
+            for lateral, feature in zip(self.laterals, features)
+        ]
+        for index in range(2, -1, -1):
+            context = self.top_down[index](outputs[index + 1])
+            context = F.interpolate(
+                context, size=outputs[index].shape[-2:], mode='bilinear',
+                align_corners=False)
+            outputs[index] = self.refine[index](outputs[index] + context)
+        return tuple(outputs)
 
 
 class HaarWavelet2D(nn.Module):
@@ -351,21 +441,29 @@ class DualFrequencyGeometryValidator(nn.Module):
         self,
         rgb_channels: int,
         geometry_channels: int,
+        region_rgb_channels: int,
+        region_geometry_channels: int,
         channels: int = 32,
     ) -> None:
         super().__init__()
         self.channels = channels
+        # Keep the original attribute names so older checkpoints can restore
+        # the already trained high-frequency path.
         self.rgb_projection = ConvNormAct(
             rgb_channels, channels, kernel_size=1)
         self.geometry_projection = ConvNormAct(
             geometry_channels, channels, kernel_size=1)
+        self.region_rgb_projection = ConvNormAct(
+            region_rgb_channels, channels, kernel_size=1)
+        self.region_geometry_projection = ConvNormAct(
+            region_geometry_channels, channels, kernel_size=1)
         self.wavelet = HaarWavelet2D()
-        self.high_gate = nn.Sequential(
+        self.high_validator = nn.Sequential(
             ConvNormAct(9 * channels + 2, 3 * channels),
             nn.Conv2d(3 * channels, 3 * channels, 1),
         )
         self.high_projection = nn.Conv2d(3 * channels, 3 * channels, 1)
-        self.low_gate = nn.Sequential(
+        self.region_validator = nn.Sequential(
             ConvNormAct(3 * channels + 2, channels),
             nn.Conv2d(channels, channels, 1),
         )
@@ -375,69 +473,99 @@ class DualFrequencyGeometryValidator(nn.Module):
     def _resize(value: torch.Tensor, size: tuple[int, int]) -> torch.Tensor:
         return F.interpolate(value, size=size, mode='bilinear', align_corners=False)
 
-    def forward(
+    def boundary_delta(
         self,
         rgb: torch.Tensor,
         geometry: torch.Tensor,
         reliability: torch.Tensor,
         rgb_boundary: torch.Tensor,
-        rgb_uncertainty: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> torch.Tensor:
+        """Return the validated stride-4 Haar high-frequency residual."""
         rgb = self.rgb_projection(rgb)
         geometry = self.geometry_projection(geometry)
-        low_rgb, high_rgb = self.wavelet(rgb)
-        low_geo, high_geo = self.wavelet(geometry)
-        band_size = low_rgb.shape[-2:]
-        reliability = self._resize(reliability, band_size)
+        low_reference, high_rgb = self.wavelet(rgb)
+        _, high_geo = self.wavelet(geometry)
+        band_size = low_reference.shape[-2:]
+        high_reliability = self._resize(reliability, band_size)
         boundary = self._resize(rgb_boundary, band_size)
-        uncertainty = self._resize(rgb_uncertainty, band_size)
 
-        high_weight = self.high_gate(torch.cat([
+        high_weight = self.high_validator(torch.cat([
             high_rgb, high_geo, (high_rgb - high_geo).abs(),
-            reliability, boundary,
+            high_reliability, boundary,
         ], dim=1)).sigmoid()
         # Reliability is applied once, at the final residual fusion.  It still
         # informs frequency validation, but does not quadratically attenuate
         # the candidate geometry residual.
         high_delta = high_weight * self.high_projection(high_geo)
-        boundary_delta = self.wavelet.inverse(
-            torch.zeros_like(low_rgb), high_delta, rgb.shape[-2:])
+        return self.wavelet.inverse(
+            torch.zeros_like(low_reference), high_delta, rgb.shape[-2:])
 
-        low_weight = self.low_gate(torch.cat([
-            low_rgb, low_geo, (low_rgb - low_geo).abs(),
-            reliability, uncertainty,
+    def region_delta(
+        self,
+        region_rgb: torch.Tensor,
+        region_geometry: torch.Tensor,
+        reliability: torch.Tensor,
+        rgb_uncertainty: torch.Tensor,
+    ) -> torch.Tensor:
+        """Return the validated stride-16 semantic region residual."""
+        # Region completion uses the semantic stride-16 features directly.
+        # The previous implementation reused the stride-8 LL band from G1,
+        # leaving deep geometry without a content path into the decoder.
+        region_rgb = self.region_rgb_projection(region_rgb)
+        region_geometry = self.region_geometry_projection(region_geometry)
+        region_size = region_rgb.shape[-2:]
+        region_reliability = self._resize(reliability, region_size)
+        region_uncertainty = self._resize(rgb_uncertainty, region_size)
+        low_weight = self.region_validator(torch.cat([
+            region_rgb, region_geometry,
+            (region_rgb - region_geometry).abs(),
+            region_reliability, region_uncertainty,
         ], dim=1)).sigmoid()
-        region_delta = low_weight * self.low_projection(low_geo)
-        return boundary_delta, region_delta
+        return low_weight * self.low_projection(region_geometry)
+
+    def direct_boundary_delta(self, geometry: torch.Tensor) -> torch.Tensor:
+        """Project stride-4 geometry without frequency decomposition."""
+        return self.geometry_projection(geometry)
+
+    def direct_region_delta(
+        self, region_geometry: torch.Tensor
+    ) -> torch.Tensor:
+        """Project stride-16 geometry without cross-modal validation."""
+        return self.region_geometry_projection(region_geometry)
+
+    def forward(
+        self,
+        rgb: torch.Tensor,
+        geometry: torch.Tensor,
+        region_rgb: torch.Tensor,
+        region_geometry: torch.Tensor,
+        reliability: torch.Tensor,
+        rgb_boundary: torch.Tensor,
+        rgb_uncertainty: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Validate both residual bands for the default full model."""
+        return (
+            self.boundary_delta(
+                rgb, geometry, reliability, rgb_boundary),
+            self.region_delta(
+                region_rgb, region_geometry, reliability, rgb_uncertainty),
+        )
 
 
-class UncertaintyGatedResidualFusion(nn.Module):
-    """Asymmetric residual fusion that can always fall back to RGB."""
+class ReliabilityWeightedResidualFusion(nn.Module):
+    """Inject a validated geometry residual in proportion to reliability."""
 
     def __init__(
         self,
         rgb_channels: int,
-        geometry_channels: int,
         delta_channels: int,
-        gate_channels: int = 32,
     ) -> None:
         super().__init__()
-        self.rgb_projection = ConvNormAct(
-            rgb_channels, gate_channels, kernel_size=1)
-        self.geometry_projection = ConvNormAct(
-            geometry_channels, gate_channels, kernel_size=1)
-        self.gate = nn.Sequential(
-            ConvNormAct(3 * gate_channels + 3, gate_channels),
-            nn.Conv2d(gate_channels, rgb_channels, 1),
-        )
         self.delta_projection = ConvNormAct(
             delta_channels, rgb_channels, kernel_size=1, activation=False)
-
-        # Begin on the RGB path and let evidence open the residual branch.
-        nn.init.constant_(self.gate[-1].bias, -2.0)
-        # Stage two freezes this module, so stage three would otherwise start
-        # from a random non-zero residual.  A zero projection guarantees exact
-        # RGB behaviour on the first joint-training step.
+        # Stage two freezes this module. A zero projection guarantees exact
+        # RGB behaviour on the first joint-training step while allowing the
+        # final segmentation loss to learn a useful residual immediately.
         nn.init.zeros_(self.delta_projection[0].weight)
 
     @staticmethod
@@ -447,31 +575,17 @@ class UncertaintyGatedResidualFusion(nn.Module):
     def forward(
         self,
         rgb: torch.Tensor,
-        geometry: torch.Tensor,
         delta: torch.Tensor,
         reliability: torch.Tensor,
-        rgb_uncertainty: torch.Tensor,
-        expert_disagreement: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+        use_reliability: bool = True,
+    ) -> torch.Tensor:
         size = rgb.shape[-2:]
-        geometry = self._resize(geometry, size)
         delta = self._resize(delta, size)
-        reliability = self._resize(reliability, size)
-        rgb_uncertainty = self._resize(rgb_uncertainty, size)
-        expert_disagreement = self._resize(expert_disagreement, size)
-        rgb_projected = self.rgb_projection(rgb)
-        geometry_projected = self.geometry_projection(geometry)
-        intrinsic_gate = self.gate(torch.cat([
-            rgb_projected,
-            geometry_projected,
-            (rgb_projected - geometry_projected).abs(),
-            reliability,
-            rgb_uncertainty,
-            expert_disagreement,
-        ], dim=1)).sigmoid()
-        effective_gate = reliability * intrinsic_gate
-        fused = rgb + effective_gate * self.delta_projection(delta)
-        return fused, intrinsic_gate
+        residual = torch.tanh(self.delta_projection(delta))
+        if use_reliability:
+            reliability = self._resize(reliability, size)
+            residual = reliability * residual
+        return rgb + residual
 
 
 class MultiScaleDecoder(nn.Module):
@@ -538,10 +652,7 @@ class BoundaryResidualRefiner(nn.Module):
         coarse = self.coarse_head(feature)
         boundary = self.boundary_head(feature)
         sdf = self.sdf_head(feature)
-        probability = coarse.sigmoid().clamp(1e-6, 1.0 - 1e-6)
-        uncertainty = -(
-            probability * probability.log()
-            + (1.0 - probability) * (1.0 - probability).log()) / math.log(2.0)
+        uncertainty = binary_entropy_from_logits(coarse)
         reliability = F.interpolate(
             reliability, size=feature.shape[-2:], mode='bilinear',
             align_corners=False)
@@ -557,5 +668,73 @@ class BoundaryResidualRefiner(nn.Module):
             coarse=coarse,
             boundary=boundary,
             sdf=sdf,
+            refinement_gate=gate,
+        )
+
+
+class HighResolutionDetailRefiner(nn.Module):
+    """Recover half-resolution RGB detail after stride-four decoding."""
+
+    def __init__(self, decoder_channels: int, channels: int = 32) -> None:
+        super().__init__()
+        self.rgb_stem = nn.Sequential(
+            ConvNormAct(3, channels, stride=2),
+            DepthwiseSeparableBlock(channels, channels),
+        )
+        self.decoder_projection = ConvNormAct(
+            decoder_channels, channels, kernel_size=1)
+        self.fuse = nn.Sequential(
+            ConvNormAct(2 * channels + 1, channels),
+            DepthwiseSeparableBlock(channels, channels),
+        )
+        self.boundary_head = nn.Sequential(
+            ConvNormAct(channels, channels),
+            nn.Conv2d(channels, 1, 1),
+        )
+        self.gate = nn.Sequential(
+            ConvNormAct(3, 16),
+            nn.Conv2d(16, 1, 1),
+        )
+        self.residual = nn.Sequential(
+            ConvNormAct(channels + 2, channels),
+            nn.Conv2d(channels, 1, 1),
+        )
+        # Preserve the trained stride-four prediction when this module is
+        # introduced or loaded on top of an older checkpoint.
+        # As in BoundaryResidualRefiner, Q is always zero during RGB training.
+        nn.init.zeros_(self.gate[0][0].weight[:, 2:3])
+        nn.init.zeros_(self.residual[-1].weight)
+        nn.init.zeros_(self.residual[-1].bias)
+
+    def forward(
+        self,
+        rgb: torch.Tensor,
+        decoder_feature: torch.Tensor,
+        base_logits: torch.Tensor,
+        reliability: torch.Tensor,
+    ) -> dict[str, torch.Tensor]:
+        rgb_detail = self.rgb_stem(rgb)
+        size = rgb_detail.shape[-2:]
+        decoder_detail = F.interpolate(
+            self.decoder_projection(decoder_feature), size=size,
+            mode='bilinear', align_corners=False)
+        base_logits = F.interpolate(
+            base_logits, size=size, mode='bilinear', align_corners=False)
+        detail = self.fuse(torch.cat([
+            rgb_detail, decoder_detail, base_logits.sigmoid(),
+        ], dim=1))
+        boundary = self.boundary_head(detail)
+        uncertainty = binary_entropy_from_logits(base_logits)
+        reliability = F.interpolate(
+            reliability, size=size, mode='bilinear', align_corners=False)
+        gate = self.gate(torch.cat([
+            boundary.sigmoid(), uncertainty, reliability,
+        ], dim=1)).sigmoid()
+        residual = self.residual(torch.cat([
+            detail, base_logits, boundary,
+        ], dim=1))
+        return dict(
+            final=base_logits + gate * residual,
+            boundary=boundary,
             refinement_gate=gate,
         )

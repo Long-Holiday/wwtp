@@ -8,7 +8,7 @@
 
 > 在没有真实 DSM/DEM 的条件下，如何校正单目模型产生的不可靠伪几何，并且仅在其确实有助于分割时，用它补全污水处理厂范围和精修边界。
 
-模型遵循“可靠 RGB 主路径 + 受约束几何残差”的原则。伪深度不会与 RGB 对称融合，也不能无约束地演化成另一张分割掩膜；当几何不可靠时，门控可以关闭残差并退回 RGB 路径。
+模型遵循“可靠 RGB 主路径 + 受约束几何残差”的原则。伪深度不会与 RGB 对称融合，也不能无约束地演化成另一张分割掩膜；几何残差按可靠度连续缩放，可靠度为零时退回 RGB 路径。
 
 主要实现文件：
 
@@ -38,16 +38,17 @@ flowchart TD
     D0 --> RGR["RGR 可靠性感知可变形校正"]
     Q0 --> RGR
     RA --> RGR
-    RGR --> GE["轻量几何编码器"]
+    RGR --> GE["轻量几何编码器 + 几何 FPN"]
     FILM --> DFGV["Haar 双频几何验证"]
     GE --> DFGV
     RA --> DFGV
-    DFGV --> UGRF["1/4 与 1/16 残差门控融合"]
-    FILM --> UGRF
-    UGRF --> DEC["多尺度解码器"]
-    DEC --> AUX["粗分割 / 边界 / SDF 头"]
-    AUX --> REFINE["边界引导残差精修"]
-    REFINE --> OUT["最终二值分割掩膜"]
+    DFGV --> RWRF["1/4 与 1/16 可靠度残差融合"]
+    FILM --> RWRF
+    RWRF --> DEC["多尺度解码器"]
+    DEC --> AUX["1/4 粗分割 / 边界 / SDF 头"]
+    AUX --> REFINE["1/4 边界引导残差精修"]
+    REFINE --> DETAIL["1/2 RGB 细节精修"]
+    DETAIL --> OUT["最终二值分割掩膜"]
 ```
 
 Depth Anything 全程离线、冻结，不进入分割训练计算图。几何阶段和联合阶段的局部输入为：
@@ -321,7 +322,10 @@ $$
 | $G_3$ | $64\times64$ | 128 |
 | $G_4$ | $32\times32$ | 256 |
 
-$G_1$ 产生几何辅助 logit $Z_g$。第二阶段验证直接评估 $Z_g$，最终推理不把它作为结果。
+四级输出随后进入轻量自顶向下几何 FPN。$G_4$ 的语义上下文逐级传到
+$G_3,G_2,G_1$，各级保持原通道数。融合后的 $G_1$ 产生几何辅助 logit
+$Z_g$，因此第二阶段的几何分割损失可以训练全部四级几何编码器，而不再只
+训练最浅层。第二阶段验证直接评估 $Z_g$，最终推理不把它作为结果。
 
 ---
 
@@ -353,50 +357,32 @@ $$
 
 零低频与 $\Delta H$ 经过逆 DWT 得到 $1/4$ 边界修正 $\Delta F_h$。
 
-低频验证：
+区域验证直接使用融合后的 $1/16$ 深层特征：
 
 $$
 W_l=\sigma
 \left(
-f_l[L_r,L_g,|L_r-L_g|,Q_d,U_r]
+f_l[R_3,G_3,|R_3-G_3|,Q_d,U_r]
 \right),
 $$
 
 $$
 \Delta F_l=
-W_l\odot\operatorname{Proj}(L_g).
+W_l\odot\operatorname{Proj}(G_3).
 $$
 
-$\Delta F_l$ 产生于 $1/8$，随后插值到 $1/16$ 参与区域补全。
+$\Delta F_l$ 直接产生于 $1/16$，使深层几何语义成为区域补全内容，而不是
+只参与融合权重。Haar 高频路径仍负责 $1/4$ 边界修正。
 
 ---
 
-## 八、UGRF 不确定性门控融合
+## 八、可靠度加权残差融合
 
-门控输入：
-
-$$
-[
-\operatorname{Proj}(R_i),
-\operatorname{Proj}(G_i),
-|\operatorname{Proj}(R_i)-\operatorname{Proj}(G_i)|,
-Q_d,U_r,|P_r-P_g|
-].
-$$
-
-内部门控和有效门控：
+DFGV 已分别验证高频边界候选和深层区域候选，融合层不再学习第二套专家选择
+门控。残差只经过通道投影，并按任务可靠度连续加权：
 
 $$
-\widetilde W_i=\sigma(f_i(\cdot)),
-\qquad
-W_i=Q_d\odot\widetilde W_i.
-$$
-
-融合：
-
-$$
-X_i=R_i+
-W_i\odot\operatorname{Proj}(\Delta F_i).
+X_i=R_i+Q_d\odot\tanh(\operatorname{Proj}(\Delta F_i)).
 $$
 
 只在两个位置融合：
@@ -404,19 +390,9 @@ $$
 - $1/4$：高频边界修正；
 - $1/16$：低频区域补全。
 
-$R_2,R_4$ 保持纯 RGB。可靠度只在这里乘入一次。门控输出偏置初始化为 -2，残差投影零初始化，使联合训练第一步严格等价于 RGB 路径。
-
-根据 RGB 和几何专家的逐像素 BCE 误差构造软目标：
-
-$$
-W^*=
-1-\exp\left[
--\frac{\max(\ell_r-\ell_g-m,0)}{T}
-\right],
-\qquad T=0.5,\quad m=0.05.
-$$
-
-因此几何没有明确正收益时目标严格为零。停止 $W^*$ 的梯度后，高频门只在扩张后的边界带监督，低频门只在区域内部监督；损失作用于乘入可靠度后的有效门控。
+$R_2,R_4$ 保持纯 RGB。可靠度只在这里乘入一次，`tanh` 将每通道残差限制在
+$[-1,1]$。残差投影零初始化，使联合训练第一步严格等价于 RGB 路径；随后
+由最终分割损失直接学习残差内容。
 
 ---
 
@@ -442,7 +418,7 @@ U_c,Q_d
 \right).
 $$
 
-最终 logit：
+第一步精修 logit：
 
 $$
 \Delta Z=
@@ -450,10 +426,18 @@ f_{refine}[F_{dec},Z_c,\widehat B,\widehat S],
 $$
 
 $$
-Z_{final}=Z_c+G_b\odot\Delta Z.
+Z_{1/4}=Z_c+G_b\odot\Delta Z.
 $$
 
-精修输出层零初始化，初始时 $Z_{final}=Z_c$。
+随后从归一化 RGB 提取 $1/2$ 分辨率细节特征，与上采样后的解码特征和
+$Z_{1/4}$ 融合，预测第二级边界与有界位置门控：
+
+$$
+Z_{final}=\operatorname{Up}(Z_{1/4})+G_{detail}\odot\Delta Z_{detail}.
+$$
+
+两级精修输出层均零初始化。细节分支只增加 32 个通道，主要恢复在 $1/4$
+监督和上采样中容易损失的窄结构及边缘。
 
 为兼容 MMSeg 二分类接口，模型返回：
 
@@ -475,7 +459,26 @@ $$
 
 标签 255 不参与损失。
 
-边界标签由 $1/4$ GT 的 3×3 形态学梯度产生。联合阶段同时监督 RGB 粗边界和最终边界，两者取平均。
+AMP 下 BCE、Dice、SDF、可靠度和保持损失的概率计算及空间归约显式使用
+FP32。可靠度头同时输出 logit 与 sigmoid 概率，监督使用
+`binary_cross_entropy_with_logits`，避免 CUDA autocast 不允许普通概率 BCE
+的问题；概率仍用于几何可靠度加权，不改变监督目标。
+
+RGB 不确定性与两级精修统一使用稳定的二元熵公式（FP32）：
+
+$$
+H(z)=\frac{\operatorname{softplus}(-|z|)+|z|\sigma(-|z|)}{\ln 2}.
+$$
+
+旧公式在 FP16 下把 $1-10^{-6}$ 舍入为 1，饱和正 logit 导致 $0\log0$；
+即使精修残差初始化为零，`NaN * 0` 也会污染预测。旧 Dice 路径因乘以
+FP32 valid mask 已发生类型提升，不能仅凭输入尺寸就断言其是本次 NaN 根因。
+`parse_losses` 在发现非有限前向损失时，报告阶段与损失名称并在反向传播前
+停止；GradScaler 仍正常处理偶发的梯度溢出，不用置零损失掩盖错误。
+
+最终 logit 上采样到输入尺度后计算主分割损失。边界标签分别在对应尺度由
+3×3 形态学梯度产生，同时监督 $1/2$ 细节边界、$1/4$ 解码边界和 RGB 粗
+边界，三者取平均。
 
 SDF 使用精确欧氏距离变换：
 
@@ -526,8 +529,7 @@ L={}&L_{final}
 &+0.1L_{SDF}
 +0.05L_{reliability}
 +0.05L_{preserve}\\
-&+0.05L_{equivariance}
-+0.1L_{gate}.
+&+0.05L_{equivariance}.
 \end{aligned}
 $$
 
@@ -541,7 +543,6 @@ $$
 | $L_{reliability}$ | BCE | 拟合训练期软几何有效度 |
 | $L_{preserve}$ | L1 | 限制深度校正 |
 | $L_{equivariance}$ | Smooth L1 | 翻转一致性 |
-| $L_{gate}$ | BCE | 专家选择 |
 
 ---
 
@@ -554,7 +555,7 @@ $$
 配置：configs/experiments/rpgv_stage1_rgb.py
 
 - 输入三通道 RGB 和 512 thumbnail；
-- 训练 MiT-B2、FiLM、RGB 辅助头、解码器和精修头；
+- 训练 MiT-B2、FiLM、RGB 辅助头、解码器及两级精修头；
 - 冻结且不执行几何相关模块；
 - 损失为 $L_{final}+0.3L_{rgb}+0.2L_{boundary}+0.1L_{SDF}$；
 - 验证输出为 RGB 解码后的最终分割；
@@ -566,9 +567,9 @@ $$
 
 - 从阶段一 checkpoint 初始化；
 - 输入五通道局部块和 512 thumbnail；
-- RGB 编码器、FiLM、RGB 辅助头、解码器、DFGV 和 UGRF 冻结；
+- RGB 编码器、FiLM、RGB 辅助头、解码器、DFGV 和残差融合层冻结；
 - 冻结 RGB 教师保持 eval，关闭 DropPath 随机性；
-- 只训练 RGR、几何编码器和几何辅助头；
+- 只训练 RGR、几何编码器、几何 FPN 和几何辅助头；
 - 损失为 $0.2L_{geo}+0.05L_{reliability}+0.05L_{preserve}+0.05L_{equivariance}$；
 - 验证输出为 $Z_g$；
 - 训练 20k iterations。
@@ -582,9 +583,9 @@ $$
 - 从阶段二 checkpoint 初始化；
 - 全部模块解冻；
 - MiT-B2 学习率为新模块的 0.1 倍；
-- 已训练的 FiLM、RGB 辅助头、解码器和精修器学习率为新模块的 0.25 倍；
+- 已训练的 FiLM、RGB 辅助头、解码器和两级精修器学习率为新模块的 0.25 倍；
 - 15% 概率令整幅有效可靠度为零，以持续监督 RGB-only 退化路径；
-- 启用完整总损失；
+- 启用完整联合总损失，几何残差由最终分割目标端到端学习；
 - 验证输出最终融合分割；
 - 训练 40k iterations。
 
@@ -713,7 +714,115 @@ python tools/smoke_test.py \
 - 阶段专属损失；
 - 等变分支；
 - 反向传播；
+- 全分辨率 FP16 输入下的 FP32 Dice/熵数值稳定性；
+- 无融合门控时的有界几何残差；
+- 四级几何编码器和最深层 FPN 的梯度连通性；
+- $1/2$ 高分辨率细节精修；
 - 阶段对应的验证输出；
 - 滑窗推理和输出尺寸。
 
-默认完整模型约 27.01M 参数。
+真实 CUDA AMP 数值回归：
+
+```bash
+python tools/test_rpgv_numerics.py -v
+```
+
+覆盖三阶段原有 AdamW/动态 GradScaler 配置与 8 步梯度累积，每阶段要求
+至少两次真正的参数更新，并检查梯度、参数和优化器状态有限；模型输入缩为
+64，另行检查 $1024\times1024$ 损失的前向与反向。还覆盖饱和 logits 的两级
+精修、全忽略标签、可靠度正负监督和 RGB 到联合训练的细节分支初始化一致性。
+无 CUDA 时明确跳过 GPU 用例，不把 CPU 半精度输入测试等同于 AMP 训练测试。
+
+默认完整模型约 27.14M 参数。
+
+---
+
+## 十六、消融实验
+
+### 1. 实现原则
+
+消融实验不复制 RPGV-Net 类。`component_cfg` 只改变前向路径，所有变体仍实例化
+相同模块并保留相同 `state_dict` 键，因此可以严格复用阶段 checkpoint。被旁路的
+参数会同步冻结，避免 DDP 未使用参数问题，也使可训练参数量能够反映真实实验。
+
+开关的默认值均为 `True`：
+
+| 开关 | 关闭后的行为 | 对应配置 |
+| --- | --- | --- |
+| `global_context` | 不计算全图 token，不执行 FiLM | `rpgv_no_global_context.py` |
+| RGR 整体 | 同时关闭深度校正与学习可靠度，直接使用 $D_0,Q_0$ | `rpgv_no_rgr.py` |
+| `depth_rectification` | 使用原始 $D_0$，跳过有界深度残差；保持与等变损失同步关闭 | `rpgv_no_depth_rectification.py` |
+| `learned_reliability` | 直接使用离线 $Q_0$；可靠度监督同步关闭 | `rpgv_offline_reliability_only.py` |
+| `frequency_validation` | 以同尺度几何投影替代 Haar/跨模态验证，仍保留两处残差注入 | `rpgv_no_frequency_validation.py` |
+| `boundary_fusion` | 移除 $1/4$ 边界残差 | `rpgv_no_boundary_fusion.py` |
+| `region_fusion` | 移除 $1/16$ 区域残差 | `rpgv_no_region_fusion.py` |
+| `reliability_weighting` | 注入有界残差时不再乘 $Q_d$ | `rpgv_unweighted_fusion.py` |
+| `boundary_refinement` | 直接使用 $1/4$ 粗 logit，仍保留形状辅助监督 | `rpgv_no_boundary_refinement.py` |
+| `detail_refinement` | 不执行 $1/2$ RGB 细节精修 | `rpgv_no_detail_refinement.py` |
+
+另有两个训练机制消融：`rpgv_no_geometry_dropout.py` 将几何 dropout 概率设为
+0；`rpgv_no_shape_auxiliary.py` 将边界与 SDF 损失权重设为 0。RGB-only 对照直接
+使用阶段一最佳 checkpoint，避免把“无几何”与一条仍接收可靠度的联合路径混淆。
+
+`frequency_validation=False` 不是把几何残差置零，而是使用 $G_1/G_3$ 的直接
+通道投影。这样它只检验 DFGV 的频率分解与跨模态验证是否有效，不会同时删除
+几何信息，符合单因素消融原则。类似地，关闭边界精修时仍保留边界/SDF 辅助
+任务；显式形状监督由独立配置检验。
+
+### 2. 公平训练协议
+
+正式消融应从阶段一开始完整重训，而不是只在阶段三临时关闭模块：
+
+```bash
+bash scripts/train_rpgv_ablations.sh
+```
+
+脚本对每个变体复用与完整模型相同的数据、40k/20k/40k 三阶段 schedule、优化器
+和评价指标，只通过 `--cfg-options` 改一个因素。默认输出到：
+
+```text
+work_dirs/rpgv_ablations/<ablation>/
+├── stage1_rgb/
+├── stage2_geometry/
+└── stage3_joint/
+```
+
+可通过空格分隔的 `RPGV_ABLATIONS` 选择子集；`full` 可用于在同一目录结构下
+重跑完整对照。例如：
+
+```bash
+RPGV_ABLATIONS="full no_frequency_validation no_region_fusion" \
+  bash scripts/train_rpgv_ablations.sh
+```
+
+`configs/ablations/` 下的独立配置继承阶段三配置，适合已有统一阶段二 checkpoint
+时做快速诊断；它们不替代正式的全流程重训。快速运行示例：
+
+```bash
+bash scripts/train_rpgv_ablations_from_stage2.sh
+```
+
+该脚本默认自动选择 `work_dirs/rpgv_staged/stage2_geometry/` 中最新的最佳
+checkpoint，并把变体写入 `work_dirs/rpgv_ablations_stage3/`。也可通过
+`RPGV_STAGE2_CHECKPOINT` 指定 checkpoint，通过 `RPGV_ABLATIONS` 选择子集；
+选择规则与完整重训脚本相同。
+
+### 3. 汇总与验证
+
+汇总工具会在每个变体的 `stage3_joint` 日志中按 Foreground IoU 选择最佳验证
+记录，并同时报告 Dice、Boundary F1 和 HD95：
+
+```bash
+python tools/summarize_rpgv_ablations.py \
+  work_dirs/rpgv_ablations \
+  --format markdown \
+  --output work_dirs/rpgv_ablations/summary.md
+```
+
+所有独立消融配置已纳入 smoke test 的配置发现范围：
+
+```bash
+python tools/smoke_test.py \
+  --models rpgv_no_frequency_validation rpgv_no_detail_refinement \
+  --input-size 64 --backward
+```

@@ -8,6 +8,7 @@ services:
     volumes:
       - .:/workspace
       - /home/wz97172726/.cache/torch:/root/.cache/torch
+      - /home/wz97172726/.cache/huggingface:/root/.cache/huggingface
     shm_size: 16gb
     ipc: host
     gpus: all
