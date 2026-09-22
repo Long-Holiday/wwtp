@@ -13,25 +13,28 @@ from pathlib import Path
 DEFAULT_STAGE2_CKPT = "work_dirs/rpgv_staged/stage2_geometry/best_binary_Foreground_IoU_iter_10000.pth"
 DEFAULT_WORK_ROOT = "work_dirs/rpgv_ablations"
 
-ALL_ABLATIONS = [
-    # Group 1: Core Architectural Innovations
-    "no_rgr",                    # Removes RGR (no depth rectification & no learned reliability)
-    "no_frequency_validation",   # Replaces DFGV Haar decomposition with direct spatial projection
-    "no_global_context",         # Removes shared full-scene token and FiLM modulation
-    "unweighted_fusion",         # Residual injection without Qd reliability weighting
-    "no_detail_refinement",      # Removes stride-2 RGB detail refinement
-    
-    # Group 2: Key Fusion & Refinement Components
-    "no_boundary_fusion",        # Removes stride-4 high-frequency boundary residual
-    "no_region_fusion",          # Removes stride-16 semantic region residual
-    "no_boundary_refinement",    # Removes stride-4 boundary residual refinement
-    "no_depth_rectification",    # Uncorrected depth with learned reliability
-    "offline_reliability_only",  # Offline reliability prior without task calibration
-    
-    # Group 3: Auxiliary Losses & Data Pipeline
-    "no_shape_auxiliary",        # Without boundary and SDF loss
-    "no_geometry_dropout",       # Without pseudo-geometry corruption/dropout
+PLAN_ABLATIONS = [
+    "no_rgr",
+    "no_frequency_validation",
+    "no_global_context",
+    "unweighted_fusion",
+    "no_detail_refinement",
+    "no_depth_rectification",
+    "no_geometry_fusion",
 ]
+
+# These variants remain explicitly selectable, but are outside the reduced
+# default plan. See docs/model_design.md for the evidence and tradeoffs.
+OPTIONAL_ABLATIONS = [
+    "offline_reliability_only",
+    "no_boundary_fusion",
+    "no_region_fusion",
+    "no_boundary_refinement",
+    "no_shape_auxiliary",
+    "no_geometry_dropout",
+]
+ALL_ABLATIONS = PLAN_ABLATIONS + OPTIONAL_ABLATIONS
+PENDING_ABLATIONS = ["no_depth_rectification", "no_geometry_fusion"]
 
 
 def run_cmd(cmd, check=True):
@@ -141,6 +144,7 @@ def run_ablation(ablation, work_root=DEFAULT_WORK_ROOT, stage2_ckpt=DEFAULT_STAG
     ablation_dir = os.path.join(work_root, ablation, "stage3_joint")
     os.makedirs(ablation_dir, exist_ok=True)
     test_eval_dir = os.path.join(ablation_dir, "test_eval")
+    training_done = Path(ablation_dir) / ".training_completed"
 
     print(f"\n{'='*70}\n[START] Ablation: {ablation}\nConfig: {config}\nWorkDir: {ablation_dir}\n{'='*70}")
 
@@ -154,8 +158,14 @@ def run_ablation(ablation, work_root=DEFAULT_WORK_ROOT, stage2_ckpt=DEFAULT_STAG
         update_summary(work_root)
         return
 
-    # Step 1: Train if no best checkpoint found
-    if not best_ckpt:
+    # A best checkpoint may appear at the first validation while training is
+    # still active. Only this runner's completion marker permits evaluation.
+    if not training_done.is_file():
+        if any(Path(ablation_dir).iterdir()):
+            raise RuntimeError(
+                f"Incomplete or externally managed run in {ablation_dir}; "
+                "refusing to test a checkpoint from active training. "
+                "Use a fresh --work-root or finish this run first.")
         print(f"\n>>> [Stage 1/2] Launching Training for {ablation}...")
         train_cmd = [
             "docker", "compose", "run", "--rm",
@@ -176,6 +186,11 @@ def run_ablation(ablation, work_root=DEFAULT_WORK_ROOT, stage2_ckpt=DEFAULT_STAG
         ]
         run_cmd(train_cmd)
         best_ckpt = get_best_ckpt(ablation_dir)
+        if not best_ckpt:
+            raise RuntimeError(f"No checkpoint produced in {ablation_dir} after training!")
+        training_done.write_text(
+            f"config={config}\nstage2_checkpoint={stage2_ckpt}\n",
+            encoding="utf-8")
 
     if not best_ckpt:
         raise RuntimeError(f"No checkpoint produced in {ablation_dir} after training!")
@@ -199,15 +214,16 @@ def run_ablation(ablation, work_root=DEFAULT_WORK_ROOT, stage2_ckpt=DEFAULT_STAG
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--ablation", choices=ALL_ABLATIONS + ["all"], default="all",
-                        help="Specific ablation or 'all'")
+    parser.add_argument("--ablation", choices=ALL_ABLATIONS + ["pending", "all"],
+                        default="pending",
+                        help="A single variant, the two pending variants, or all seven planned variants")
     parser.add_argument("--work-root", default=DEFAULT_WORK_ROOT,
                         help="Root work directory for ablations")
     parser.add_argument("--stage2-ckpt", default=DEFAULT_STAGE2_CKPT,
                         help="Shared Stage 2 checkpoint")
     args = parser.parse_args()
 
-    # Ensure reference links exist
+    # Preserve the existing full and RGB-only references in the summary.
     os.makedirs(os.path.join(args.work_root, "full"), exist_ok=True)
     os.makedirs(os.path.join(args.work_root, "rgb_only"), exist_ok=True)
     full_link = os.path.join(args.work_root, "full", "stage3_joint")
@@ -217,7 +233,12 @@ def main():
     if not os.path.exists(rgb_link):
         os.symlink("../../rpgv_staged/stage1_rgb", rgb_link)
 
-    targets = ALL_ABLATIONS if args.ablation == "all" else [args.ablation]
+    if args.ablation == "pending":
+        targets = PENDING_ABLATIONS
+    elif args.ablation == "all":
+        targets = PLAN_ABLATIONS
+    else:
+        targets = [args.ablation]
     for ab in targets:
         run_ablation(ab, work_root=args.work_root, stage2_ckpt=args.stage2_ckpt)
 

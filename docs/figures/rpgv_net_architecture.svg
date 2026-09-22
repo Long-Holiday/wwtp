@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3560" height="1220" viewBox="0 0 3560 1220" role="img" aria-labelledby="title desc">
+<title id="title">RPGV-Net architecture</title>
+<desc id="desc">Shared MiT-B2 RGB backbone with global FiLM, reliability-guided pseudo-depth rectification, geometry encoder and FPN, Haar boundary validation at stride four, region validation at stride sixteen, reliability-weighted residual fusion, multi-scale decoder and two-stage refinement.</desc>
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#334155"/></marker>
+  <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#2876b9"/></marker>
+  <marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#159895"/></marker>
+  <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#7653a6"/></marker>
+</defs>
+<rect width="3560" height="1220" fill="#ffffff"/>
+
+<text x="1780" y="65" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="700" fill="#16263c">RPGV-Net</text>
+<text x="1780" y="106" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="500" fill="#53677e">Reliability-aware Pseudo-Geometry Rectification and Validation</text>
+<path d="M70 128 H3490" fill="none" stroke="#d4dfe8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="42" y="160" width="2085" height="305" rx="23" fill="#f2f8fd" stroke="#dceaf5" stroke-width="2"/>
+<rect x="42" y="850" width="2085" height="300" rx="23" fill="#effaf8" stroke="#d3eee9" stroke-width="2"/>
+<rect x="1210" y="510" width="910" height="270" rx="23" fill="#fff8ee" stroke="#f3e2ca" stroke-width="2"/>
+<rect x="2175" y="475" width="1330" height="310" rx="23" fill="#f8f7fc" stroke="#e8e1f1" stroke-width="2"/>
+<text x="72" y="194" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#24699f">RGB pathway</text>
+<text x="72" y="886" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#0f827c">Pseudo-geometry pathway</text>
+<text x="1240" y="547" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#a96920">Geometry validation and residual injection</text>
+<text x="2203" y="513" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#674d91">Segmentation head</text>
+<rect x="85" y="215" width="185" height="82" rx="9" fill="#e7ecdd" stroke="#a6b7b0" stroke-width="2"/>
+<circle cx="130" cy="245" r="20" fill="#a6bbb5" stroke="#f6fbf9" stroke-width="5"/>
+<circle cx="193" cy="249" r="24" fill="#a6bbb5" stroke="#f6fbf9" stroke-width="5"/>
+<circle cx="158" cy="278" r="13" fill="#a6bbb5" stroke="#f6fbf9" stroke-width="5"/>
+<path d="M92 285 L260 227" stroke="#bac5b3" stroke-width="9" opacity=".7"/>
+<rect x="85" y="332" width="185" height="83" rx="9" fill="#dce7d7" stroke="#a6b7b0" stroke-width="2"/>
+<circle cx="120" cy="360" r="12" fill="#91ada5" stroke="#f7fbf8" stroke-width="4"/>
+<circle cx="156" cy="357" r="17" fill="#91ada5" stroke="#f7fbf8" stroke-width="4"/>
+<circle cx="202" cy="354" r="13" fill="#91ada5" stroke="#f7fbf8" stroke-width="4"/>
+<circle cx="140" cy="391" r="11" fill="#91ada5" stroke="#f7fbf8" stroke-width="4"/>
+<circle cx="187" cy="393" r="16" fill="#91ada5" stroke="#f7fbf8" stroke-width="4"/>
+<text x="177" y="207" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#34475a">Full-scene thumbnail · 512²</text>
+<text x="177" y="325" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#34475a">Local RGB crop · 1024²</text>
+<rect x="365" y="245" width="250" height="175" rx="17" fill="#dceefc" stroke="#5a94c4" stroke-width="3"/>
+<text x="490.0" y="324.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#243247">Shared MiT-B2</text>
+<text x="490.0" y="359.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="500" fill="#526477">same weights · two passes</text>
+<path d="M270 256 H365" fill="none" stroke="#2876b9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M270 373 H365" fill="none" stroke="#2876b9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<rect x="700" y="190" width="350" height="78" rx="17" fill="#e3f1fc" stroke="#5a94c4" stroke-width="3"/>
+<text x="875.0" y="238.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#243247">GAP → global token → FiLM</text>
+<path d="M615 284 H665 V230 H700" fill="none" stroke="#2876b9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M615 372 H1280" fill="none" stroke="#2876b9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M1050 230 H2040" fill="none" stroke="#2876b9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M1355 230 V285" fill="none" stroke="#2876b9" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M1555 230 V285" fill="none" stroke="#2876b9" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M1755 230 V285" fill="none" stroke="#2876b9" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M1955 230 V285" fill="none" stroke="#2876b9" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<text x="1105" y="215" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600" fill="#397ba9">four-stage modulation</text>
+<rect x="1280" y="285" width="150" height="125" rx="17" fill="#dceefa" stroke="#4a91c6" stroke-width="3"/>
+<text x="1355.0" y="339.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" fill="#243247">R₁</text>
+<text x="1355.0" y="374.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="500" fill="#526477">1/4 · 64 ch</text>
+<rect x="1480" y="285" width="150" height="125" rx="17" fill="#dceefa" stroke="#4a91c6" stroke-width="3"/>
+<text x="1555.0" y="339.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" fill="#243247">R₂</text>
+<text x="1555.0" y="374.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="500" fill="#526477">1/8 · 128 ch</text>
+<rect x="1680" y="285" width="150" height="125" rx="17" fill="#dceefa" stroke="#4a91c6" stroke-width="3"/>
+<text x="1755.0" y="339.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" fill="#243247">R₃</text>
+<text x="1755.0" y="374.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="500" fill="#526477">1/16 · 320 ch</text>
+<rect x="1880" y="285" width="150" height="125" rx="17" fill="#dceefa" stroke="#4a91c6" stroke-width="3"/>
+<text x="1955.0" y="339.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="31" font-weight="700" fill="#243247">R₄</text>
+<text x="1955.0" y="374.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="500" fill="#526477">1/32 · 512 ch</text>
+<path d="M1430 348 H1480" fill="none" stroke="#2876b9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M1630 348 H1680" fill="none" stroke="#2876b9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M1830 348 H1880" fill="none" stroke="#2876b9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<rect x="835" y="555" width="330" height="132" rx="17" fill="#f7fbfe" stroke="#82afd0" stroke-width="3"/>
+<text x="1000.0" y="613.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#243247">RGB auxiliary heads</text>
+<text x="1000.0" y="648.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="500" fill="#526477">Zᵣ · boundary Bᵣ · uncertainty Uᵣ</text>
+<path d="M1280 385 H1190 V620 H1165" fill="none" stroke="#2876b9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M835 620 H790 V820 H640 V920" fill="none" stroke="#2876b9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<text x="782" y="804" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600" fill="#397ba9">R₁ + Bᵣ guide RGR</text>
+<path d="M270 335 H290 V142 H3150 V585" fill="none" stroke="#2876b9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="11 9" marker-end="url(#arrow-blue)"/>
+<text x="2820" y="137" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="600" fill="#397ba9">local RGB detail skip</text>
+<rect x="85" y="925" width="185" height="126" rx="17" fill="#ffffff" stroke="#54aaa1" stroke-width="3"/>
+<text x="177.5" y="980.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#243247">Depth Anything V2</text>
+<text x="177.5" y="1015.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="500" fill="#526477">offline · frozen</text>
+<rect x="85" y="925" width="185" height="126" rx="17" fill="none" stroke="#159895" stroke-width="2.5" stroke-dasharray="10 8"/>
+<path d="M85 262 H63 V905 H178 V925" fill="none" stroke="#8aa69f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="9 8" marker-end="url(#arrow)"/>
+<rect x="310" y="940" width="170" height="97" rx="17" fill="#ddf4ef" stroke="#4fa99f" stroke-width="3"/>
+<text x="395.0" y="980.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#243247">D₀ + Q₀</text>
+<text x="395.0" y="1015.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="500" fill="#526477">depth · prior</text>
+<rect x="525" y="923" width="220" height="130" rx="17" fill="#d6f1ec" stroke="#319b90" stroke-width="3"/>
+<text x="635.0" y="980.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#243247">RGR rectifier</text>
+<text x="635.0" y="1015.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="500" fill="#526477">bounded deformable correction</text>
+<rect x="790" y="923" width="200" height="130" rx="17" fill="#ddf4ef" stroke="#4fa99f" stroke-width="3"/>
+<text x="890.0" y="980.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" fill="#243247">D̂ + Qd</text>
+<text x="890.0" y="1015.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="500" fill="#526477">Qd = Q₀ × Qlearn</text>
+<rect x="1035" y="920" width="220" height="136" rx="17" fill="#d6f1ec" stroke="#319b90" stroke-width="3"/>
+<text x="1145.0" y="980.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#243247">Geometry encoder</text>
+<text x="1145.0" y="1015.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="500" fill="#526477">+ top-down FPN</text>
+<path d="M270 988 H310" fill="none" stroke="#159895" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-teal)"/>
+<path d="M480 988 H525" fill="none" stroke="#159895" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-teal)"/>
+<path d="M745 988 H790" fill="none" stroke="#159895" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-teal)"/>
+<path d="M990 988 H1035" fill="none" stroke="#159895" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-teal)"/>
+<path d="M1255 988 H1270 V1094 H1955" fill="none" stroke="#159895" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1280" y="925" width="150" height="114" rx="17" fill="#dbf3ee" stroke="#39a79b" stroke-width="3"/>
+<text x="1355.0" y="974.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#243247">G₁</text>
+<text x="1355.0" y="1009.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="500" fill="#526477">1/4 · 32 ch</text>
+<path d="M1355 1094 V1039" fill="none" stroke="#159895" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-teal)"/>
+<rect x="1480" y="925" width="150" height="114" rx="17" fill="#dbf3ee" stroke="#39a79b" stroke-width="3"/>
+<text x="1555.0" y="974.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#243247">G₂</text>
+<text x="1555.0" y="1009.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="500" fill="#526477">1/8 · 64 ch</text>
+<path d="M1555 1094 V1039" fill="none" stroke="#159895" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-teal)"/>
+<rect x="1680" y="925" width="150" height="114" rx="17" fill="#dbf3ee" stroke="#39a79b" stroke-width="3"/>
+<text x="1755.0" y="974.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#243247">G₃</text>
+<text x="1755.0" y="1009.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="500" fill="#526477">1/16 · 128 ch</text>
+<path d="M1755 1094 V1039" fill="none" stroke="#159895" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-teal)"/>
+<rect x="1880" y="925" width="150" height="114" rx="17" fill="#dbf3ee" stroke="#39a79b" stroke-width="3"/>
+<text x="1955.0" y="974.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#243247">G₄</text>
+<text x="1955.0" y="1009.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="500" fill="#526477">1/32 · 256 ch</text>
+<path d="M1955 1094 V1039" fill="none" stroke="#159895" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-teal)"/>
+<text x="1370" y="1128" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="500" fill="#16847d">G₁ → Zg auxiliary logit</text>
+<rect x="1260" y="565" width="190" height="152" rx="17" fill="#fff0dc" stroke="#df9b43" stroke-width="3"/>
+<text x="1355.0" y="633.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#243247">Haar / high band</text>
+<text x="1355.0" y="668.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="500" fill="#526477">R₁ · G₁ · Bᵣ · Qd</text>
+<rect x="1485" y="583" width="175" height="116" rx="17" fill="#eee8f8" stroke="#9575bb" stroke-width="3"/>
+<text x="1572.5" y="633.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#243247">Qd residual</text>
+<text x="1572.5" y="668.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="500" fill="#526477">fusion · 1/4</text>
+<rect x="1660" y="565" width="190" height="152" rx="17" fill="#fff0dc" stroke="#df9b43" stroke-width="3"/>
+<text x="1755.0" y="633.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#243247">Deep region</text>
+<text x="1755.0" y="668.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="500" fill="#526477">R₃ · G₃ · Uᵣ · Qd</text>
+<rect x="1885" y="583" width="175" height="116" rx="17" fill="#eee8f8" stroke="#9575bb" stroke-width="3"/>
+<text x="1972.5" y="633.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" fill="#243247">Qd residual</text>
+<text x="1972.5" y="668.0" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="500" fill="#526477">fusion · 1/16</text>
+<path d="M1355 410 V565" fill="none" stroke="#2876b9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M1355 925 V717" fill="none" stroke="#159895" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-teal)"/>
+<path d="M1755 410 V565" fill="none" stroke="#2876b9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M1755 925 V717" fill="none" stroke="#159895" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-teal)"/>
+<path d="M1450 640 H1485" fill="none" stroke="#7653a6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-purple)"/>
+<path d="M1850 640 H1885" fill="none" stroke="#7653a6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-purple)"/>
+<text x="1318" y="748" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600" fill="#af742c">ΔFh · 1/4 boundary</text>
+<text x="1720" y="748" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600" fill="#af742c">ΔFl · 1/16 region</text>
+<rect x="2200" y="558" width="155" height="193" rx="17" fill="#ffffff" stroke="#9d87b9" stroke-width="3"/>
+<text x="2277" y="591" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="700" fill="#5c4b7c">Decoder inputs</text>
+<text x="2277" y="625" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" fill="#26354a">R₁′  fused</text>
+<text x="2277" y="657" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" fill="#26354a">R₂   RGB</text>
+<text x="2277" y="689" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" fill="#26354a">R₃′  fused</text>
+<text x="2277" y="721" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="600" fill="#26354a">R₄   RGB</text>
+<path d="M1660 640 V492 H2150 V619 H2200" fill="none" stroke="#7653a6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-purple)"/>
+<circle cx="1755" cy="492" r="9" fill="#ffffff"/>
+<path d="M1755 410 V565" fill="none" stroke="#2876b9" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M2060 640 H2140 V682 H2200" fill="none" stroke="#7653a6" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-purple)"/>
+<path d="M1630 349 H1644 V272 H2240 V558" fill="none" stroke="#2876b9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M2030 349 H2090 V250 H2315 V558" fill="none" stroke="#2876b9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<text x="2175" y="262" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="600" fill="#397ba9">R₂ / R₄ RGB bypass</text>
+<rect x="2380" y="590" width="175" height="125" rx="17" fill="#e9e2f5" stroke="#9477b9" stroke-width="3"/>
+<text x="2467.5" y="644.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#243247">Multi-scale</text>
+<text x="2467.5" y="679.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="500" fill="#526477">decoder · 128 ch</text>
+<rect x="2585" y="590" width="175" height="125" rx="17" fill="#f6f4fa" stroke="#a394bd" stroke-width="3"/>
+<text x="2672.5" y="644.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#243247">Coarse logit</text>
+<text x="2672.5" y="679.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="500" fill="#526477">boundary · SDF</text>
+<rect x="2790" y="590" width="185" height="125" rx="17" fill="#f6f4fa" stroke="#a394bd" stroke-width="3"/>
+<text x="2882.5" y="644.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#243247">Boundary-guided</text>
+<text x="2882.5" y="679.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="500" fill="#526477">residual refinement · 1/4</text>
+<rect x="3005" y="590" width="210" height="125" rx="17" fill="#eef4fc" stroke="#6799c8" stroke-width="3"/>
+<text x="3110.0" y="644.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" fill="#243247">RGB detail</text>
+<text x="3110.0" y="679.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="500" fill="#526477">refinement · 1/2</text>
+<rect x="3245" y="565" width="210" height="177" rx="17" fill="#ffffff" stroke="#4b687e" stroke-width="3"/>
+<text x="3350" y="593" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#26354a">Final binary mask</text>
+<rect x="3305" y="612" width="90" height="105" rx="2" fill="#192a3b" stroke="#192a3b" stroke-width="1"/>
+<circle cx="3331" cy="640" r="11" fill="none" stroke="#ffffff" stroke-width="5"/>
+<circle cx="3366" cy="644" r="14" fill="none" stroke="#ffffff" stroke-width="5"/>
+<circle cx="3341" cy="682" r="14" fill="none" stroke="#ffffff" stroke-width="5"/>
+<circle cx="3378" cy="687" r="10" fill="none" stroke="#ffffff" stroke-width="5"/>
+<path d="M2355 652 H2380" fill="none" stroke="#334155" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M2555 652 H2585" fill="none" stroke="#334155" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M2760 652 H2790" fill="none" stroke="#334155" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M2975 652 H3005" fill="none" stroke="#334155" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M3215 652 H3245" fill="none" stroke="#334155" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M70 1171 H3490" fill="none" stroke="#d4dfe8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="76" y="1200" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="500" fill="#596c7e">Qd = 0 suppresses geometry residuals; RGB features remain the fallback path.</text>
+<rect x="2640" y="1180" width="30" height="22" rx="4" fill="#dceefa" stroke="#b3c2ce" stroke-width="1"/>
+<text x="2680" y="1199" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600" fill="#536477">RGB</text>
+<rect x="2830" y="1180" width="30" height="22" rx="4" fill="#dbf3ee" stroke="#b3c2ce" stroke-width="1"/>
+<text x="2870" y="1199" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600" fill="#536477">Geometry</text>
+<rect x="3050" y="1180" width="30" height="22" rx="4" fill="#fff0dc" stroke="#b3c2ce" stroke-width="1"/>
+<text x="3090" y="1199" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600" fill="#536477">Validation</text>
+<rect x="3290" y="1180" width="30" height="22" rx="4" fill="#eee8f8" stroke="#b3c2ce" stroke-width="1"/>
+<text x="3330" y="1199" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="600" fill="#536477">Fusion</text>
+</svg>

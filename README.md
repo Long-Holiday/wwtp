@@ -11,6 +11,7 @@
 - UNetFormer（ResNet-18）
 - RS-Mamba（Tiny，八方向 selective scan）
 - RPGV-Net（MiT-B2 + 可靠性感知伪几何校正与双频验证）
+- CBR-Net、HD-Net（独立边界模型对比配置，见 [使用说明](docs/edge_baselines.md)）
 
 数据、模型、训练策略、评价指标和命令入口彼此解耦。新增模型或消融实验通常只需增加一个注册模块和一份继承配置，不需要修改训练器。
 
@@ -190,6 +191,8 @@ docker compose run --rm wwtp \
 ```
 
 结果同时写入终端和对应 `work_dirs/<model>/` 日志。
+
+WWTP 全模型 val/test 黑白掩码和逐图对比图的生成方式见 [推理对比图说明](docs/wwtp_inference_gallery.md)。
 
 ## 指标定义
 

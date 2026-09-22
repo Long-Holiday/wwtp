@@ -745,7 +745,7 @@ python tools/test_rpgv_numerics.py -v
 相同模块并保留相同 `state_dict` 键，因此可以严格复用阶段 checkpoint。被旁路的
 参数会同步冻结，避免 DDP 未使用参数问题，也使可训练参数量能够反映真实实验。
 
-开关的默认值均为 `True`：
+下表是可用的消融开关全集；实际执行子集见下一节。开关的默认值均为 `True`：
 
 | 开关 | 关闭后的行为 | 对应配置 |
 | --- | --- | --- |
@@ -756,6 +756,7 @@ python tools/test_rpgv_numerics.py -v
 | `frequency_validation` | 以同尺度几何投影替代 Haar/跨模态验证，仍保留两处残差注入 | `rpgv_no_frequency_validation.py` |
 | `boundary_fusion` | 移除 $1/4$ 边界残差 | `rpgv_no_boundary_fusion.py` |
 | `region_fusion` | 移除 $1/16$ 区域残差 | `rpgv_no_region_fusion.py` |
+| 两尺度融合整体 | 同时移除 $1/4$ 与 $1/16$ 几何残差 | `rpgv_no_geometry_fusion.py` |
 | `reliability_weighting` | 注入有界残差时不再乘 $Q_d$ | `rpgv_unweighted_fusion.py` |
 | `boundary_refinement` | 直接使用 $1/4$ 粗 logit，仍保留形状辅助监督 | `rpgv_no_boundary_refinement.py` |
 | `detail_refinement` | 不执行 $1/2$ RGB 细节精修 | `rpgv_no_detail_refinement.py` |
@@ -769,7 +770,57 @@ python tools/test_rpgv_numerics.py -v
 几何信息，符合单因素消融原则。类似地，关闭边界精修时仍保留边界/SDF 辅助
 任务；显式形状监督由独立配置检验。
 
-### 2. 公平训练协议
+### 2. 精简执行计划（2026-09-21）
+
+原计划的 12 项消融缩减为 **7 项**：保留已完成的 4 项和正在运行的 1 项，
+后续只增加 `no_depth_rectification` 与 `no_geometry_fusion`。后者同时关闭
+`boundary_fusion` 和 `region_fusion`，只检验两处几何残差注入的**整体贡献**，
+不能据此分别归因于 $1/4$ 边界融合或 $1/16$ 区域融合。
+
+| 状态 | 消融任务 | 决策依据 |
+| --- | --- | --- |
+| 已完成 | `no_rgr`、`no_frequency_validation`、`no_global_context`、`unweighted_fusion` | 已覆盖 RGR 整体、双频验证、全局上下文和可靠度加权四个主要假设 |
+| 进行中 | `no_detail_refinement` | 检验 $1/2$ RGB 细节精修；未得到验证和测试结果前不算完成 |
+| 待做 | `no_depth_rectification` | 与 `no_rgr` 配合，进一步检验深度校正的作用 |
+| 待做（合并） | `no_geometry_fusion`：`boundary_fusion=False` 且 `region_fusion=False` | 替代分别运行 `no_boundary_fusion` 和 `no_region_fusion`，检验几何注入整体作用 |
+| 暂跳过 | `offline_reliability_only` | 已有 RGR 整体实验；如需单独证明学习可靠度的贡献，再补做 |
+| 暂跳过 | `no_boundary_refinement`、`no_shape_auxiliary` | 与细节精修分别检验不同因素；跳过后不得声称已单独验证这两项的贡献 |
+| 暂跳过 | `no_geometry_dropout` | 常规干净测试集不能直接检验几何失效时的 RGB 回退能力；如需主张鲁棒性，应配合缺失或破坏几何的测试补做 |
+
+`no_geometry_fusion` 的联合配置在同一次训练中将两个开关同时设为 `False`；
+不能把两项单独消融的结果相加或当作联合结果。两个消融脚本的默认列表只包含
+上述 7 项；自动运行器默认仅执行两个待做项，`--ablation all` 才选择 7 项。
+跳过的单项配置仍可显式选择。上述 7 项是不同模型
+变体的数量，不包含完整模型和 RGB-only 对照。
+暂跳过仅代表当前研究范围的取舍，不代表这些模块已被证明无效。
+
+现有结果属于从同一阶段二 checkpoint 出发的阶段三快速诊断。
+截至本次调整，四项已完成消融的测试 Foreground IoU 分别为：
+`no_rgr` 73.63%、`no_frequency_validation` 70.73%、
+`no_global_context` 71.83%、`unweighted_fusion` 70.67%；
+完整模型为 77.17%。但完整模型训练了 40k 步，已完成消融因提前停止实际仅
+训练了 4k–8k 步，其中 `no_rgr` 的梯度累积为 4，其余为 8。
+因此这些分数只用于确定后续优先级，不能直接解释为模块的精确性能增益。
+
+当前先沿用已有消融的阶段三快速诊断配置，完成两个待做变体；自动运行器默认
+只执行它们，不会重复运行已完成实验或触碰正在运行的 `no_detail_refinement`：
+
+```bash
+python3 scripts/run_ablation_suite.py --ablation pending
+```
+
+运行器沿用同一阶段二 checkpoint、16k 步上限、每 1k 步验证、梯度累积 8 和
+现有提前停止规则，训练结束后用最佳验证 checkpoint 测试，结果仍写入
+`work_dirs/rpgv_ablations/`。如任务工作目录已有未完成训练，运行器会停止，
+避免把训练途中的最佳 checkpoint 误当作最终结果。单项入口
+`scripts/run_single_ablation.sh` 也调用同一运行器。
+
+后续若要进行正式性能归因，需补充同协议的 `full` 对照，并统一训练步数、
+学习率计划、验证间隔、梯度累积和停止规则；`no_rgr` 至少需按统一梯度累积
+重跑。完整模型的验证曲线在早期回落后仍再次提高，因此当前提前停止结果只
+适合快速诊断。正式论文结论应使用下节的完整三阶段训练协议。
+
+### 3. 公平训练协议
 
 正式消融应从阶段一开始完整重训，而不是只在阶段三临时关闭模块：
 
@@ -788,12 +839,16 @@ work_dirs/rpgv_ablations/<ablation>/
 ```
 
 可通过空格分隔的 `RPGV_ABLATIONS` 选择子集；`full` 可用于在同一目录结构下
-重跑完整对照。例如：
+重跑完整对照。脚本默认列表为精简后的 7 项；例如只选择完整对照和两个待做
+变体：
 
 ```bash
-RPGV_ABLATIONS="full no_frequency_validation no_region_fusion" \
+RPGV_ABLATIONS="full no_depth_rectification no_geometry_fusion" \
   bash scripts/train_rpgv_ablations.sh
 ```
+
+上述完整三阶段入口与本次继续执行的阶段三快速诊断入口不同；本次先使用前节
+的 `run_ablation_suite.py --ablation pending`。
 
 `configs/ablations/` 下的独立配置继承阶段三配置，适合已有统一阶段二 checkpoint
 时做快速诊断；它们不替代正式的全流程重训。快速运行示例：
@@ -802,12 +857,13 @@ RPGV_ABLATIONS="full no_frequency_validation no_region_fusion" \
 bash scripts/train_rpgv_ablations_from_stage2.sh
 ```
 
-该脚本默认自动选择 `work_dirs/rpgv_staged/stage2_geometry/` 中最新的最佳
+该脚本默认从 7 项计划中选择变体，并自动选择
+`work_dirs/rpgv_staged/stage2_geometry/` 中最新的最佳
 checkpoint，并把变体写入 `work_dirs/rpgv_ablations_stage3/`。也可通过
 `RPGV_STAGE2_CHECKPOINT` 指定 checkpoint，通过 `RPGV_ABLATIONS` 选择子集；
 选择规则与完整重训脚本相同。
 
-### 3. 汇总与验证
+### 4. 汇总与验证
 
 汇总工具会在每个变体的 `stage3_joint` 日志中按 Foreground IoU 选择最佳验证
 记录，并同时报告 Dice、Boundary F1 和 HD95：

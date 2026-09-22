@@ -1,0 +1,22 @@
+{
+  "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11466675/",
+  "paper": "Samba: Semantic segmentation of remotely sensed images with state space model (Heliyon, 2024), Tables 2 and 4",
+  "loveda": {
+    "protocol": "official validation, seven classes, no-data ignored",
+    "metric_keys": {"mIoU": "mIoU", "mF1": "mFscore"},
+    "rows": [
+      {"model": "DeepLabV3+ / ResNet50", "mIoU": 34.60, "mF1": 50.72},
+      {"model": "SegFormer / Mix ViT", "mIoU": 43.16, "mF1": 59.75},
+      {"model": "Samba / UperNet", "mIoU": 47.11, "mF1": 63.17}
+    ]
+  },
+  "potsdam": {
+    "protocol": "historical 24 train / 14 test RGB tiles, five scored classes, clutter excluded",
+    "metric_keys": {"mIoU": "full/mIoU5", "mF1": "full/mF15"},
+    "rows": [
+      {"model": "DeepLabV3+ / ResNet50", "mIoU": 75.23, "mF1": 85.70},
+      {"model": "SegFormer / Mix ViT", "mIoU": 81.13, "mF1": 89.42},
+      {"model": "Samba / UperNet", "mIoU": 82.29, "mF1": 90.15}
+    ]
+  }
+}

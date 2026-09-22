@@ -6,18 +6,13 @@ set -euo pipefail
 # configs/ablations files are intended for quicker stage-3 diagnostics.
 WORK_ROOT="${RPGV_ABLATION_WORK_ROOT:-work_dirs/rpgv_ablations}"
 DEFAULT_ABLATIONS=(
-  no_global_context
   no_rgr
-  no_depth_rectification
-  offline_reliability_only
   no_frequency_validation
-  no_boundary_fusion
-  no_region_fusion
+  no_global_context
   unweighted_fusion
-  no_boundary_refinement
   no_detail_refinement
-  no_geometry_dropout
-  no_shape_auxiliary
+  no_depth_rectification
+  no_geometry_fusion
 )
 
 if [[ -n "${RPGV_ABLATIONS:-}" ]]; then
@@ -54,6 +49,12 @@ for ablation in "${selected_ablations[@]}"; do
       ;;
     no_region_fusion)
       overrides=(model.component_cfg.region_fusion=False)
+      ;;
+    no_geometry_fusion)
+      overrides=(
+        model.component_cfg.boundary_fusion=False
+        model.component_cfg.region_fusion=False
+      )
       ;;
     unweighted_fusion)
       overrides=(model.component_cfg.reliability_weighting=False)

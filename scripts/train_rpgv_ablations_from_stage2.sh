@@ -7,18 +7,13 @@ SOURCE_ROOT="${RPGV_SOURCE_WORK_ROOT:-work_dirs/rpgv_staged}"
 WORK_ROOT="${RPGV_ABLATION_WORK_ROOT:-work_dirs/rpgv_ablations_stage3}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 DEFAULT_ABLATIONS=(
-  no_global_context
   no_rgr
-  no_depth_rectification
-  offline_reliability_only
   no_frequency_validation
-  no_boundary_fusion
-  no_region_fusion
+  no_global_context
   unweighted_fusion
-  no_boundary_refinement
   no_detail_refinement
-  no_geometry_dropout
-  no_shape_auxiliary
+  no_depth_rectification
+  no_geometry_fusion
 )
 
 latest_checkpoint() {

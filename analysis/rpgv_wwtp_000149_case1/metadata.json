@@ -1,0 +1,76 @@
+{
+  "config": "/workspace/configs/experiments/rpgv_stage3_joint.py",
+  "checkpoint": "/workspace/work_dirs/rpgv_staged/stage3_joint/iter_40000.pth",
+  "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000149.png",
+  "pseudo_geometry": "/workspace/wwtp_semantic_dataset/pseudo_geometry/val/wwtp_000149.npz",
+  "gt": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000149.png",
+  "split": "val",
+  "roi_xywh": [
+    0,
+    0,
+    1024,
+    1024
+  ],
+  "paper_display_zoom_xywh": [
+    0,
+    0,
+    1024,
+    1024
+  ],
+  "components": {
+    "global_context": true,
+    "depth_rectification": true,
+    "learned_reliability": true,
+    "frequency_validation": true,
+    "boundary_fusion": true,
+    "region_fusion": true,
+    "reliability_weighting": true,
+    "boundary_refinement": true,
+    "detail_refinement": true
+  },
+  "available_maps": [
+    "boundary_response",
+    "boundary_response_candidate",
+    "boundary_validation_mean",
+    "corrected_depth",
+    "depth_correction",
+    "depth_d0",
+    "depth_d0_at_rectifier_scale",
+    "detail_gate",
+    "effective_fusion_weight",
+    "error",
+    "final_mask",
+    "final_minus_rgb_fallback",
+    "final_probability",
+    "geometry_aux_probability",
+    "gt",
+    "learned_reliability",
+    "refinement_gate",
+    "region_response",
+    "region_response_candidate",
+    "region_validation_mean",
+    "reliability_q0",
+    "rgb_aux_probability",
+    "rgb_fallback_probability",
+    "task_reliability"
+  ],
+  "roi_tp": 299938,
+  "roi_fp": 38548,
+  "roi_fn": 6361,
+  "roi_iou": 0.8697712318796452,
+  "map_means": {
+    "depth_correction": -0.0027255238965153694,
+    "task_reliability": 0.8533838391304016,
+    "boundary_response": 0.3638656437397003,
+    "region_response": 0.37035709619522095,
+    "boundary_validation_mean": 0.38679084181785583,
+    "region_validation_mean": 0.469465434551239,
+    "final_minus_rgb_fallback": -0.0001028536498779431
+  },
+  "paper_color_limits": {
+    "correction": 0.25,
+    "feature_response_mode": "joint_99th_percentile",
+    "feature_response": 0.8618629276752472
+  },
+  "note": "Single local window with a full-scene global token; final P is the local model output, not stitched whole-image slide inference. Validation weights are channel means; response maps are mean absolute changes to fused RGB features. RGB-only decoder uses the same joint checkpoint with geometry and reliability absent."
+}
