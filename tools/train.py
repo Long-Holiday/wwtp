@@ -71,6 +71,9 @@ def parse_args() -> argparse.Namespace:
         '--no-resume-scheduler', action='store_true',
         help='do not resume param scheduler state when resuming training')
     parser.add_argument(
+        '--disable-early-stopping', action='store_true',
+        help='remove configured early stopping and do not inject a default hook')
+    parser.add_argument(
         '--cfg-options', nargs='+', action=DictAction,
         help='override config values, e.g. train_dataloader.batch_size=2')
     return parser.parse_args()
@@ -101,12 +104,20 @@ def main() -> None:
             '`scripts/train_rpgv_stages.sh`, set the documented checkpoint '
             'environment variable, or pass --resume for an interrupted stage.')
 
-    # Inject EarlyStoppingHook to prevent overtraining when validation plateaus
-    custom_hooks = cfg.get('custom_hooks', [])
+    # Fixed-budget experiment runners may disable this automatic injection.
+    # Explicit custom hooks remain the caller's responsibility.
+    custom_hooks = list(cfg.get('custom_hooks', []))
+    if args.disable_early_stopping:
+        custom_hooks = [
+            hook for hook in custom_hooks
+            if not (isinstance(hook, dict)
+                    and hook.get('type') in ('EarlyStoppingHook', 'RPGVEarlyStoppingHook'))]
+        cfg.custom_hooks = custom_hooks
     has_early_stopping = any(
-        (isinstance(h, dict) and h.get('type') == 'EarlyStoppingHook')
+        (isinstance(h, dict) and h.get('type') in ('EarlyStoppingHook', 'RPGVEarlyStoppingHook'))
         for h in custom_hooks)
-    if not has_early_stopping:
+    enable_early_stopping = cfg.pop('enable_early_stopping', True)
+    if enable_early_stopping and not args.disable_early_stopping and not has_early_stopping:
         custom_hooks.append(
             dict(
                 type='EarlyStoppingHook',

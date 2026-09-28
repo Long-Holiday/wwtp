@@ -1,0 +1,1720 @@
+{
+  "schema": 1,
+  "metric_units": "percent except HD95_px",
+  "selection": "validation foreground IoU; independent test results where present",
+  "stages": {
+    "v1_stage1": {
+      "name": "v1_stage1",
+      "directory": "work_dirs/rpgv_staged/stage1_rgb",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_staged/stage1_rgb/20260919_103639/vis_data/scalars.json",
+          "evaluations": 10,
+          "best_step": 16000,
+          "last_step": 20000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 71.73323879396624,
+            "binary/Boundary_F1": 13.571955084862209,
+            "binary/Precision": 79.30371022763025,
+            "binary/Recall": 88.25511272568377,
+            "binary/HD95_px": 348.38628844882135
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 63.414575461315515,
+            "binary/Boundary_F1": 9.594160314812287,
+            "binary/Precision": 66.09998487785703,
+            "binary/Recall": 93.9792312587944,
+            "binary/HD95_px": 466.8427737062281
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_staged/stage1_rgb/test_eval/test_results.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 64.9525,
+          "binary/Boundary_F1": 9.7711,
+          "binary/Precision": 68.5724,
+          "binary/Recall": 92.4841,
+          "binary/HD95_px": 457.1993
+        }
+      }
+    },
+    "v1_stage2": {
+      "name": "v1_stage2",
+      "directory": "work_dirs/rpgv_staged/stage2_geometry",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_staged/stage2_geometry/20260919_135612/vis_data/scalars.json",
+          "evaluations": 6,
+          "best_step": 10000,
+          "last_step": 12000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 35.90118977105966,
+            "binary/Boundary_F1": 2.124811470962573,
+            "binary/Precision": 39.603269794736725,
+            "binary/Recall": 79.34121547934784,
+            "binary/HD95_px": 789.0716999061095
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 30.74630018152269,
+            "binary/Boundary_F1": 1.7022004721966715,
+            "binary/Precision": 32.18422202139611,
+            "binary/Recall": 87.3125058731127,
+            "binary/HD95_px": 1078.2261330030558
+          }
+        }
+      ],
+      "completed": null,
+      "test": null
+    },
+    "v1_stage3": {
+      "name": "v1_stage3",
+      "directory": "work_dirs/rpgv_staged/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_staged/stage3_joint/20260919_153804/vis_data/scalars.json",
+          "evaluations": 20,
+          "best_step": 40000,
+          "last_step": 40000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 76.86981469912986,
+            "binary/Boundary_F1": 16.591556178035848,
+            "binary/Precision": 83.19873535903727,
+            "binary/Recall": 90.99517161097246,
+            "binary/HD95_px": 258.85084459437417
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 76.86981469912986,
+            "binary/Boundary_F1": 16.591556178035848,
+            "binary/Precision": 83.19873535903727,
+            "binary/Recall": 90.99517161097246,
+            "binary/HD95_px": 258.85084459437417
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_staged/stage3_joint/test_eval/20260920_004330/20260920_004330.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 77.17165434733676,
+          "binary/Boundary_F1": 16.680087712972078,
+          "binary/Precision": 83.68605758199381,
+          "binary/Recall": 90.83721437651,
+          "binary/HD95_px": 265.9770589092878
+        }
+      }
+    },
+    "v1_stage3_restart_30k": {
+      "name": "v1_stage3_restart_30k",
+      "directory": "work_dirs/rpgv_stage3_restart_30k",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_stage3_restart_30k/20260921_110310/vis_data/scalars.json",
+          "evaluations": 4,
+          "best_step": 6000,
+          "last_step": 8000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 77.36097072441825,
+            "binary/Boundary_F1": 16.805525875150938,
+            "binary/Precision": 84.03071107912477,
+            "binary/Recall": 90.69469013249044,
+            "binary/HD95_px": 242.05837070109422
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 76.55679344031083,
+            "binary/Boundary_F1": 16.990074099614326,
+            "binary/Precision": 82.51445676402828,
+            "binary/Recall": 91.38170357738137,
+            "binary/HD95_px": 265.85000678577666
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_stage3_restart_30k/test_eval/20260921_130631.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 77.73616379983122,
+          "binary/Boundary_F1": 16.99408274857174,
+          "binary/Precision": 84.83275129433025,
+          "binary/Recall": 90.2842789251817,
+          "binary/HD95_px": 250.568050744918
+        }
+      }
+    },
+    "v1_no_depth_rectification": {
+      "name": "v1_no_depth_rectification",
+      "directory": "work_dirs/rpgv_ablations/no_depth_rectification/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_ablations/no_depth_rectification/stage3_joint/20260921_081038/vis_data/scalars.json",
+          "evaluations": 5,
+          "best_step": 5000,
+          "last_step": 5000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 73.16084208545558,
+            "binary/Boundary_F1": 14.422489734789066,
+            "binary/Precision": 80.28797083188792,
+            "binary/Recall": 89.1794304460961,
+            "binary/HD95_px": 326.0635056728066
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 73.16084208545558,
+            "binary/Boundary_F1": 14.422489734789066,
+            "binary/Precision": 80.28797083188792,
+            "binary/Recall": 89.1794304460961,
+            "binary/HD95_px": 326.0635056728066
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_ablations/no_depth_rectification/stage3_joint/test_eval/20260921_094015.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 72.4531876195837,
+          "binary/Boundary_F1": 14.125277222932315,
+          "binary/Precision": 80.23319687573073,
+          "binary/Recall": 88.1962826809904,
+          "binary/HD95_px": 371.14682056522054
+        }
+      }
+    },
+    "v1_no_detail_refinement": {
+      "name": "v1_no_detail_refinement",
+      "directory": "work_dirs/rpgv_ablations/no_detail_refinement/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_ablations/no_detail_refinement/stage3_joint/20260921_065257/vis_data/scalars.json",
+          "evaluations": 4,
+          "best_step": 1000,
+          "last_step": 4000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 71.63197154553322,
+            "binary/Boundary_F1": 13.107544882488567,
+            "binary/Precision": 81.96822313723747,
+            "binary/Recall": 85.0311422982076,
+            "binary/HD95_px": 341.3057297902693
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 69.9342262408012,
+            "binary/Boundary_F1": 12.549079598401224,
+            "binary/Precision": 75.00674298866076,
+            "binary/Recall": 91.18251046191652,
+            "binary/HD95_px": 404.8106537012113
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_ablations/no_detail_refinement/stage3_joint/test_eval/20260921_081003.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 70.72897126984171,
+          "binary/Boundary_F1": 13.196239518683203,
+          "binary/Precision": 82.07594530936133,
+          "binary/Recall": 83.6495271530014,
+          "binary/HD95_px": 350.92109442585775
+        }
+      }
+    },
+    "v1_no_frequency_validation": {
+      "name": "v1_no_frequency_validation",
+      "directory": "work_dirs/rpgv_ablations/no_frequency_validation/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_ablations/no_frequency_validation/stage3_joint/20260921_014019/vis_data/scalars.json",
+          "evaluations": 4,
+          "best_step": 1000,
+          "last_step": 4000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 71.59220499668332,
+            "binary/Boundary_F1": 13.05964236481843,
+            "binary/Precision": 82.21562422086276,
+            "binary/Recall": 84.7108523572768,
+            "binary/HD95_px": 334.52907419479436
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 69.78214914513057,
+            "binary/Boundary_F1": 12.80757716193791,
+            "binary/Precision": 76.45733089573673,
+            "binary/Recall": 88.88002548288976,
+            "binary/HD95_px": 385.8028538658134
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_ablations/no_frequency_validation/stage3_joint/test_eval/20260921_030306.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 70.7288626962983,
+          "binary/Boundary_F1": 13.146965111055886,
+          "binary/Precision": 82.34315206254193,
+          "binary/Recall": 83.37363799838931,
+          "binary/HD95_px": 353.4640606215522
+        }
+      }
+    },
+    "v1_no_geometry_fusion": {
+      "name": "v1_no_geometry_fusion",
+      "directory": "work_dirs/rpgv_ablations/no_geometry_fusion/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_ablations/no_geometry_fusion/stage3_joint/20260921_094029/vis_data/scalars.json",
+          "evaluations": 4,
+          "best_step": 1000,
+          "last_step": 4000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 71.63555373804745,
+            "binary/Boundary_F1": 13.229458573148314,
+            "binary/Precision": 81.89717021950646,
+            "binary/Recall": 85.1127966116919,
+            "binary/HD95_px": 349.1085809200321
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 70.8389099730125,
+            "binary/Boundary_F1": 12.614046083461533,
+            "binary/Precision": 76.90723277719606,
+            "binary/Recall": 89.97776002771073,
+            "binary/HD95_px": 468.2621117200412
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_ablations/no_geometry_fusion/stage3_joint/test_eval/20260921_110233.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 70.47278001275296,
+          "binary/Boundary_F1": 13.216346582440957,
+          "binary/Precision": 81.65210943503325,
+          "binary/Recall": 83.73249424186967,
+          "binary/HD95_px": 361.908705567957
+        }
+      }
+    },
+    "v1_no_global_context": {
+      "name": "v1_no_global_context",
+      "directory": "work_dirs/rpgv_ablations/no_global_context/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_ablations/no_global_context/stage3_joint/20260921_030331/vis_data/scalars.json",
+          "evaluations": 8,
+          "best_step": 5000,
+          "last_step": 8000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 71.2943038669089,
+            "binary/Boundary_F1": 13.703042957640285,
+            "binary/Precision": 81.96390822455835,
+            "binary/Recall": 84.56034563833896,
+            "binary/HD95_px": 500.57378733747504
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 67.52267399710837,
+            "binary/Boundary_F1": 12.824304371353959,
+            "binary/Precision": 73.19846078604368,
+            "binary/Recall": 89.69936794503388,
+            "binary/HD95_px": 498.86547084647634
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_ablations/no_global_context/stage3_joint/test_eval/20260921_052818.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 71.82993277712562,
+          "binary/Boundary_F1": 14.19607778700269,
+          "binary/Precision": 82.1566535447207,
+          "binary/Recall": 85.1070780568348,
+          "binary/HD95_px": 485.88299530680524
+        }
+      }
+    },
+    "v1_no_rgr": {
+      "name": "v1_no_rgr",
+      "directory": "work_dirs/rpgv_ablations/no_rgr/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_ablations/no_rgr/stage3_joint/20260920_230241/vis_data/scalars.json",
+          "evaluations": 7,
+          "best_step": 7000,
+          "last_step": 7000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 74.4780282379057,
+            "binary/Boundary_F1": 15.248346988705924,
+            "binary/Precision": 81.52979992639801,
+            "binary/Recall": 89.59509905907527,
+            "binary/HD95_px": 299.8573545547265
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 74.4780282379057,
+            "binary/Boundary_F1": 15.248346988705924,
+            "binary/Precision": 81.52979992639801,
+            "binary/Recall": 89.59509905907527,
+            "binary/HD95_px": 299.8573545547265
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_ablations/no_rgr/stage3_joint/test_eval/20260921_013859.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 73.63360997333183,
+          "binary/Boundary_F1": 15.335766954963367,
+          "binary/Precision": 81.7204236365004,
+          "binary/Recall": 88.15301341132601,
+          "binary/HD95_px": 340.2654892039455
+        }
+      }
+    },
+    "v1_unweighted_fusion": {
+      "name": "v1_unweighted_fusion",
+      "directory": "work_dirs/rpgv_ablations/unweighted_fusion/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_ablations/unweighted_fusion/stage3_joint/20260921_052843/vis_data/scalars.json",
+          "evaluations": 4,
+          "best_step": 1000,
+          "last_step": 4000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 71.47898284888615,
+            "binary/Boundary_F1": 12.99729061241698,
+            "binary/Precision": 81.54756304583005,
+            "binary/Recall": 85.2707982412124,
+            "binary/HD95_px": 348.611523029993
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 69.61244678847035,
+            "binary/Boundary_F1": 12.720277063011313,
+            "binary/Precision": 75.99555561871207,
+            "binary/Recall": 89.2332668684469,
+            "binary/HD95_px": 527.6777790576206
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_ablations/unweighted_fusion/stage3_joint/test_eval/20260921_065229.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 70.67015803673962,
+          "binary/Boundary_F1": 13.193555594669956,
+          "binary/Precision": 81.69801527643475,
+          "binary/Recall": 83.96274002424605,
+          "binary/HD95_px": 360.63150669113907
+        }
+      }
+    },
+    "v2_stage1": {
+      "name": "v2_stage1",
+      "directory": "work_dirs/rpgv_v2_paper/full/seed_42/full/stage1_rgb",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_paper/full/seed_42/full/stage1_rgb/20260922_144802/vis_data/scalars.json",
+          "evaluations": 20,
+          "best_step": 36000,
+          "last_step": 40000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 75.14283044075366,
+            "binary/Boundary_F1": 14.417468640187897,
+            "binary/Precision": 82.02143424819135,
+            "binary/Recall": 89.95997669300824,
+            "binary/HD95_px": 300.66859711497705
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 74.81770024582573,
+            "binary/Boundary_F1": 14.400596290147021,
+            "binary/Precision": 81.01305415925573,
+            "binary/Recall": 90.72655343431337,
+            "binary/HD95_px": 291.8729834426565
+          }
+        }
+      ],
+      "completed": {
+        "source": "work_dirs/rpgv_v2_paper/full/seed_42/full/stage1_rgb/completed.json",
+        "budget": 40000,
+        "last_val_iter": null,
+        "stopped_early": null,
+        "checkpoint": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage1_rgb/best_binary_Foreground_IoU_iter_36000.pth",
+        "checkpoint_sha256": "4b05366fd5083bc64d60fbd1c3220f2d88f6941ec53c802665d27d252f3b6b6f",
+        "initialization": null,
+        "selected_iter": 36000,
+        "metrics": {
+          "binary/Foreground_IoU": 75.14283044075366,
+          "binary/Boundary_F1": 14.417468640187897,
+          "binary/Precision": 82.02143424819135,
+          "binary/Recall": 89.95997669300824,
+          "binary/HD95_px": 300.66859711497705
+        }
+      },
+      "test": null
+    },
+    "v2_stage2": {
+      "name": "v2_stage2",
+      "directory": "work_dirs/rpgv_v2_paper/full/seed_42/full/stage2_geometry",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_paper/full/seed_42/full/stage2_geometry/20260922_205007/vis_data/scalars.json",
+          "evaluations": 10,
+          "best_step": 20000,
+          "last_step": 20000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 40.17999354741122,
+            "binary/Boundary_F1": 2.449118059173796,
+            "binary/Precision": 45.09812928605066,
+            "binary/Recall": 78.65259162186629,
+            "binary/HD95_px": 693.4030734862891
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 40.17999354741122,
+            "binary/Boundary_F1": 2.449118059173796,
+            "binary/Precision": 45.09812928605066,
+            "binary/Recall": 78.65259162186629,
+            "binary/HD95_px": 693.4030734862891
+          }
+        }
+      ],
+      "completed": {
+        "source": "work_dirs/rpgv_v2_paper/full/seed_42/full/stage2_geometry/completed.json",
+        "budget": 20000,
+        "last_val_iter": null,
+        "stopped_early": null,
+        "checkpoint": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage2_geometry/best_binary_Foreground_IoU_iter_20000.pth",
+        "checkpoint_sha256": "2b89757c7cd96feae6d36dd58e498bb9cf9200929b88ee13db6de02445177884",
+        "initialization": {
+          "path": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage1_rgb/best_binary_Foreground_IoU_iter_36000.pth",
+          "sha256": "4b05366fd5083bc64d60fbd1c3220f2d88f6941ec53c802665d27d252f3b6b6f"
+        },
+        "selected_iter": 20000,
+        "metrics": {
+          "binary/Foreground_IoU": 40.17999354741122,
+          "binary/Boundary_F1": 2.449118059173796,
+          "binary/Precision": 45.09812928605066,
+          "binary/Recall": 78.65259162186629,
+          "binary/HD95_px": 693.4030734862891
+        }
+      },
+      "test": null
+    },
+    "v2_stage3": {
+      "name": "v2_stage3",
+      "directory": "work_dirs/rpgv_v2_paper/full/seed_42/full/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_paper/full/seed_42/full/stage3_joint/20260922_233303/vis_data/scalars.json",
+          "evaluations": 20,
+          "best_step": 38000,
+          "last_step": 40000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 78.40414319784814,
+            "binary/Boundary_F1": 16.958838073355327,
+            "binary/Precision": 85.72214216987241,
+            "binary/Recall": 90.18083479951613,
+            "binary/HD95_px": 216.0187733065723
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 77.93491769211626,
+            "binary/Boundary_F1": 16.61013081747148,
+            "binary/Precision": 84.39721783589779,
+            "binary/Recall": 91.05405534931874,
+            "binary/HD95_px": 227.6346074571278
+          }
+        }
+      ],
+      "completed": {
+        "source": "work_dirs/rpgv_v2_paper/full/seed_42/full/stage3_joint/completed.json",
+        "budget": 40000,
+        "last_val_iter": null,
+        "stopped_early": null,
+        "checkpoint": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage3_joint/best_binary_Foreground_IoU_iter_38000.pth",
+        "checkpoint_sha256": "6d5fd7e4d449afed632105934b7aef786de92af4cc09e7c3b90728a82a1600b7",
+        "initialization": {
+          "path": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage2_geometry/best_binary_Foreground_IoU_iter_20000.pth",
+          "sha256": "2b89757c7cd96feae6d36dd58e498bb9cf9200929b88ee13db6de02445177884"
+        },
+        "selected_iter": 38000,
+        "metrics": {
+          "binary/Foreground_IoU": 78.40414319784814,
+          "binary/Boundary_F1": 16.958838073355327,
+          "binary/Precision": 85.72214216987241,
+          "binary/Recall": 90.18083479951613,
+          "binary/HD95_px": 216.0187733065723
+        }
+      },
+      "test": {
+        "source": "work_dirs/rpgv_v2_paper/full/seed_42/full/evaluation_test/metrics.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 78.55998319659464,
+          "binary/Boundary_F1": 17.12861424254899,
+          "binary/Precision": 86.41908392734888,
+          "binary/Recall": 89.62493837360245,
+          "binary/HD95_px": 253.89573691675943
+        }
+      }
+    },
+    "v2_joint_fixed": {
+      "name": "v2_joint_fixed",
+      "directory": "work_dirs/rpgv_v2_joint_fixed",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_joint_fixed/20260925_083005/vis_data/scalars.json",
+          "evaluations": 37,
+          "best_step": 64000,
+          "last_step": 74000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 78.44247802298054,
+            "binary/Boundary_F1": 16.995778271323488,
+            "binary/Precision": 85.16216905485521,
+            "binary/Recall": 90.86042406795143,
+            "binary/HD95_px": 231.82728272182908
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 76.77654682301647,
+            "binary/Boundary_F1": 17.24652555389548,
+            "binary/Precision": 82.77506208390176,
+            "binary/Recall": 91.37529099583826,
+            "binary/HD95_px": 269.32798990282646
+          }
+        }
+      ],
+      "completed": null,
+      "test": null
+    },
+    "v2_no_rgr_stage1_partial": {
+      "name": "v2_no_rgr_stage1_partial",
+      "directory": "work_dirs/rpgv_v2_paper/full/seed_42/no_rgr/stage1_rgb",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_paper/full/seed_42/no_rgr/stage1_rgb/20260923_091327/vis_data/scalars.json",
+          "evaluations": 0
+        }
+      ],
+      "completed": null,
+      "test": null
+    },
+    "v2_no_rgr_stage2": {
+      "name": "v2_no_rgr_stage2",
+      "directory": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage2_geometry",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage2_geometry/20260923_093042/vis_data/scalars.json",
+          "evaluations": 10,
+          "best_step": 20000,
+          "last_step": 20000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 21.85628392937156,
+            "binary/Boundary_F1": 1.3580108371277742,
+            "binary/Precision": 25.10772342375958,
+            "binary/Recall": 62.794151500833806,
+            "binary/HD95_px": 1151.6320494790232
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 21.85628392937156,
+            "binary/Boundary_F1": 1.3580108371277742,
+            "binary/Precision": 25.10772342375958,
+            "binary/Recall": 62.794151500833806,
+            "binary/HD95_px": 1151.6320494790232
+          }
+        }
+      ],
+      "completed": {
+        "source": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage2_geometry/completed.json",
+        "budget": 20000,
+        "last_val_iter": 20000,
+        "stopped_early": false,
+        "checkpoint": "/workspace/work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage2_geometry/best_binary_Foreground_IoU_iter_20000.pth",
+        "checkpoint_sha256": "8b8bdd44306555936d7f598a41497fd23077b379dbccc54576bec4544df2af74",
+        "initialization": {
+          "path": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage1_rgb/best_binary_Foreground_IoU_iter_36000.pth",
+          "sha256": "4b05366fd5083bc64d60fbd1c3220f2d88f6941ec53c802665d27d252f3b6b6f"
+        },
+        "selected_iter": 20000,
+        "metrics": {
+          "binary/Foreground_IoU": 21.85628392937156,
+          "binary/Boundary_F1": 1.3580108371277742,
+          "binary/Precision": 25.10772342375958,
+          "binary/Recall": 62.794151500833806,
+          "binary/HD95_px": 1151.6320494790232
+        }
+      },
+      "test": null
+    },
+    "v2_no_rgr_stage3": {
+      "name": "v2_no_rgr_stage3",
+      "directory": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage3_joint/20260923_120333/vis_data/scalars.json",
+          "evaluations": 20,
+          "best_step": 38000,
+          "last_step": 40000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 78.33138902800206,
+            "binary/Boundary_F1": 16.610157729878875,
+            "binary/Precision": 84.87256248128878,
+            "binary/Recall": 91.04231445319331,
+            "binary/HD95_px": 244.24642235850885
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 77.7945274324914,
+            "binary/Boundary_F1": 16.360067168792668,
+            "binary/Precision": 83.71371094011973,
+            "binary/Recall": 91.66826981205244,
+            "binary/HD95_px": 251.8127187546861
+          }
+        }
+      ],
+      "completed": {
+        "source": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage3_joint/completed.json",
+        "budget": 40000,
+        "last_val_iter": 40000,
+        "stopped_early": false,
+        "checkpoint": "/workspace/work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage3_joint/best_binary_Foreground_IoU_iter_38000.pth",
+        "checkpoint_sha256": "11ec9716699273f41ebead28c34288a23373be51b9004f02c042c4f30cd8819d",
+        "initialization": {
+          "path": "/workspace/work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage2_geometry/best_binary_Foreground_IoU_iter_20000.pth",
+          "sha256": "8b8bdd44306555936d7f598a41497fd23077b379dbccc54576bec4544df2af74"
+        },
+        "selected_iter": 38000,
+        "metrics": {
+          "binary/Foreground_IoU": 78.33138902800206,
+          "binary/Boundary_F1": 16.610157729878875,
+          "binary/Precision": 84.87256248128878,
+          "binary/Recall": 91.04231445319331,
+          "binary/HD95_px": 244.24642235850885
+        }
+      },
+      "test": null
+    },
+    "v2_no_frequency_stage3": {
+      "name": "v2_no_frequency_stage3",
+      "directory": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_frequency_validation/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_frequency_validation/stage3_joint/20260923_210720/vis_data/scalars.json",
+          "evaluations": 8,
+          "best_step": 6000,
+          "last_step": 16000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 76.20188631439422,
+            "binary/Boundary_F1": 15.41959772525737,
+            "binary/Precision": 87.26937840792957,
+            "binary/Recall": 85.73195858747475,
+            "binary/HD95_px": 249.67570879343725
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 74.70581688336306,
+            "binary/Boundary_F1": 14.32989194074166,
+            "binary/Precision": 80.68963870035873,
+            "binary/Recall": 90.9696801943456,
+            "binary/HD95_px": 285.6626501088386
+          }
+        }
+      ],
+      "completed": {
+        "source": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_frequency_validation/stage3_joint/completed.json",
+        "budget": 40000,
+        "last_val_iter": 16000,
+        "stopped_early": true,
+        "checkpoint": "/workspace/work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_frequency_validation/stage3_joint/best_binary_Foreground_IoU_iter_6000.pth",
+        "checkpoint_sha256": "0862740d3732b5ae6776f86a760b6d8d2cbbdf2bf6a050f764b8a272d1155bd2",
+        "initialization": {
+          "path": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage2_geometry/best_binary_Foreground_IoU_iter_20000.pth",
+          "sha256": "2b89757c7cd96feae6d36dd58e498bb9cf9200929b88ee13db6de02445177884"
+        },
+        "selected_iter": 6000,
+        "metrics": {
+          "binary/Foreground_IoU": 76.20188631439422,
+          "binary/Boundary_F1": 15.41959772525737,
+          "binary/Precision": 87.26937840792957,
+          "binary/Recall": 85.73195858747475,
+          "binary/HD95_px": 249.67570879343725
+        }
+      },
+      "test": null
+    },
+    "v2_unweighted_stage3": {
+      "name": "v2_unweighted_stage3",
+      "directory": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/unweighted_fusion/stage3_joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/unweighted_fusion/stage3_joint/20260924_013105/vis_data/scalars.json",
+          "evaluations": 2,
+          "best_step": 2000,
+          "last_step": 4000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 72.82058973913244,
+            "binary/Boundary_F1": 13.710587567685353,
+            "binary/Precision": 81.32049765686725,
+            "binary/Recall": 87.44807703268128,
+            "binary/HD95_px": 295.67964812698466
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 72.52254972571305,
+            "binary/Boundary_F1": 14.065124657655037,
+            "binary/Precision": 83.95958021425069,
+            "binary/Recall": 84.18697797124175,
+            "binary/HD95_px": 286.14869541873003
+          }
+        },
+        {
+          "source": "work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/unweighted_fusion/stage3_joint/20260924_094045/vis_data/scalars.json",
+          "evaluations": 0
+        }
+      ],
+      "completed": null,
+      "test": null
+    },
+    "v2_single_progressive_base": {
+      "name": "v2_single_progressive_base",
+      "directory": "work_dirs/rpgv_v2_single_stage_fixed/single_stage/seed_42/progressive_base/joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_single_stage_fixed/single_stage/seed_42/progressive_base/joint/20260926_051753/vis_data/scalars.json",
+          "evaluations": 15,
+          "best_step": 20000,
+          "last_step": 30000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 73.86188091921973,
+            "binary/Boundary_F1": 13.839776361307909,
+            "binary/Precision": 84.2513616761497,
+            "binary/Recall": 85.69318853418018,
+            "binary/HD95_px": 324.04086415916373
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 71.93443064860827,
+            "binary/Boundary_F1": 11.810685726757844,
+            "binary/Precision": 76.435063191619,
+            "binary/Recall": 92.43384658597279,
+            "binary/HD95_px": 331.21475575770415
+          }
+        }
+      ],
+      "completed": {
+        "source": "work_dirs/rpgv_v2_single_stage_fixed/single_stage/seed_42/progressive_base/joint/completed.json",
+        "budget": 100000,
+        "last_val_iter": 30000,
+        "stopped_early": true,
+        "checkpoint": "/workspace/work_dirs/rpgv_v2_single_stage_fixed/single_stage/seed_42/progressive_base/joint/best_binary_Foreground_IoU_iter_20000.pth",
+        "checkpoint_sha256": "4e929c3b74d3c342e761b77a4b07d384611c53e35546eae8007c1d6acee1d1c0",
+        "initialization": null,
+        "selected_iter": 20000,
+        "metrics": {
+          "binary/Foreground_IoU": 73.86188091921973,
+          "binary/Boundary_F1": 13.839776361307909,
+          "binary/Precision": 84.2513616761497,
+          "binary/Recall": 85.69318853418018,
+          "binary/HD95_px": 324.04086415916373
+        }
+      },
+      "test": null
+    },
+    "v2_single_progressive_rgr": {
+      "name": "v2_single_progressive_rgr",
+      "directory": "work_dirs/rpgv_v2_single_stage_fixed/single_stage/seed_42/progressive_rgr/joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_single_stage_fixed/single_stage/seed_42/progressive_rgr/joint/20260926_115805/vis_data/scalars.json",
+          "evaluations": 30,
+          "best_step": 50000,
+          "last_step": 60000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 78.27130656615134,
+            "binary/Boundary_F1": 17.054665104951585,
+            "binary/Precision": 86.88751317113503,
+            "binary/Recall": 88.75524079321211,
+            "binary/HD95_px": 228.82134813691678
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 75.98133166064233,
+            "binary/Boundary_F1": 15.654064523863312,
+            "binary/Precision": 81.45506940726452,
+            "binary/Recall": 91.87443363039148,
+            "binary/HD95_px": 319.27305947651394
+          }
+        }
+      ],
+      "completed": {
+        "source": "work_dirs/rpgv_v2_single_stage_fixed/single_stage/seed_42/progressive_rgr/joint/completed.json",
+        "budget": 100000,
+        "last_val_iter": 60000,
+        "stopped_early": true,
+        "checkpoint": "/workspace/work_dirs/rpgv_v2_single_stage_fixed/single_stage/seed_42/progressive_rgr/joint/best_binary_Foreground_IoU_iter_50000.pth",
+        "checkpoint_sha256": "4b95178bdf48c265ebc59d4f24e203d3c64bb47707e774a03645efb92cc732e6",
+        "initialization": null,
+        "selected_iter": 50000,
+        "metrics": {
+          "binary/Foreground_IoU": 78.27130656615134,
+          "binary/Boundary_F1": 17.054665104951585,
+          "binary/Precision": 86.88751317113503,
+          "binary/Recall": 88.75524079321211,
+          "binary/HD95_px": 228.82134813691678
+        }
+      },
+      "test": null
+    },
+    "v2_single_progressive_dfgv": {
+      "name": "v2_single_progressive_dfgv",
+      "directory": "work_dirs/rpgv_v2_single_stage_fixed/single_stage/seed_42/progressive_dfgv/joint",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v2_single_stage_fixed/single_stage/seed_42/progressive_dfgv/joint/20260927_041955/vis_data/scalars.json",
+          "evaluations": 14,
+          "best_step": 24000,
+          "last_step": 28000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 74.59244288581765,
+            "binary/Boundary_F1": 14.55593383673855,
+            "binary/Precision": 83.84375340744374,
+            "binary/Recall": 87.11380498965508,
+            "binary/HD95_px": 306.20204476734847
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 66.45421446739259,
+            "binary/Boundary_F1": 11.813560525265524,
+            "binary/Precision": 70.1305209304913,
+            "binary/Recall": 92.68847684677262,
+            "binary/HD95_px": 445.3065060345248
+          }
+        }
+      ],
+      "completed": null,
+      "test": null
+    },
+    "v4": {
+      "name": "v4",
+      "directory": "work_dirs/rpgv_v4",
+      "curves": [
+        {
+          "source": "work_dirs/rpgv_v4/20260924_032119/vis_data/scalars.json",
+          "evaluations": 20,
+          "best_step": 26000,
+          "last_step": 40000,
+          "best_metrics": {
+            "binary/Foreground_IoU": 74.44351388958565,
+            "binary/Boundary_F1": 14.86183919467937,
+            "binary/Precision": 83.03579456262239,
+            "binary/Recall": 87.79627691600679,
+            "binary/HD95_px": 251.1036795517164
+          },
+          "last_metrics": {
+            "binary/Foreground_IoU": 73.60210290710748,
+            "binary/Boundary_F1": 15.41568199688364,
+            "binary/Precision": 82.51973223583431,
+            "binary/Recall": 87.19722668735437,
+            "binary/HD95_px": 246.6940388414763
+          }
+        }
+      ],
+      "completed": null,
+      "test": {
+        "source": "work_dirs/rpgv_v4/test_eval/20260924_091541.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 72.77162281812404,
+          "binary/Boundary_F1": 14.531705424001423,
+          "binary/Precision": 81.41087876118287,
+          "binary/Recall": 87.27336575129044,
+          "binary/HD95_px": 346.04542987403323
+        }
+      }
+    }
+  },
+  "quick_screens": [
+    {
+      "directory": "work_dirs/rpgv_v2_quick_screen",
+      "stages": {
+        "zero_shot": {
+          "full": {
+            "source": "work_dirs/rpgv_v2_quick_screen/zero_shot/full/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "full",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "1ea3288a1601744676f98ab6290bd5d89b182da3417911852d2e534ba6acf9e8",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 80.56069535071929,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 86.05186099991813,
+              "binary/Recall": 92.66035536134726,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_base": {
+            "source": "work_dirs/rpgv_v2_quick_screen/zero_shot/progressive_base/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "progressive_base",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "9d0829db9b41833c4e9346fd1c2056baa99738a0cffb98097a9eecc28dbe6427",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 80.2208250935753,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 85.61201915888478,
+              "binary/Recall": 92.72147415402864,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_contour": {
+            "source": "work_dirs/rpgv_v2_quick_screen/zero_shot/progressive_contour/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "progressive_contour",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "96897486471fab753979f9f589fb986a385a11d3a6959869ae8fe5462e70f068",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 80.56069535071929,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 86.05186099991813,
+              "binary/Recall": 92.66035536134726,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_dfgv": {
+            "source": "work_dirs/rpgv_v2_quick_screen/zero_shot/progressive_dfgv/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "progressive_dfgv",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "eaf7b7c3ba0b618a2eca93b313e41947e6bea2ae748860f643c949677e4ae1d5",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 80.25047155329038,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 85.49483125745436,
+              "binary/Recall": 92.89905246861807,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_rgr": {
+            "source": "work_dirs/rpgv_v2_quick_screen/zero_shot/progressive_rgr/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "progressive_rgr",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "f312c657215d09f9c9f79432a909a8a0b0c48fd49aee8883db8bc138b0be88e4",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 80.3601530659615,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 86.05516899687575,
+              "binary/Recall": 92.39133491021964,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_weighted": {
+            "source": "work_dirs/rpgv_v2_quick_screen/zero_shot/progressive_weighted/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "progressive_weighted",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "a6ab7fd95021f6623968b29d71a2410ac3baaf7289b37bd36f94593df9f75679",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 80.3698268492275,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 85.77496693361313,
+              "binary/Recall": 92.72939131255835,
+              "binary/HD95_px": null
+            }
+          }
+        },
+        "finetune_eval": {
+          "full": {
+            "source": "work_dirs/rpgv_v2_quick_screen/finetune_eval/full/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "full",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/full/train/best_mIoU_iter_1000.pth",
+              "checkpoint_sha256": "a334bb264f2bc8ccf27fc32d9e3bdd48a83711e243ff9a69f935b6ea9288d877",
+              "config_sha256": "fb198eae5df17f29fd0df9ec58eb3ed66df462ce23146911e1cf64a5128535c2",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 71.1093260919457,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 73.47816420780667,
+              "binary/Recall": 95.66295131198179,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_base": {
+            "source": "work_dirs/rpgv_v2_quick_screen/finetune_eval/progressive_base/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "progressive_base",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_base/train/best_mIoU_iter_1000.pth",
+              "checkpoint_sha256": "83093fec2dda27f717dcc74061821d1bd5ce5560ee3269fcadd1dcf51c84a5b3",
+              "config_sha256": "08cfae9d53dec9678b04983db198107c5c7f057e974d05046cf3cf82ee00455c",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 71.03005922554844,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 73.40846795071647,
+              "binary/Recall": 95.63758715924622,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_contour": {
+            "source": "work_dirs/rpgv_v2_quick_screen/finetune_eval/progressive_contour/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "progressive_contour",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_contour/train/best_mIoU_iter_1000.pth",
+              "checkpoint_sha256": "4a23160007b956dc10982ff6a47042a414c5cad06fa510848e00630dd0015d26",
+              "config_sha256": "618902b4a60fa12a26845eab2770e5a3696f0d3ce0503b6152383eff5766baa8",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 71.19809386588555,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 73.57624059113355,
+              "binary/Recall": 95.65738632245062,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_dfgv": {
+            "source": "work_dirs/rpgv_v2_quick_screen/finetune_eval/progressive_dfgv/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "progressive_dfgv",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_dfgv/train/best_mIoU_iter_1000.pth",
+              "checkpoint_sha256": "a302ea259b68c4c39174e4402ac1db2335fad7d1429c371d1faee967424c4aa0",
+              "config_sha256": "75e040ccbad9c3d203809c3c1b386b92ecf414f0033614854072a64f093090f1",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 70.81461585716787,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 73.08324342496554,
+              "binary/Recall": 95.8005678211165,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_rgr": {
+            "source": "work_dirs/rpgv_v2_quick_screen/finetune_eval/progressive_rgr/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "progressive_rgr",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_rgr/train/best_mIoU_iter_1000.pth",
+              "checkpoint_sha256": "fd5ce1a8e5d6b93c2e8eaa9b590b23dc9d90e6c2a50395c2f52320807a4216fd",
+              "config_sha256": "77539b461ac9df2bfe1f1c8ec305ad55246620c9db6fc4f3e7b2cc457e0059e5",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 71.38862572382509,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 73.73309102214391,
+              "binary/Recall": 95.73590197429702,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_weighted": {
+            "source": "work_dirs/rpgv_v2_quick_screen/finetune_eval/progressive_weighted/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "progressive_weighted",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_weighted/train/best_mIoU_iter_1000.pth",
+              "checkpoint_sha256": "b1361444582363d5a6ae36c2b3e18bc3b168a01002595991a4934086048bf516",
+              "config_sha256": "aa9ef1c5444ac0077fa0aeab8eda8ebfc90a6e51866060806fc78a7ff1743d1b",
+              "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+              "sample_count": 64
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 70.34674304973613,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 72.56545726278351,
+              "binary/Recall": 95.83466382679514,
+              "binary/HD95_px": null
+            }
+          }
+        }
+      },
+      "finetune_protocol": {
+        "schema": 1,
+        "variant": "full",
+        "source_checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+        "source_checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+        "source_config_sha256": "1ea3288a1601744676f98ab6290bd5d89b182da3417911852d2e534ba6acf9e8",
+        "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+        "seed": 42,
+        "iterations": 1000,
+        "crop_size": 512,
+        "thumbnail_size": 256,
+        "resize_base": 1024,
+        "train_batch_size": 8,
+        "eval_batch_size": 1,
+        "accumulation": 2,
+        "workers": 4,
+        "learning_rate": 0.0001,
+        "checkpoint_interval": 500
+      },
+      "mini_val_count": 64
+    },
+    {
+      "directory": "work_dirs/rpgv_v2_quick_screen_expanded",
+      "stages": {
+        "zero_shot": {
+          "full": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/zero_shot/full/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "full",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "1ea3288a1601744676f98ab6290bd5d89b182da3417911852d2e534ba6acf9e8",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 78.23244561360198,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 84.7127508862268,
+              "binary/Recall": 91.09275103494946,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_base": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/zero_shot/progressive_base/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "progressive_base",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "9d0829db9b41833c4e9346fd1c2056baa99738a0cffb98097a9eecc28dbe6427",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 77.86002134136494,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 84.26028422251443,
+              "binary/Recall": 91.11140500860051,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_contour": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/zero_shot/progressive_contour/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "progressive_contour",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "96897486471fab753979f9f589fb986a385a11d3a6959869ae8fe5462e70f068",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 78.23244561360198,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 84.7127508862268,
+              "binary/Recall": 91.09275103494946,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_dfgv": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/zero_shot/progressive_dfgv/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "progressive_dfgv",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "eaf7b7c3ba0b618a2eca93b313e41947e6bea2ae748860f643c949677e4ae1d5",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 77.92119721487795,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 84.1334300212964,
+              "binary/Recall": 91.34424961659533,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_rgr": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/zero_shot/progressive_rgr/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "progressive_rgr",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "f312c657215d09f9c9f79432a909a8a0b0c48fd49aee8883db8bc138b0be88e4",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 77.92718763106792,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 84.6800357937385,
+              "binary/Recall": 90.71666496010361,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_weighted": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/zero_shot/progressive_weighted/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "zero_shot",
+              "variant": "progressive_weighted",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+              "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+              "config_sha256": "a6ab7fd95021f6623968b29d71a2410ac3baaf7289b37bd36f94593df9f75679",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 78.05858597783643,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 84.41971362943444,
+              "binary/Recall": 91.19664125508466,
+              "binary/HD95_px": null
+            }
+          }
+        },
+        "finetune_eval": {
+          "full": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/finetune_eval/full/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "full",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen_expanded/finetune/full/train/best_mIoU_iter_1500.pth",
+              "checkpoint_sha256": "959966e4108eea033c834b4da1cefcac4020a8311067cd4ebf3aa6e174672cb8",
+              "config_sha256": "ce8bb74fdf45e19dcbb404c1dd8bd8808a8e5ab2dca8e7fb972d41c26730aeee",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 70.8211663057265,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 74.22714931498237,
+              "binary/Recall": 93.91511841354847,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_base": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/finetune_eval/progressive_base/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "progressive_base",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen_expanded/finetune/progressive_base/train/best_mIoU_iter_1500.pth",
+              "checkpoint_sha256": "02c471eb8801fb688d52220dfdce230e70b26625eeec8987dd906498b57b5d6d",
+              "config_sha256": "5c210767f1afd8939d9fb55305aa493dbe9a9e611ab343458dbef8b9e1eb9f1f",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 70.62891474004228,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 73.98299812266123,
+              "binary/Recall": 93.96828652869628,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_contour": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/finetune_eval/progressive_contour/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "progressive_contour",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen_expanded/finetune/progressive_contour/train/best_mIoU_iter_1500.pth",
+              "checkpoint_sha256": "f26724d9cd9cfc51dc2c1c6039ca0efb3e3b968da641b1ba4b8bc211db8e3ff1",
+              "config_sha256": "8875b9c0fc8d352cb3aaef495d116175225cf168f5d6180b4337585c1dd0c4a6",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 70.87388037592952,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 74.2446763685045,
+              "binary/Recall": 93.97974090368521,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_dfgv": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/finetune_eval/progressive_dfgv/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "progressive_dfgv",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen_expanded/finetune/progressive_dfgv/train/best_mIoU_iter_1500.pth",
+              "checkpoint_sha256": "96d5b5874d13800179196a6fc0d56142e03cfb1ee72b910c6f048fbb9e6d5a1a",
+              "config_sha256": "857455cb332e1de67ad7df2d2ca9e4f2d7f5d50519020eacbe8eb0641aba83d2",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 70.04621490139805,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 73.2308541390486,
+              "binary/Recall": 94.15448876614346,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_rgr": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/finetune_eval/progressive_rgr/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "progressive_rgr",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen_expanded/finetune/progressive_rgr/train/best_mIoU_iter_1500.pth",
+              "checkpoint_sha256": "2170a667d3731e96d56db5d6489393a39a65f85833729cf870466d27a2940e58",
+              "config_sha256": "f3a6516e85f0d14d3cd9c01a740afa0a9c015a7aa9a8b740fa744acd729ec304",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 70.23463242116796,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 73.50063231306164,
+              "binary/Recall": 94.04979884483795,
+              "binary/HD95_px": null
+            }
+          },
+          "progressive_weighted": {
+            "source": "work_dirs/rpgv_v2_quick_screen_expanded/finetune_eval/progressive_weighted/metrics.json",
+            "identity": {
+              "schema": 1,
+              "stage": "finetune_eval",
+              "variant": "progressive_weighted",
+              "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen_expanded/finetune/progressive_weighted/train/best_mIoU_iter_1500.pth",
+              "checkpoint_sha256": "78071e0236d606463e3f8a210045634f5c34fc0fe73e50f2c989dbe2a6dd5a7b",
+              "config_sha256": "926107ee87e4f25ebf12d42c05749e12c9a9db9c319b181fe37ee01a393b2d1c",
+              "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+              "sample_count": 256
+            },
+            "metrics": {
+              "binary/Foreground_IoU": 69.95564901092163,
+              "binary/Boundary_F1": null,
+              "binary/Precision": 73.05175591177463,
+              "binary/Recall": 94.28761898987102,
+              "binary/HD95_px": null
+            }
+          }
+        }
+      },
+      "finetune_protocol": {
+        "schema": 1,
+        "variant": "full",
+        "source_checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+        "source_checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+        "source_config_sha256": "1ea3288a1601744676f98ab6290bd5d89b182da3417911852d2e534ba6acf9e8",
+        "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+        "seed": 42,
+        "iterations": 1500,
+        "crop_size": 512,
+        "thumbnail_size": 256,
+        "resize_base": 1024,
+        "train_batch_size": 8,
+        "eval_batch_size": 1,
+        "accumulation": 2,
+        "workers": 4,
+        "learning_rate": 0.0001,
+        "checkpoint_interval": 750
+      },
+      "mini_val_count": 256
+    }
+  ],
+  "baselines": {
+    "deeplabv3plus": [
+      {
+        "source": "work_dirs/deeplabv3plus/test_results/20260918_132657/20260918_132657.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 65.27124997768742,
+          "binary/Boundary_F1": 9.56853414727323,
+          "binary/Precision": 75.60218948570416,
+          "binary/Recall": 82.6887000905856,
+          "binary/HD95_px": 506.4266159827482
+        }
+      }
+    ],
+    "deeplabv3plus_extended": [
+      {
+        "source": "work_dirs/deeplabv3plus_extended/test_results/20260920_043138/20260920_043138.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 69.19509125573832,
+          "binary/Boundary_F1": 11.416490034065141,
+          "binary/Precision": 81.05969333286389,
+          "binary/Recall": 82.54022699107504,
+          "binary/HD95_px": 463.6235942565545
+        }
+      }
+    ],
+    "hrnet": [
+      {
+        "source": "work_dirs/hrnet/test_results/20260918_183226/20260918_183226.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 60.395077459358696,
+          "binary/Boundary_F1": 8.968026867141935,
+          "binary/Precision": 73.43777603911626,
+          "binary/Recall": 77.27574720857854,
+          "binary/HD95_px": 540.1377002673811
+        }
+      }
+    ],
+    "hrnet_extended": [
+      {
+        "source": "work_dirs/hrnet_extended/test_results/20260920_070107/20260920_070107.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 55.48408336745828,
+          "binary/Boundary_F1": 7.98456918519934,
+          "binary/Precision": 69.67442100537266,
+          "binary/Recall": 73.14905093509094,
+          "binary/HD95_px": 657.3819522892493
+        }
+      }
+    ],
+    "mask2former": [
+      {
+        "source": "work_dirs/mask2former/test_results/20260918_165337/20260918_165337.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 51.98514804782568,
+          "binary/Boundary_F1": 7.742781109402062,
+          "binary/Precision": 61.161700895371986,
+          "binary/Recall": 77.6026241629413,
+          "binary/HD95_px": 738.2608655330328
+        }
+      }
+    ],
+    "mask2former_extended": [
+      {
+        "source": "work_dirs/mask2former_extended/test_results/20260920_090314/20260920_090314.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 59.443086674212765,
+          "binary/Boundary_F1": 11.883867494633046,
+          "binary/Precision": 70.73007410733703,
+          "binary/Recall": 78.83602291239428,
+          "binary/HD95_px": 504.13828680735946
+        }
+      }
+    ],
+    "rs_mamba": [
+      {
+        "source": "work_dirs/rs_mamba/test_results/20260919_034339/20260919_034339.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 15.440558159368708,
+          "binary/Boundary_F1": 1.4194759107519,
+          "binary/Precision": 16.342908622762454,
+          "binary/Recall": 73.6600517526903,
+          "binary/HD95_px": 1141.1491086433832
+        }
+      }
+    ],
+    "rs_mamba_extended": [
+      {
+        "source": "work_dirs/rs_mamba_extended/test_results/20260920_120602/20260920_120602.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 23.9807452378639,
+          "binary/Boundary_F1": 2.080967894189491,
+          "binary/Precision": 30.830646355063095,
+          "binary/Recall": 51.90797386133662,
+          "binary/HD95_px": 876.9050863332828
+        }
+      }
+    ],
+    "segformer": [
+      {
+        "source": "work_dirs/segformer/test_results/20260918_120847/20260918_120847.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 48.00377101966111,
+          "binary/Boundary_F1": 4.93645025092952,
+          "binary/Precision": 64.12984661438543,
+          "binary/Recall": 65.62397441539196,
+          "binary/HD95_px": 648.7878099809536
+        }
+      }
+    ],
+    "segformer_extended": [
+      {
+        "source": "work_dirs/segformer_extended/test_results/20260920_132830/20260920_132830.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 46.973361559926076,
+          "binary/Boundary_F1": 4.812901258881735,
+          "binary/Precision": 78.56786533327933,
+          "binary/Recall": 53.876954117599475,
+          "binary/HD95_px": 473.1132043887218
+        }
+      }
+    ],
+    "segnext": [
+      {
+        "source": "work_dirs/segnext/test_results/20260919_014650/20260919_014650.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 60.49155748406949,
+          "binary/Boundary_F1": 9.382986406606236,
+          "binary/Precision": 70.24857334316802,
+          "binary/Recall": 81.32681149738356,
+          "binary/HD95_px": 495.11650734467617
+        }
+      }
+    ],
+    "segnext_extended": [
+      {
+        "source": "work_dirs/segnext_extended/test_results/20260920_144246/20260920_144246.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 65.97899332762476,
+          "binary/Boundary_F1": 11.804486556077695,
+          "binary/Precision": 76.68296666550718,
+          "binary/Recall": 82.53798723466326,
+          "binary/HD95_px": 557.6879032554182
+        }
+      }
+    ],
+    "unet": [
+      {
+        "source": "work_dirs/unet/test_results/20260918_145458/20260918_145458.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 27.261023849280015,
+          "binary/Boundary_F1": 2.018072281755648,
+          "binary/Precision": 30.484522606806873,
+          "binary/Recall": 72.05194195167216,
+          "binary/HD95_px": 1061.0802785458316
+        }
+      }
+    ],
+    "unet_extended": [
+      {
+        "source": "work_dirs/unet_extended/test_results/20260920_184037/20260920_184037.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 43.34265679497957,
+          "binary/Boundary_F1": 3.3951517259486024,
+          "binary/Precision": 62.69507209786524,
+          "binary/Recall": 58.405271860976235,
+          "binary/HD95_px": 835.1679213025178
+        }
+      }
+    ],
+    "unetformer": [
+      {
+        "source": "work_dirs/unetformer/test_results/20260919_004230/20260919_004230.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 43.50974021809542,
+          "binary/Boundary_F1": 4.4644962395118455,
+          "binary/Precision": 50.29077558288596,
+          "binary/Recall": 76.34172171467867,
+          "binary/HD95_px": 788.3152678806706
+        }
+      }
+    ],
+    "unetformer_extended": [
+      {
+        "source": "work_dirs/unetformer_extended/test_results/20260920_200028/20260920_200028.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 57.05157418495895,
+          "binary/Boundary_F1": 7.547984002215673,
+          "binary/Precision": 68.92528397300515,
+          "binary/Recall": 76.80765184732098,
+          "binary/HD95_px": 589.6154704224969
+        }
+      }
+    ],
+    "cbr_net": [
+      {
+        "source": "work_dirs/edge_baselines/cbr_net/test_eval/20260921_143600.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 22.64291327583885,
+          "binary/Boundary_F1": 1.7865344708430875,
+          "binary/Precision": 26.547728168844593,
+          "binary/Recall": 60.621044051076055,
+          "binary/HD95_px": 1016.2592670636222
+        }
+      },
+      {
+        "source": "work_dirs/edge_baselines/cbr_net/test_eval/20260925_054033.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 27.049643707029645,
+          "binary/Boundary_F1": 1.2035155923828227,
+          "binary/Precision": 44.83431052459381,
+          "binary/Recall": 40.54374499726037,
+          "binary/HD95_px": 986.6940919944847
+        }
+      }
+    ],
+    "hd_net": [
+      {
+        "source": "work_dirs/edge_baselines/hd_net/test_eval/20260921_201821.json",
+        "identity": null,
+        "metrics": {
+          "binary/Foreground_IoU": 34.93878433212801,
+          "binary/Boundary_F1": 2.8434638722917422,
+          "binary/Precision": 51.60776496009181,
+          "binary/Recall": 51.96273904361715,
+          "binary/HD95_px": 798.3861173250541
+        }
+      }
+    ]
+  },
+  "v3_training_artifacts_found": false,
+  "v3_training_curves": [],
+  "v3_initialization": "work_dirs/rpgv_v3_initialization/init.json"
+}

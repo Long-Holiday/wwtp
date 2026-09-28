@@ -1,0 +1,27 @@
+{
+  "model": "RPGVNetV4",
+  "date": "2026-09-24",
+  "full_training_run": false,
+  "regression": {
+    "command": "CUDA_VISIBLE_DEVICES= python -m unittest discover -s tools -p 'test_rpgv_v[24].py' -v",
+    "tests": 17,
+    "passed": 15,
+    "skipped": 2,
+    "skip_reason": "CUDA tests not run; existing GPU training left undisturbed"
+  },
+  "training_entry_smoke": {
+    "entry": "tools/train.py",
+    "device": "cpu",
+    "real_train_samples": 1,
+    "input_size": [64, 64],
+    "iterations": 2,
+    "optimizer": "AdamW via OptimWrapper, accumulation=1",
+    "pretrained_initialization": false,
+    "status": "passed"
+  },
+  "parameters": {
+    "v2": 26004091,
+    "v4": 24722666
+  },
+  "caveat": "No trained v4 accuracy, full-resolution throughput, GPU peak-memory or CUDA AMP result is claimed."
+}

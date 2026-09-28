@@ -14,3 +14,4 @@ services:
     gpus: all
     environment:
       WWTP_DATA_ROOT: /workspace/wwtp_semantic_dataset
+      CUBLAS_WORKSPACE_CONFIG: ":4096:8"

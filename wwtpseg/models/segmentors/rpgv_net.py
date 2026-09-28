@@ -202,10 +202,7 @@ class RPGVNet(BaseSegmentor):
             rgb_channels[0], validation_channels)
         self.low_fusion = ReliabilityWeightedResidualFusion(
             rgb_channels[2], validation_channels)
-        self.decoder = MultiScaleDecoder(rgb_channels, decoder_channels)
-        self.refiner = BoundaryResidualRefiner(decoder_channels)
-        self.detail_refiner = HighResolutionDetailRefiner(
-            decoder_channels, detail_channels)
+        self._build_prediction_modules(decoder_channels, detail_channels)
 
         # SegDataPreProcessor leaves input channels untouched. Normalize only
         # BGR here and preserve optional geometry in [0, 1].
@@ -218,6 +215,13 @@ class RPGVNet(BaseSegmentor):
             torch.tensor([58.395, 57.12, 57.375]).view(1, 3, 1, 1),
             persistent=False)
         self._configure_trainable_parameters()
+
+    def _build_prediction_modules(self, decoder_channels, detail_channels):
+        """Construction hook: v2 replaces the prediction stack, not its weights."""
+        self.decoder = MultiScaleDecoder(self.rgb_channels, decoder_channels)
+        self.refiner = BoundaryResidualRefiner(decoder_channels)
+        self.detail_refiner = HighResolutionDetailRefiner(
+            decoder_channels, detail_channels)
 
     @classmethod
     def _resolve_component_cfg(

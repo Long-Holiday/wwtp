@@ -1,0 +1,62 @@
+{
+  "config": "configs/v5/rpgv_v5.py",
+  "batch_size": 1,
+  "input_size": [
+    1024,
+    1024
+  ],
+  "dataset": "wwtp_semantic_dataset_1m",
+  "device": "NVIDIA L4",
+  "torch_version": "2.1.2",
+  "parameters": 24391164,
+  "mean_step_seconds": 0.2711139877210371,
+  "images_per_second": 3.6884854536865523,
+  "peak_allocated_mib": 5553.94921875,
+  "peak_reserved_mib": 5980.0,
+  "backbone_max_update": 0.0005926936864852905,
+  "steps": [
+    {
+      "step": 0,
+      "loss": 0.4913160800933838,
+      "grad_norm": 18.807085037231445,
+      "seconds": 1.4764200201025233,
+      "scale": 128.0
+    },
+    {
+      "step": 1,
+      "loss": 0.2137201726436615,
+      "grad_norm": 0.38899943232536316,
+      "seconds": 0.2757228210102767,
+      "scale": 128.0
+    },
+    {
+      "step": 2,
+      "loss": 0.21300813555717468,
+      "grad_norm": 0.3905434310436249,
+      "seconds": 0.27157584694214165,
+      "scale": 128.0
+    },
+    {
+      "step": 3,
+      "loss": 0.21066579222679138,
+      "grad_norm": 0.3551063537597656,
+      "seconds": 0.27012784290127456,
+      "scale": 128.0
+    },
+    {
+      "step": 4,
+      "loss": 0.20906108617782593,
+      "grad_norm": 0.3350176215171814,
+      "seconds": 0.2727517089806497,
+      "scale": 128.0
+    },
+    {
+      "step": 5,
+      "loss": 0.20946072041988373,
+      "grad_norm": 0.41293075680732727,
+      "seconds": 0.27000055206008255,
+      "scale": 128.0
+    }
+  ],
+  "scope": "Random initialization, fixed real batch, AMP forward/loss/backward/AdamW; two warmup steps excluded. No data I/O, validation, accumulation or convergence claim."
+}

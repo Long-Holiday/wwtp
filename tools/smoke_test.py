@@ -153,6 +153,10 @@ def _check_rpgv_backward_paths(model, stage: str) -> None:
         ):
             raise AssertionError(
                 f'RPGV {stage} deepest geometry pyramid received no gradient')
+    elif hasattr(model.refiner, 'contour'):
+        gradient = model.refiner.contour[-1].weight.grad
+        if gradient is None or not gradient.abs().sum():
+            raise AssertionError('RPGV v2 contour head received no gradient')
     elif model.component_enabled('detail_refinement'):
         detail_output = model.detail_refiner.residual[-1].weight.grad
         if detail_output is None or not detail_output.abs().sum():
@@ -165,17 +169,17 @@ def smoke_model(name: str, config_path: Path, size: int, backward: bool) -> None
     model_cfg = copy.deepcopy(cfg.model)
     _disable_pretraining(model_cfg)
     _small_rs_mamba(model_cfg)
-    if model_cfg.get('type') == 'RPGVNet':
+    if model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}:
         model_cfg['global_thumbnail_size'] = size
     # A synthetic smoke pass should not pad a 64 px input back to 512 px.
     model_cfg['data_preprocessor']['size'] = (size, size)
     model = revert_sync_batchnorm(MODELS.build(model_cfg))
     model.train()
-    if model_cfg.get('type') == 'RPGVNet':
+    if model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}:
         _check_rpgv_stage_freezing(
             model, model_cfg.get('training_stage', 'joint'))
     items = [_sample(size, index) for index in range(2)]
-    if model_cfg.get('type') == 'RPGVNet':
+    if model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}:
         staged_items = []
         for image, sample in items:
             sample.global_img = PixelData(data=image.clone())
@@ -198,11 +202,11 @@ def smoke_model(name: str, config_path: Path, size: int, backward: bool) -> None
         raise RuntimeError(f'{name}: non-finite loss {total.item()}')
     if backward:
         total.backward()
-        if model_cfg.get('type') == 'RPGVNet':
+        if model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}:
             _check_rpgv_backward_paths(
                 model, model_cfg.get('training_stage', 'joint'))
         if (
-            model_cfg.get('type') == 'RPGVNet'
+            model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}
             and model_cfg.get('training_stage', 'joint') != 'rgb'
             and model.component_enabled('learned_reliability')
         ):
@@ -211,7 +215,7 @@ def smoke_model(name: str, config_path: Path, size: int, backward: bool) -> None
                 raise AssertionError(
                     f'{name}: reliability head received no gradient')
         if (
-            model_cfg.get('type') == 'RPGVNet'
+            model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}
             and model_cfg.get('training_stage', 'joint') == 'joint'
         ):
             if model.component_enabled('boundary_fusion'):
@@ -226,7 +230,7 @@ def smoke_model(name: str, config_path: Path, size: int, backward: bool) -> None
             ):
                 raise AssertionError(
                     f'{name}: zero-init fusion projection received no gradient')
-    if model_cfg.get('type') == 'RPGVNet':
+    if model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}:
         model.eval()
         with torch.no_grad():
             predictions = model.predict(**processed)

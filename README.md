@@ -63,6 +63,25 @@ docker compose build --build-arg TORCH_CUDA_ARCH_LIST="8.0;8.6+PTX"
 
 仓库默认数据路径是 `wwtp_semantic_dataset/`，也可通过环境变量 `WWTP_DATA_ROOT` 指向其他位置。掩膜是调色板 PNG；加载时必须保留调色板索引 0/1，项目使用 MMSeg 默认的 Pillow annotation backend 处理这一点。
 
+如需将原始 2048×2048、0.5 m/px 数据集转换为 1024×1024、1 m/px，运行：
+
+```bash
+docker run --rm --network none -v "$PWD":/workspace -w /workspace \
+  wwtp-mmseg:1.2.2-cu121 \
+  python tools/resample_wwtp_dataset.py
+```
+
+输出在 `wwtp_semantic_dataset_1m/`，原始数据不变。影像使用面积平均，类别掩膜使用最近邻；`.pgw` 和伪几何图同步转换，划分索引保持一致。转换后训练时设置 `WWTP_DATA_ROOT=wwtp_semantic_dataset_1m`、`WWTP_IMAGE_SIZE=1024`；后者同时调整随机缩放基准和边界指标的像素尺度。
+
+在 Docker Compose 中运行训练时，可这样传入新数据集路径：
+
+```bash
+docker compose run --rm \
+  -e WWTP_DATA_ROOT=/workspace/wwtp_semantic_dataset_1m \
+  -e WWTP_IMAGE_SIZE=1024 \
+  wwtp python tools/train.py configs/experiments/unet.py
+```
+
 先校验全部 3044 对文件、尺寸和标签值：
 
 ```bash
@@ -160,6 +179,21 @@ docker compose run --rm wwtp \
 docker compose run --rm -e GPU_COUNT=1 wwtp bash scripts/train_all.sh
 ```
 
+八个主流模型已有首轮和 `_extended` checkpoint 时，可从最新迭代权重补训到统一的
+20k 步。脚本关闭早停，保留续训权重中的优化器和学习率调度状态；只有尚未开始续训
+的模型才从首轮 3k 权重切换到续训调度器。运行前先查看计划，正式补训需等其他
+GPU 训练结束：
+
+```bash
+docker compose run --rm wwtp python scripts/complete_mainstream_baselines.py --dry-run
+docker compose run --rm wwtp python scripts/complete_mainstream_baselines.py
+```
+
+脚本可中断后重复执行，也可加 `--models segformer rs_mamba` 只补指定模型。
+完成判定依据是 `iter_20000.pth`，已有测试结果不会使模型被跳过；训练结束后会
+列出首轮与续训中验证集 IoU 最佳的权重。旧测试结果和推理图仍对应旧权重，需
+另行更新。
+
 断点恢复：
 
 ```bash
@@ -178,7 +212,7 @@ python tools/train.py configs/experiments/hrnet.py \
 
 默认训练增强依次包含 0.5–1.5 倍随机缩放、随机任意角度旋转、前景感知位置裁剪、水平/垂直/对角翻转和光度扰动。针对目标集中在原图中央的位置偏置，正样本有 80% 概率把前景质心放到 512×512 裁剪窗口内 15%–85% 的随机位置；其余 20% 正样本和全部负样本仍使用均匀随机裁剪，以保留纯背景与困难上下文。该裁剪在前景非常小时也会尽量保留目标，避免增强后正样本大量退化为负样本。
 
-默认训练 40k iterations，每 2k iterations 验证并按 `binary/Foreground_IoU` 保存最佳权重。验证和测试不使用随机增强，在原始 2048×2048 影像上进行 512×512、stride 384 的滑窗推理，避免直接缩小影像导致小目标和边缘评价失真。RS-Mamba 默认 batch size 1、梯度累积 4 次，以维持有效 batch size 4。
+当前八个主流基线的首轮配置训练 3k iterations、每 500 步验证；续训配置以总计 20k 步为目标、每 1k 步验证，并按 `binary/Foreground_IoU` 保存最佳权重。验证和测试不使用随机增强，在原始 2048×2048 影像上进行 512×512、stride 384 的滑窗推理，避免直接缩小影像导致小目标和边缘评价失真。RS-Mamba 默认 batch size 1、梯度累积 4 次，以维持有效 batch size 4。
 
 预训练权重会在首次正式训练时自动下载。若运行环境完全离线，请事先缓存权重，或者用配置覆盖相应 `init_cfg=None`；UNetFormer 的 timm encoder 可覆盖为 `model.backbone.pretrained=False`。
 
@@ -247,6 +281,47 @@ python tools/summarize_rpgv_ablations.py work_dirs/rpgv_ablations_stage3
 
 开关语义、单因素控制方式、选择部分实验和快速阶段三诊断方法见
 [`docs/model_design.md`](docs/model_design.md#十六消融实验)。
+
+## RPGV-Net v2
+
+`RPGVNetV2` 使用轻量加法解码、统一 SDF 轮廓修正和可靠度几何分支。当前标准方案为**单阶段联合训练 + 固定损失系数 + 统一早停**：RGB、几何、融合与预测头从第一步同时优化，不加载任何 stage1/stage2/stage3 checkpoint。保留 ImageNet 骨干初始化，损失系数固定，RGB/几何辅助系数均为 0.2。
+
+训练与消融说明见 [v2 设计文档](docs/rpgv_v2_design.md)。新单阶段方案尚未完成正式训练。
+
+```bash
+docker compose run --rm wwtp bash scripts/train_rpgv_v2.sh
+```
+
+默认递进式消融共六组：基础 RGB＋原始几何 → RGR → DFGV → 可靠度加权 → 轮廓修正 → 结构约束（Full）。每组独立初始化、最多训练 100k iterations，不复用前一组或旧阶段权重。原单项删除消融可用 `--variants paper` 选择。每 2k iterations 验证，前景 IoU 连续 5 次未达到 0.1 个百分点的有效提升即早停；始终选取验证集最佳 checkpoint。
+
+```bash
+python scripts/run_rpgv_v2_ablations.py plan
+python scripts/run_rpgv_v2_ablations.py run
+python scripts/run_rpgv_v2_ablations.py evaluate --split val
+python tools/summarize_rpgv_v2_ablations.py work_dirs/rpgv_v2_single_stage_fixed --split val
+```
+
+代码验证：`python tools/test_rpgv_v2_ablations.py -v`、`python tools/test_rpgv_v2.py -v`。旧 `train_rpgv_v2_stages.sh` 入口转发到单阶段训练；历史阶段配置只保留用于旧实验诊断。
+
+## RPGV-Net v4：单阶段几何融合
+
+基于 v2 的 MiT-B2 与轻量解码/轮廓头，将 RGR 和独立几何分割替换为编码器内的四级 RGB–几何融合；浅层保留 Haar 频域特征，全部参数单阶段联合训练，默认不依赖已有阶段权重。设计依据、对照配置和恢复命令见 [v4 设计文档](docs/rpgv_v4_design.md)。已完成工程检查，尚未完整训练。
+
+```bash
+docker compose run --rm wwtp bash scripts/train_rpgv_v4.sh
+python tools/test_rpgv_v4.py -v
+```
+
+## RPGV-Net v3
+
+针对 v2 联合训练波动，新增 `RPGVNetV3`：固定 v2 最佳 RGB 主路径，使用轻量几何条件模块学习误差修正。它保留同权重 RGB 回退作为明确参照，并提供纯 RGB 修正模块对照。v3 尚未正式训练，日志诊断、结构和使用方式见 [v3 设计文档](docs/rpgv_v3_design.md)。
+
+```bash
+# 等待当前 GPU 训练结束后启动独立实验
+docker compose run --rm wwtp bash scripts/train_rpgv_v3.sh
+```
+
+CPU 检查：`python tools/test_rpgv_v3.py -v`。完整验证集几何增益检查：`python tools/evaluate_rpgv_v3.py PATH_TO_V3_BEST --output work_dirs/rpgv_v3_validation`。
 
 ## 实现来源
 

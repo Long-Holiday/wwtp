@@ -18,6 +18,10 @@ SPECS = {
     'RPGV-Net': ('configs/experiments/rpgv_stage3_joint.py',
                  ['work_dirs/rpgv_staged/stage3_joint',
                   'work_dirs/rpgv_stage3_restart_30k']),
+    'RPGV_v2': ('configs/experiments/rpgv_v2_stage3_joint.py',
+                ['work_dirs/rpgv_v2_staged/stage3_joint']),
+    'RPGV_v4': ('configs/v4/rpgv_v4.py',
+                ['work_dirs/rpgv_v4']),
     'DeepLabV3+': ('configs/experiments/deeplabv3plus.py',
                    ['work_dirs/deeplabv3plus', 'work_dirs/deeplabv3plus_extended']),
     'HRNet': ('configs/experiments/hrnet.py',
@@ -85,6 +89,53 @@ def atomic_png(image, path: Path) -> None:
     temp = path.with_name(path.name + '.tmp')
     image.save(temp, format='PNG')
     temp.replace(path)
+
+
+def atomic_json(value: dict, path: Path) -> None:
+    """Replace a JSON file without exposing a partially written manifest."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_name(path.name + '.tmp')
+    temp.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
+    temp.replace(path)
+
+
+def update_manifest(manifest: dict, path: Path) -> bool:
+    """Allow adding models while protecting all recorded prior selections.
+
+    Existing masks are reusable only when their model name still points to
+    exactly the same config, checkpoint and validation score. Removing a
+    recorded model or silently changing its checkpoint requires a new output
+    directory, because either operation would make the gallery ambiguous.
+    """
+    if not path.exists():
+        atomic_json(manifest, path)
+        return True
+    previous = json.loads(path.read_text())
+    if (previous.get('data_root') != manifest['data_root']
+            or previous.get('splits') != manifest['splits']):
+        raise RuntimeError(
+            'Existing output uses another dataset or split selection; '
+            'use another output directory')
+    previous_models = {model['name']: model for model in previous['models']}
+    current_models = {model['name']: model for model in manifest['models']}
+    removed = previous_models.keys() - current_models.keys()
+    if removed:
+        raise RuntimeError(
+            f'Existing output contains models omitted by this run: '
+            f'{sorted(removed)}. Run with the full model list or use another '
+            'output directory')
+    changed = []
+    for name, old in previous_models.items():
+        if current_models[name] != old:
+            changed.append(name)
+    if changed:
+        raise RuntimeError(
+            f'Existing model selection changed for {changed}; use another '
+            'output directory to avoid mixing checkpoints')
+    manifest_changed = previous['models'] != manifest['models']
+    if manifest_changed:
+        atomic_json(manifest, path)
+    return manifest_changed
 
 
 def infer(model_spec: dict, split: str, data_root: Path, output: Path,
@@ -170,7 +221,8 @@ def infer(model_spec: dict, split: str, data_root: Path, output: Path,
 
 
 def compose(split: str, ids: list[str], data_root: Path, output: Path,
-            models: list[dict], panel_width: int) -> None:
+            models: list[dict], panel_width: int,
+            overwrite: bool = False) -> None:
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont
 
@@ -184,7 +236,7 @@ def compose(split: str, ids: list[str], data_root: Path, output: Path,
     count = len(panels)
     for number, stem in enumerate(ids, 1):
         destination = output / 'comparisons' / split / (stem + '.png')
-        if destination.exists():
+        if destination.exists() and not overwrite:
             continue
         with Image.open(data_root / 'images' / split / (stem + '.png')) as source:
             original = source.convert('RGB')
@@ -273,19 +325,21 @@ def main() -> None:
         return
     output.mkdir(parents=True, exist_ok=True)
     manifest_path = output / 'manifest.json'
-    if manifest_path.exists():
-        previous = json.loads(manifest_path.read_text())
-        if (previous['models'] != models or previous['data_root'] != str(data_root)
-                or previous['splits'] != manifest['splits']):
-            raise RuntimeError('Existing output has a different model selection or dataset; use another output directory')
-    else:
-        manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
+    update_manifest(manifest, manifest_path)
     if args.command == 'run':
+        atomic_json(
+            dict(status='in_progress', models=len(models),
+                 splits=manifest['splits']),
+            output / 'completed.json')
         for model in models:
             for split, ids in ids_by_split.items():
                 infer(model, split, data_root, output, ids, args.device)
     for split, ids in ids_by_split.items():
-        compose(split, ids, data_root, output, models, args.panel_width)
+        # A run always rebuilds the sheets after all masks are present. This
+        # makes an interrupted incremental model addition safe to resume: old
+        # model masks are skipped, and stale comparison PNGs are overwritten.
+        compose(split, ids, data_root, output, models, args.panel_width,
+                overwrite=args.command == 'run')
     if args.command == 'run':
         for split, ids in ids_by_split.items():
             for stem in ids:
@@ -299,9 +353,7 @@ def main() -> None:
                           splits=manifest['splits'],
                           mask_pngs=len(models) * sum(manifest['splits'].values()),
                           comparison_pngs=sum(manifest['splits'].values()))
-        temp = output / 'completed.json.tmp'
-        temp.write_text(json.dumps(completion, ensure_ascii=False, indent=2) + '\n')
-        temp.replace(output / 'completed.json')
+        atomic_json(completion, output / 'completed.json')
 
 
 if __name__ == '__main__':

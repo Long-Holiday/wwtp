@@ -23,7 +23,11 @@ def main():
     if args.cfg_options:
         cfg.merge_from_dict(args.cfg_options)
     root = Path(cfg['data_root'])
-    if not root.joinpath('manifest.json').is_file():
+    if cfg.train_dataloader.dataset.get('type') == 'PotsdamOriginalDataset':
+        image_dir = root / '2_Ortho_RGB' / '2_Ortho_RGB'
+        if len(list(image_dir.glob('top_potsdam_*_RGB.png'))) != 38:
+            raise FileNotFoundError(f'Expected 38 original Potsdam RGB PNGs in {image_dir}')
+    elif not root.joinpath('manifest.json').is_file():
         raise FileNotFoundError(f'Prepared dataset missing: {root}. Run prepare.py first.')
     if args.mode == 'train':
         work_dir = args.work_dir or Path('work_dirs/remote_sensing') / args.config.stem

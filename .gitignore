@@ -6,5 +6,6 @@ work_dirs/
 *.pth
 *.log
 wwtp_semantic_dataset/
+wwtp_semantic_dataset_1m/
 wwtp_semantic_dataset.tar
 data/remote_sensing/
