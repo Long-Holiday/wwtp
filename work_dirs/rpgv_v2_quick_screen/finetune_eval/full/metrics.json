@@ -1,0 +1,20 @@
+{
+  "identity": {
+    "schema": 1,
+    "stage": "finetune_eval",
+    "variant": "full",
+    "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/full/train/best_mIoU_iter_1000.pth",
+    "checkpoint_sha256": "a334bb264f2bc8ccf27fc32d9e3bdd48a83711e243ff9a69f935b6ea9288d877",
+    "config_sha256": "fb198eae5df17f29fd0df9ec58eb3ed66df462ce23146911e1cf64a5128535c2",
+    "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+    "sample_count": 64
+  },
+  "metrics": {
+    "binary/Foreground_IoU": 71.1093260919457,
+    "binary/Dice": 83.11566378764775,
+    "binary/F1": 83.11566378764775,
+    "binary/Precision": 73.47816420780667,
+    "binary/Recall": 95.66295131198179,
+    "binary/Pixel_Accuracy": 96.53442837297916
+  }
+}

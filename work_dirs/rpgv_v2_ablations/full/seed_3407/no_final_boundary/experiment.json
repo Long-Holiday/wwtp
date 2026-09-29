@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "protocol": "full",
+  "variant": "no_final_boundary",
+  "seed": 3407,
+  "budgets": {
+    "stage1_rgb": 40000,
+    "stage2_geometry": 20000,
+    "stage3_joint": 40000
+  },
+  "stage2_checkpoint": null,
+  "configs": {
+    "stage1_rgb": "507379c8c9c7361adb28bcf8e15c613633ae69a0af3343c0f78b258de43b867d",
+    "stage2_geometry": "210541f2da4df40c118a5bf76c3f68cb550a2ba35f200ec98856c4b775bd4829",
+    "stage3_joint": "63b7ca69fd4d084408b95f32143c9d0686670ab8794610d4a6fd3ff4398aa5cd"
+  },
+  "code": {
+    "wwtpseg/__init__.py": "76b702b1c4699da0cd205d95a2bd6a1cebdaf5a81eff81076d5a9a5062c8dca3",
+    "wwtpseg/datasets/__init__.py": "e9ff9060ab9c002d2d1d2d230b3edb157907b308675b3b223269bffb1977b472",
+    "wwtpseg/datasets/transforms/__init__.py": "8d07bd70f88f9af1deec2bf881e0a7877390af323cdff462691d67c06201531c",
+    "wwtpseg/datasets/transforms/foreground_crop.py": "59517735e591a20fabe10544e4196536f8a81f7afc0efe46187eb8fc2d0e884e",
+    "wwtpseg/datasets/transforms/load_pseudo_geometry.py": "78edcd6c5b0ef0f7f6bee809793c3f9685d0bb04f5139f7e3418bf32fc58af06",
+    "wwtpseg/datasets/transforms/rpgv_transforms.py": "0422aa4d1ea92b3c74ccefc3c7609cf351253b9cb1805e40e4968483d986342c",
+    "wwtpseg/datasets/wwtp_dataset.py": "505e96098fc8996e2a6d005e18cb5285e4850e06434c5ee7193449d2bf55a74f",
+    "wwtpseg/edge_baselines/__init__.py": "53b56389915ac3ceeda2fa126af1632cecb3d341fb2dbcae5166ca3f352b3a59",
+    "wwtpseg/edge_baselines/cbr_net.py": "b3778dfad3a0a361992c42a736b608c5c9d3a817bac5474c3981c12acf1fa59a",
+    "wwtpseg/edge_baselines/hd_net.py": "6261cfb8d8fa9ac3a44fb461862b09a13b5fe698e379996fe2b388426a520ff1",
+    "wwtpseg/edge_baselines/segmentor.py": "f521d532d952848f03b42dc945f884109ca52024c91b298cb8ca1c5f5ae62d83",
+    "wwtpseg/evaluation/__init__.py": "85007e2ddb51650e5019d618be092eae293b8646621cfbf7837f92a62a1a7f54",
+    "wwtpseg/evaluation/binary_boundary_metric.py": "1ee41aa7e792ab4a6311d088e0da01aa18be643a6f9d6a7dcec04cf25bde5625",
+    "wwtpseg/evaluation/binary_topology_metric.py": "e4e4e1d168f78ddcbeb759988ab79b24ae5a0ac05e3f22b5f25ee0f7c96585ab",
+    "wwtpseg/models/__init__.py": "104612aef8f5e59a7f3eab6ee41a100695e77aa314ef3e0d514d06afe52ff01e",
+    "wwtpseg/models/backbones/__init__.py": "d208976e12893ba705004c835e039cdfc411e3bf5ee4180e08aa3ec8adce0f7f",
+    "wwtpseg/models/backbones/rs_mamba.py": "1a8670f1ff1841a28bd9184c454546d6e4d572b043808cd05923e08e6d92cec7",
+    "wwtpseg/models/backbones/unetformer.py": "f22cc1ba76a992006216f88a41c115ee16c130f546628d202bfef229e0557609",
+    "wwtpseg/models/segmentors/__init__.py": "e2bc0b6ea8cb1fd2d33f0a5f1e184f1135afbb301e08dabbc1b06b460692768b",
+    "wwtpseg/models/segmentors/rpgv_net.py": "609076d511a161437fb38f0060afd5463e9b9c1244fa903f4c2a866dcaa05f5d",
+    "wwtpseg/models/segmentors/rpgv_net_v2.py": "7ddd8405ee310bae655d683fbdd6c3a24dead670f32617c95c1c4d9de5fd9009",
+    "wwtpseg/models/utils/__init__.py": "f0e47a5ffa88304d723503392b6c25d8ab85f1a8d60c7de89bd06f7f5ceb9fac",
+    "wwtpseg/models/utils/rpgv_modules.py": "9992f1b84777d9c64b83c76b0fccca5b256f5249458f5616165e003c39f75c31",
+    "wwtpseg/models/utils/rpgv_v2_modules.py": "98e2dda2d5e4cd8ffac07454d0ee3ba91b07e3a47fd055319a64a0772d0f12c1",
+    "wwtpseg/remote_sensing/__init__.py": "2a714c183717edef3488a1bd300272781fd581b9fb183fa224c5c741b1468643",
+    "wwtpseg/remote_sensing/cbrnet_multiclass.py": "49c13761050dfb91ec3bfffe0f45e496305aa025aac93ac4ea539ce8b352f673",
+    "wwtpseg/remote_sensing/model.py": "89557a24c4b5abc60dc75fa6b0b26845345baf303a545f33770a001c165251c6",
+    "wwtpseg/remote_sensing/model_full.py": "e171a19683eba44183493ca43fae9d4ccef8d923473711184f687ac607875414",
+    "wwtpseg/remote_sensing/potsdam_metric.py": "e929dad694a00de19e3dc1e5dd7b945bd4b5447a855a23d714a13207d07797a7",
+    "scripts/run_rpgv_v2_ablations.py": "90cc5725aa62bbbafa3060cf2e4c41b19e0116de47b14d849f8aab97a247c790",
+    "tools/train.py": "88fd705b010a3aef0d50fe5bb35dd28596e4db81819504030b9b58ca00506e1c",
+    "tools/evaluate_rpgv_v2_ablation.py": "a22973ca422719f7eeb6644679fc55d5998918df035875e83a19190b7bf21c62"
+  }
+}

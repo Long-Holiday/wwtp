@@ -1,0 +1,10 @@
+{
+  "status": "complete",
+  "models": 13,
+  "splits": {
+    "val": 304,
+    "test": 305
+  },
+  "mask_pngs": 7917,
+  "comparison_pngs": 609
+}

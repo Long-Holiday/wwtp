@@ -1,0 +1,66 @@
+{
+  "stage": "zero_shot",
+  "metric": "binary/Foreground_IoU",
+  "rows": [
+    {
+      "rank": 1,
+      "variant": "full",
+      "foreground_iou": 80.56069535071929,
+      "dice": 89.23392235972396,
+      "precision": 86.05186099991813,
+      "recall": 92.66035536134726,
+      "delta_from_full": 0.0,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth"
+    },
+    {
+      "rank": 2,
+      "variant": "progressive_contour",
+      "foreground_iou": 80.56069535071929,
+      "dice": 89.23392235972396,
+      "precision": 86.05186099991813,
+      "recall": 92.66035536134726,
+      "delta_from_full": 0.0,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth"
+    },
+    {
+      "rank": 3,
+      "variant": "progressive_weighted",
+      "foreground_iou": 80.3698268492275,
+      "dice": 89.11670898970175,
+      "precision": 85.77496693361313,
+      "recall": 92.72939131255835,
+      "delta_from_full": -0.19086850149179213,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth"
+    },
+    {
+      "rank": 4,
+      "variant": "progressive_rgr",
+      "foreground_iou": 80.3601530659615,
+      "dice": 89.11076166205304,
+      "precision": 86.05516899687575,
+      "recall": 92.39133491021964,
+      "delta_from_full": -0.20054228475778757,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth"
+    },
+    {
+      "rank": 5,
+      "variant": "progressive_dfgv",
+      "foreground_iou": 80.25047155329038,
+      "dice": 89.04328611375047,
+      "precision": 85.49483125745436,
+      "recall": 92.89905246861807,
+      "delta_from_full": -0.31022379742890394,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth"
+    },
+    {
+      "rank": 6,
+      "variant": "progressive_base",
+      "foreground_iou": 80.2208250935753,
+      "dice": 89.02503365182419,
+      "precision": 85.61201915888478,
+      "recall": 92.72147415402864,
+      "delta_from_full": -0.33987025714398555,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "identity": {
+    "schema": 1,
+    "stage": "finetune_eval",
+    "variant": "progressive_weighted",
+    "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_weighted/train/best_mIoU_iter_1000.pth",
+    "checkpoint_sha256": "b1361444582363d5a6ae36c2b3e18bc3b168a01002595991a4934086048bf516",
+    "config_sha256": "aa9ef1c5444ac0077fa0aeab8eda8ebfc90a6e51866060806fc78a7ff1743d1b",
+    "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+    "sample_count": 64
+  },
+  "metrics": {
+    "binary/Foreground_IoU": 70.34674304973613,
+    "binary/Dice": 82.59241332157082,
+    "binary/F1": 82.59241332157082,
+    "binary/Precision": 72.56545726278351,
+    "binary/Recall": 95.83466382679514,
+    "binary/Pixel_Accuracy": 96.39793932437897
+  }
+}

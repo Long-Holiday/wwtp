@@ -1,0 +1,28 @@
+{
+  "metric": "binary/Foreground_IoU",
+  "selection": "highest validation Foreground IoU",
+  "data_root": "/workspace/wwtp_semantic_dataset",
+  "models": [
+    {
+      "name": "RPGV-Net",
+      "slug": "rpgv-net",
+      "config": "/workspace/configs/experiments/rpgv_stage3_joint.py",
+      "checkpoint": "/workspace/work_dirs/rpgv_stage3_restart_30k/best_binary_Foreground_IoU_iter_6000.pth",
+      "validation_foreground_iou": 77.361,
+      "checkpoint_size": 110339478,
+      "checkpoint_mtime_ns": 1789993603577531393
+    },
+    {
+      "name": "Mask2Former",
+      "slug": "mask2former",
+      "config": "/workspace/configs/experiments/mask2former.py",
+      "checkpoint": "/workspace/work_dirs/mask2former_extended/best_binary_Foreground_IoU_iter_5000.pth",
+      "validation_foreground_iou": 61.9537,
+      "checkpoint_size": 193461552,
+      "checkpoint_mtime_ns": 1789891115302543270
+    }
+  ],
+  "splits": {
+    "val": 1
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "identity": {
+    "schema": 1,
+    "stage": "zero_shot",
+    "variant": "progressive_base",
+    "checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+    "checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+    "config_sha256": "9d0829db9b41833c4e9346fd1c2056baa99738a0cffb98097a9eecc28dbe6427",
+    "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+    "sample_count": 64
+  },
+  "metrics": {
+    "binary/Foreground_IoU": 80.2208250935753,
+    "binary/Dice": 89.02503365182419,
+    "binary/F1": 89.02503365182419,
+    "binary/Precision": 85.61201915888478,
+    "binary/Recall": 92.72147415402864,
+    "binary/Pixel_Accuracy": 97.96154387295246
+  }
+}

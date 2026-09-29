@@ -1,0 +1,20 @@
+{
+  "identity": {
+    "schema": 1,
+    "stage": "finetune_eval",
+    "variant": "progressive_dfgv",
+    "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen_expanded/finetune/progressive_dfgv/train/best_mIoU_iter_1500.pth",
+    "checkpoint_sha256": "96d5b5874d13800179196a6fc0d56142e03cfb1ee72b910c6f048fbb9e6d5a1a",
+    "config_sha256": "857455cb332e1de67ad7df2d2ca9e4f2d7f5d50519020eacbe8eb0641aba83d2",
+    "mini_val_sha256": "bd630a45f52db7a86949e4e892ff02fbeb4850ee8d473dc5a6d14a6dcf2b288b",
+    "sample_count": 256
+  },
+  "metrics": {
+    "binary/Foreground_IoU": 70.04621490139805,
+    "binary/Dice": 82.38491511500519,
+    "binary/F1": 82.38491511500519,
+    "binary/Precision": 73.2308541390486,
+    "binary/Recall": 94.15448876614346,
+    "binary/Pixel_Accuracy": 96.72238724306226
+  }
+}

@@ -1,11 +1,39 @@
+# Byte-compiled / optimized / AST cache
 __pycache__/
 *.py[cod]
+*$py.class
 .pytest_cache/
 .mypy_cache/
-work_dirs/
-*.pth
-*.log
+
+# Datasets
 wwtp_semantic_dataset/
 wwtp_semantic_dataset_1m/
-wwtp_semantic_dataset.tar
+wwtp_semantic_dataset*.tar*
 data/remote_sensing/
+data/
+
+# Model weights & checkpoints (exclude large training weights)
+*.pth
+*.pt
+*.ckpt
+*.bin
+*.onnx
+*.engine
+*.safetensors
+last_checkpoint
+
+# Images (exclude all image files)
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.bmp
+*.gif
+*.webp
+*.ico
+
+# Temporary files & runtime locks
+*.lock
+.*.lock
+*.tmp

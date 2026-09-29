@@ -1,0 +1,9 @@
+{
+  "split": "test",
+  "checkpoint": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage3_joint/best_binary_Foreground_IoU_iter_38000.pth",
+  "checkpoint_sha256": "6d5fd7e4d449afed632105934b7aef786de92af4cc09e7c3b90728a82a1600b7",
+  "config_sha256": "91916a580fadad185d6f4ec3e9a5e2fdfdf7dfb777b14d9b12ec5679da8079ca",
+  "small_area_px": 256,
+  "connectivity": 8,
+  "postprocessing": false
+}

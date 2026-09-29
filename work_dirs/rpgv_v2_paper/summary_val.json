@@ -1,0 +1,570 @@
+{
+  "runs": [
+    {
+      "protocol": "full",
+      "variant": "full",
+      "seed": 42,
+      "status": "evaluated",
+      "budget": 40000,
+      "last_val_iter": 40000,
+      "best_iter": 38000,
+      "val_iou": 78.40414319784814,
+      "val_boundary_f1": 16.958838073355327,
+      "split": "val",
+      "delta_val_iou": 0.0,
+      "iou": 78.40386191899321,
+      "dice": 87.89480348199366,
+      "precision": 85.72202481152179,
+      "recall": 90.18059255935509,
+      "boundary_f1": 16.96021448296273,
+      "hd95_px": 216.02259371802378,
+      "islands": 880,
+      "island_pixels": 4837497,
+      "holes": 576,
+      "hole_pixels": 203219,
+      "parameters": 26004091
+    },
+    {
+      "protocol": "full",
+      "variant": "no_contour",
+      "seed": 42,
+      "status": "planned",
+      "budget": 40000,
+      "last_val_iter": null,
+      "best_iter": null,
+      "val_iou": null,
+      "val_boundary_f1": null,
+      "split": "val",
+      "delta_val_iou": null,
+      "iou": null,
+      "dice": null,
+      "precision": null,
+      "recall": null,
+      "boundary_f1": null,
+      "hd95_px": null,
+      "islands": null,
+      "island_pixels": null,
+      "holes": null,
+      "hole_pixels": null,
+      "parameters": null
+    },
+    {
+      "protocol": "full",
+      "variant": "no_frequency_validation",
+      "seed": 42,
+      "status": "planned",
+      "budget": 40000,
+      "last_val_iter": null,
+      "best_iter": null,
+      "val_iou": null,
+      "val_boundary_f1": null,
+      "split": "val",
+      "delta_val_iou": null,
+      "iou": null,
+      "dice": null,
+      "precision": null,
+      "recall": null,
+      "boundary_f1": null,
+      "hd95_px": null,
+      "islands": null,
+      "island_pixels": null,
+      "holes": null,
+      "hole_pixels": null,
+      "parameters": null
+    },
+    {
+      "protocol": "full",
+      "variant": "no_rgr",
+      "seed": 42,
+      "status": "planned",
+      "budget": 40000,
+      "last_val_iter": null,
+      "best_iter": null,
+      "val_iou": null,
+      "val_boundary_f1": null,
+      "split": "val",
+      "delta_val_iou": null,
+      "iou": null,
+      "dice": null,
+      "precision": null,
+      "recall": null,
+      "boundary_f1": null,
+      "hd95_px": null,
+      "islands": null,
+      "island_pixels": null,
+      "holes": null,
+      "hole_pixels": null,
+      "parameters": null
+    },
+    {
+      "protocol": "full",
+      "variant": "no_structure_regularization",
+      "seed": 42,
+      "status": "planned",
+      "budget": 40000,
+      "last_val_iter": null,
+      "best_iter": null,
+      "val_iou": null,
+      "val_boundary_f1": null,
+      "split": "val",
+      "delta_val_iou": null,
+      "iou": null,
+      "dice": null,
+      "precision": null,
+      "recall": null,
+      "boundary_f1": null,
+      "hd95_px": null,
+      "islands": null,
+      "island_pixels": null,
+      "holes": null,
+      "hole_pixels": null,
+      "parameters": null
+    },
+    {
+      "protocol": "full",
+      "variant": "unweighted_fusion",
+      "seed": 42,
+      "status": "planned",
+      "budget": 40000,
+      "last_val_iter": null,
+      "best_iter": null,
+      "val_iou": null,
+      "val_boundary_f1": null,
+      "split": "val",
+      "delta_val_iou": null,
+      "iou": null,
+      "dice": null,
+      "precision": null,
+      "recall": null,
+      "boundary_f1": null,
+      "hd95_px": null,
+      "islands": null,
+      "island_pixels": null,
+      "holes": null,
+      "hole_pixels": null,
+      "parameters": null
+    }
+  ],
+  "groups": [
+    {
+      "protocol": "full",
+      "variant": "full",
+      "planned_seeds": 1,
+      "val_iou": {
+        "n": 1,
+        "mean": 78.40414319784814,
+        "std": null
+      },
+      "delta_val_iou": {
+        "n": 1,
+        "mean": 0.0,
+        "std": null
+      },
+      "iou": {
+        "n": 1,
+        "mean": 78.40386191899321,
+        "std": null
+      },
+      "dice": {
+        "n": 1,
+        "mean": 87.89480348199366,
+        "std": null
+      },
+      "precision": {
+        "n": 1,
+        "mean": 85.72202481152179,
+        "std": null
+      },
+      "recall": {
+        "n": 1,
+        "mean": 90.18059255935509,
+        "std": null
+      },
+      "boundary_f1": {
+        "n": 1,
+        "mean": 16.96021448296273,
+        "std": null
+      },
+      "hd95_px": {
+        "n": 1,
+        "mean": 216.02259371802378,
+        "std": null
+      },
+      "islands": {
+        "n": 1,
+        "mean": 880,
+        "std": null
+      },
+      "island_pixels": {
+        "n": 1,
+        "mean": 4837497,
+        "std": null
+      },
+      "holes": {
+        "n": 1,
+        "mean": 576,
+        "std": null
+      },
+      "hole_pixels": {
+        "n": 1,
+        "mean": 203219,
+        "std": null
+      },
+      "parameters": {
+        "n": 1,
+        "mean": 26004091,
+        "std": null
+      }
+    },
+    {
+      "protocol": "full",
+      "variant": "no_contour",
+      "planned_seeds": 1,
+      "val_iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "delta_val_iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "dice": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "precision": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "recall": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "boundary_f1": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "hd95_px": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "islands": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "island_pixels": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "holes": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "hole_pixels": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "parameters": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      }
+    },
+    {
+      "protocol": "full",
+      "variant": "no_frequency_validation",
+      "planned_seeds": 1,
+      "val_iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "delta_val_iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "dice": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "precision": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "recall": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "boundary_f1": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "hd95_px": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "islands": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "island_pixels": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "holes": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "hole_pixels": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "parameters": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      }
+    },
+    {
+      "protocol": "full",
+      "variant": "no_rgr",
+      "planned_seeds": 1,
+      "val_iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "delta_val_iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "dice": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "precision": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "recall": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "boundary_f1": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "hd95_px": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "islands": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "island_pixels": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "holes": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "hole_pixels": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "parameters": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      }
+    },
+    {
+      "protocol": "full",
+      "variant": "no_structure_regularization",
+      "planned_seeds": 1,
+      "val_iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "delta_val_iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "dice": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "precision": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "recall": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "boundary_f1": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "hd95_px": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "islands": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "island_pixels": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "holes": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "hole_pixels": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "parameters": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      }
+    },
+    {
+      "protocol": "full",
+      "variant": "unweighted_fusion",
+      "planned_seeds": 1,
+      "val_iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "delta_val_iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "iou": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "dice": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "precision": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "recall": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "boundary_f1": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "hd95_px": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "islands": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "island_pixels": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "holes": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "hole_pixels": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      },
+      "parameters": {
+        "n": 0,
+        "mean": null,
+        "std": null
+      }
+    }
+  ]
+}

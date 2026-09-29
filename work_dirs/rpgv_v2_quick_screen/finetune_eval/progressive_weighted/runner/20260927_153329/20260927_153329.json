@@ -1,0 +1,1 @@
+{"binary/Foreground_IoU": 70.34674304973613, "binary/Dice": 82.59241332157082, "binary/F1": 82.59241332157082, "binary/Precision": 72.56545726278351, "binary/Recall": 95.83466382679514, "binary/Pixel_Accuracy": 96.39793932437897, "data_time": 0.04046843200922012, "time": 1.1980055533349514}

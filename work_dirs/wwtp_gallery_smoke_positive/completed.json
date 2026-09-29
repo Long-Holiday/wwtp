@@ -1,0 +1,9 @@
+{
+  "status": "complete",
+  "models": 2,
+  "splits": {
+    "val": 1
+  },
+  "mask_pngs": 2,
+  "comparison_pngs": 1
+}

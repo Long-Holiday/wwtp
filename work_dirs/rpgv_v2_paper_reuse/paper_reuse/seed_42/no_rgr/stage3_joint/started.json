@@ -1,0 +1,6 @@
+{
+  "initialization": {
+    "path": "/workspace/work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage2_geometry/best_binary_Foreground_IoU_iter_20000.pth",
+    "sha256": "8b8bdd44306555936d7f598a41497fd23077b379dbccc54576bec4544df2af74"
+  }
+}

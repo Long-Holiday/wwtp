@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "variant": "progressive_dfgv",
+  "source_checkpoint": "/workspace/work_dirs/rpgv_v2_joint_fixed/best_binary_Foreground_IoU_iter_64000.pth",
+  "source_checkpoint_sha256": "148f03fb7934d87b007ea86140575ef214b0c1f54c6edb8d4ad5f57145d6f1f9",
+  "source_config_sha256": "eaf7b7c3ba0b618a2eca93b313e41947e6bea2ae748860f643c949677e4ae1d5",
+  "mini_val_sha256": "46bb2fd83fefc26fff8f09b6250a948a62e305b4e5cde8f8ebb561dbab9962c3",
+  "seed": 42,
+  "iterations": 1000,
+  "crop_size": 512,
+  "thumbnail_size": 256,
+  "resize_base": 1024,
+  "train_batch_size": 8,
+  "eval_batch_size": 1,
+  "accumulation": 2,
+  "workers": 4,
+  "learning_rate": 0.0001,
+  "checkpoint_interval": 500
+}

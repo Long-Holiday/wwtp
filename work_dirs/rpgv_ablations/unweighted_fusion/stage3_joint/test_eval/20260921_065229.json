@@ -1,0 +1,22 @@
+{
+  "aAcc": 97.22,
+  "mIoU": 83.85,
+  "mAcc": 91.17,
+  "mDice": 90.65,
+  "mFscore": 90.65,
+  "mPrecision": 90.15,
+  "mRecall": 91.17,
+  "binary/Foreground_IoU": 70.67015803673962,
+  "binary/Dice": 82.81489728453487,
+  "binary/F1": 82.81489728453487,
+  "binary/Precision": 81.69801527643475,
+  "binary/Recall": 83.96274002424605,
+  "binary/Boundary_F1": 13.193555594669956,
+  "binary/BFScore": 13.193555594669956,
+  "binary/Boundary_Precision": 10.703593343582597,
+  "binary/Boundary_Recall": 17.19318194973804,
+  "binary/Hausdorff_px": 478.0340301665961,
+  "binary/HD95_px": 360.63150669113907,
+  "binary/Hausdorff_m": 239.01701508329805,
+  "binary/HD95_m": 180.31575334556953
+}

@@ -1,0 +1,32 @@
+{
+  "initialization": null,
+  "checkpoint": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage1_rgb/best_binary_Foreground_IoU_iter_36000.pth",
+  "checkpoint_sha256": "4b05366fd5083bc64d60fbd1c3220f2d88f6941ec53c802665d27d252f3b6b6f",
+  "budget": 40000,
+  "validation": {
+    "aAcc": 97.59,
+    "mIoU": 86.27,
+    "mAcc": 94.11,
+    "mDice": 92.25,
+    "mFscore": 92.25,
+    "mPrecision": 90.56,
+    "mRecall": 94.11,
+    "binary/Foreground_IoU": 75.14283044075366,
+    "binary/Dice": 85.80748666862792,
+    "binary/F1": 85.80748666862792,
+    "binary/Precision": 82.02143424819135,
+    "binary/Recall": 89.95997669300824,
+    "binary/Boundary_F1": 14.417468640187897,
+    "binary/BFScore": 14.417468640187897,
+    "binary/Boundary_Precision": 11.693955808915184,
+    "binary/Boundary_Recall": 18.79475089189931,
+    "binary/Hausdorff_px": 403.9265938742259,
+    "binary/HD95_px": 300.66859711497705,
+    "binary/Hausdorff_m": 201.96329693711294,
+    "binary/HD95_m": 150.33429855748852,
+    "data_time": 0.012897826804489386,
+    "time": 1.2478721970417461,
+    "step": 36000,
+    "selected_iter": 36000
+  }
+}

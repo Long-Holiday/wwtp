@@ -1,0 +1,6 @@
+{
+  "initialization": {
+    "path": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage1_rgb/best_binary_Foreground_IoU_iter_36000.pth",
+    "sha256": "4b05366fd5083bc64d60fbd1c3220f2d88f6941ec53c802665d27d252f3b6b6f"
+  }
+}

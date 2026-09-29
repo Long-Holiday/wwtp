@@ -1,0 +1,2082 @@
+2026/09/20 12:17:43 - mmengine - INFO - 
+------------------------------------------------------------
+System environment:
+    sys.platform: linux
+    Python: 3.10.13 (main, Sep 11 2023, 13:44:35) [GCC 11.2.0]
+    CUDA available: True
+    MUSA available: False
+    numpy_random_seed: 42
+    GPU 0: NVIDIA L4
+    CUDA_HOME: /usr/local/cuda
+    NVCC: Cuda compilation tools, release 12.1, V12.1.105
+    GCC: gcc (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
+    PyTorch: 2.1.2
+    PyTorch compiling details: PyTorch built with:
+  - GCC 9.3
+  - C++ Version: 201703
+  - Intel(R) oneAPI Math Kernel Library Version 2023.1-Product Build 20230303 for Intel(R) 64 architecture applications
+  - Intel(R) MKL-DNN v3.1.1 (Git Hash 64f6bcbcbab628e96f33a62c3e975f8535a7bde4)
+  - OpenMP 201511 (a.k.a. OpenMP 4.5)
+  - LAPACK is enabled (usually provided by MKL)
+  - NNPACK is enabled
+  - CPU capability usage: AVX512
+  - CUDA Runtime 12.1
+  - NVCC architecture flags: -gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_60,code=sm_60;-gencode;arch=compute_61,code=sm_61;-gencode;arch=compute_70,code=sm_70;-gencode;arch=compute_75,code=sm_75;-gencode;arch=compute_80,code=sm_80;-gencode;arch=compute_86,code=sm_86;-gencode;arch=compute_90,code=sm_90
+  - CuDNN 8.9.2
+  - Magma 2.6.1
+  - Build settings: BLAS_INFO=mkl, BUILD_TYPE=Release, CUDA_VERSION=12.1, CUDNN_VERSION=8.9.2, CXX_COMPILER=/opt/rh/devtoolset-9/root/usr/bin/c++, CXX_FLAGS= -D_GLIBCXX_USE_CXX11_ABI=0 -fabi-version=11 -fvisibility-inlines-hidden -DUSE_PTHREADPOOL -DNDEBUG -DUSE_KINETO -DLIBKINETO_NOROCTRACER -DUSE_FBGEMM -DUSE_QNNPACK -DUSE_PYTORCH_QNNPACK -DUSE_XNNPACK -DSYMBOLICATE_MOBILE_DEBUG_HANDLE -O2 -fPIC -Wall -Wextra -Werror=return-type -Werror=non-virtual-dtor -Werror=bool-operation -Wnarrowing -Wno-missing-field-initializers -Wno-type-limits -Wno-array-bounds -Wno-unknown-pragmas -Wno-unused-parameter -Wno-unused-function -Wno-unused-result -Wno-strict-overflow -Wno-strict-aliasing -Wno-stringop-overflow -Wno-psabi -Wno-error=pedantic -Wno-error=old-style-cast -Wno-invalid-partial-specialization -Wno-unused-private-field -Wno-aligned-allocation-unavailable -Wno-missing-braces -fdiagnostics-color=always -faligned-new -Wno-unused-but-set-variable -Wno-maybe-uninitialized -fno-math-errno -fno-trapping-math -Werror=format -Werror=cast-function-type -Wno-stringop-overflow, LAPACK_INFO=mkl, PERF_WITH_AVX=1, PERF_WITH_AVX2=1, PERF_WITH_AVX512=1, TORCH_DISABLE_GPU_ASSERTS=ON, TORCH_VERSION=2.1.2, USE_CUDA=ON, USE_CUDNN=ON, USE_EXCEPTION_PTR=1, USE_GFLAGS=OFF, USE_GLOG=OFF, USE_MKL=ON, USE_MKLDNN=ON, USE_MPI=OFF, USE_NCCL=ON, USE_NNPACK=ON, USE_OPENMP=ON, USE_ROCM=OFF, 
+
+    TorchVision: 0.16.2
+    OpenCV: 4.9.0
+    MMEngine: 0.10.7
+
+Runtime environment:
+    cudnn_benchmark: True
+    mp_cfg: {'mp_start_method': 'fork', 'opencv_num_threads': 0}
+    dist_cfg: {'backend': 'nccl'}
+    seed: 42
+    deterministic: False
+    Distributed launcher: none
+    Distributed training: False
+    GPU number: 1
+------------------------------------------------------------
+
+2026/09/20 12:17:43 - mmengine - INFO - Config:
+auto_scale_lr = dict(base_batch_size=16, enable=False)
+checkpoint = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth'
+crop_size = (
+    512,
+    512,
+)
+custom_hooks = [
+    dict(
+        min_delta=1.0,
+        monitor='binary/Foreground_IoU',
+        patience=3,
+        rule='greater',
+        strict=False,
+        type='EarlyStoppingHook'),
+]
+custom_imports = dict(
+    allow_failed_imports=False, imports=[
+        'wwtpseg',
+        'mmdet.models',
+    ])
+data_preprocessor = dict(
+    bgr_to_rgb=True,
+    mean=[
+        123.675,
+        116.28,
+        103.53,
+    ],
+    pad_val=0,
+    seg_pad_val=255,
+    size=(
+        512,
+        512,
+    ),
+    std=[
+        58.395,
+        57.12,
+        57.375,
+    ],
+    test_cfg=dict(size_divisor=32),
+    type='SegDataPreProcessor')
+data_root = '/workspace/wwtp_semantic_dataset'
+dataset_type = 'WWTPDataset'
+default_hooks = dict(
+    checkpoint=dict(
+        by_epoch=False,
+        interval=1000,
+        max_keep_ckpts=3,
+        rule='greater',
+        save_best='binary/Foreground_IoU',
+        type='CheckpointHook'),
+    logger=dict(interval=50, log_metric_by_epoch=False, type='LoggerHook'),
+    param_scheduler=dict(type='ParamSchedulerHook'),
+    sampler_seed=dict(type='DistSamplerSeedHook'),
+    timer=dict(type='IterTimerHook'),
+    visualization=dict(type='SegVisualizationHook'))
+default_scope = 'mmseg'
+env_cfg = dict(
+    cudnn_benchmark=True,
+    dist_cfg=dict(backend='nccl'),
+    mp_cfg=dict(mp_start_method='fork', opencv_num_threads=0))
+launcher = 'none'
+load_from = 'work_dirs/segformer/iter_3000.pth'
+log_level = 'INFO'
+log_processor = dict(by_epoch=False)
+metrics = [
+    dict(
+        iou_metrics=[
+            'mIoU',
+            'mDice',
+            'mFscore',
+        ],
+        nan_to_num=0,
+        type='IoUMetric'),
+    dict(boundary_tolerance=3, pixel_size_m=0.5, type='BinaryBoundaryMetric'),
+]
+model = dict(
+    backbone=dict(
+        attn_drop_rate=0.0,
+        drop_path_rate=0.1,
+        drop_rate=0.0,
+        embed_dims=64,
+        in_channels=3,
+        init_cfg=dict(
+            checkpoint=
+            'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth',
+            type='Pretrained'),
+        mlp_ratio=4,
+        num_heads=[
+            1,
+            2,
+            5,
+            8,
+        ],
+        num_layers=[
+            3,
+            4,
+            6,
+            3,
+        ],
+        num_stages=4,
+        out_indices=(
+            0,
+            1,
+            2,
+            3,
+        ),
+        patch_sizes=[
+            7,
+            3,
+            3,
+            3,
+        ],
+        qkv_bias=True,
+        sr_ratios=[
+            8,
+            4,
+            2,
+            1,
+        ],
+        type='MixVisionTransformer'),
+    data_preprocessor=dict(
+        bgr_to_rgb=True,
+        mean=[
+            123.675,
+            116.28,
+            103.53,
+        ],
+        pad_val=0,
+        seg_pad_val=255,
+        size=(
+            512,
+            512,
+        ),
+        std=[
+            58.395,
+            57.12,
+            57.375,
+        ],
+        test_cfg=dict(size_divisor=32),
+        type='SegDataPreProcessor'),
+    decode_head=dict(
+        align_corners=False,
+        channels=256,
+        dropout_ratio=0.1,
+        in_channels=[
+            64,
+            128,
+            320,
+            512,
+        ],
+        in_index=[
+            0,
+            1,
+            2,
+            3,
+        ],
+        loss_decode=[
+            dict(
+                avg_non_ignore=True,
+                loss_name='loss_ce',
+                loss_weight=1.0,
+                type='CrossEntropyLoss'),
+            dict(
+                loss_name='loss_dice',
+                loss_weight=1.0,
+                type='DiceLoss',
+                use_sigmoid=False),
+        ],
+        norm_cfg=dict(requires_grad=True, type='SyncBN'),
+        num_classes=2,
+        type='SegformerHead'),
+    test_cfg=dict(crop_size=(
+        512,
+        512,
+    ), mode='slide', stride=(
+        384,
+        384,
+    )),
+    train_cfg=dict(),
+    type='EncoderDecoder')
+norm_cfg = dict(requires_grad=True, type='SyncBN')
+optim_wrapper = dict(
+    clip_grad=dict(max_norm=10.0, norm_type=2),
+    loss_scale='dynamic',
+    optimizer=dict(
+        betas=(
+            0.9,
+            0.999,
+        ), lr=0.0006, type='AdamW', weight_decay=0.01),
+    paramwise_cfg=dict(
+        custom_keys=dict(
+            head=dict(lr_mult=10.0),
+            norm=dict(decay_mult=0.0),
+            pos_block=dict(decay_mult=0.0)),
+        norm_decay_mult=0.0),
+    type='AmpOptimWrapper')
+param_scheduler = [
+    dict(
+        begin=3000,
+        by_epoch=False,
+        end=3500,
+        start_factor=0.001,
+        type='LinearLR'),
+    dict(
+        begin=3500,
+        by_epoch=False,
+        end=20000,
+        eta_min=0.0,
+        power=0.9,
+        type='PolyLR'),
+]
+randomness = dict(deterministic=False, seed=42)
+resume = True
+test_cfg = dict(type='TestLoop')
+test_dataloader = dict(
+    batch_size=1,
+    dataset=dict(
+        data_prefix=dict(
+            img_path='images/test', seg_map_path='annotations/test'),
+        data_root='/workspace/wwtp_semantic_dataset',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='LoadAnnotations'),
+            dict(type='PackSegInputs'),
+        ],
+        type='WWTPDataset'),
+    num_workers=2,
+    persistent_workers=True,
+    sampler=dict(shuffle=False, type='DefaultSampler'))
+test_evaluator = [
+    dict(
+        iou_metrics=[
+            'mIoU',
+            'mDice',
+            'mFscore',
+        ],
+        nan_to_num=0,
+        type='IoUMetric'),
+    dict(boundary_tolerance=3, pixel_size_m=0.5, type='BinaryBoundaryMetric'),
+]
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations'),
+    dict(type='PackSegInputs'),
+]
+train_cfg = dict(max_iters=20000, type='IterBasedTrainLoop', val_interval=1000)
+train_dataloader = dict(
+    batch_size=4,
+    dataset=dict(
+        data_prefix=dict(
+            img_path='images/train', seg_map_path='annotations/train'),
+        data_root='/workspace/wwtp_semantic_dataset',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='LoadAnnotations'),
+            dict(
+                keep_ratio=True,
+                ratio_range=(
+                    0.5,
+                    1.5,
+                ),
+                scale=(
+                    2048,
+                    2048,
+                ),
+                type='RandomResize'),
+            dict(
+                degree=180,
+                pad_val=0,
+                prob=0.5,
+                seg_pad_val=255,
+                type='RandomRotate'),
+            dict(
+                crop_size=(
+                    512,
+                    512,
+                ),
+                edge_margin_ratio=0.15,
+                foreground_label=1,
+                foreground_prob=0.8,
+                min_foreground_pixels=64,
+                type='RandomForegroundCrop'),
+            dict(
+                direction=[
+                    'horizontal',
+                    'vertical',
+                    'diagonal',
+                ],
+                prob=0.75,
+                type='RandomFlip'),
+            dict(type='PhotoMetricDistortion'),
+            dict(type='PackSegInputs'),
+        ],
+        type='WWTPDataset'),
+    num_workers=4,
+    persistent_workers=True,
+    sampler=dict(shuffle=True, type='InfiniteSampler'))
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations'),
+    dict(
+        keep_ratio=True,
+        ratio_range=(
+            0.5,
+            1.5,
+        ),
+        scale=(
+            2048,
+            2048,
+        ),
+        type='RandomResize'),
+    dict(
+        degree=180, pad_val=0, prob=0.5, seg_pad_val=255, type='RandomRotate'),
+    dict(
+        crop_size=(
+            512,
+            512,
+        ),
+        edge_margin_ratio=0.15,
+        foreground_label=1,
+        foreground_prob=0.8,
+        min_foreground_pixels=64,
+        type='RandomForegroundCrop'),
+    dict(
+        direction=[
+            'horizontal',
+            'vertical',
+            'diagonal',
+        ],
+        prob=0.75,
+        type='RandomFlip'),
+    dict(type='PhotoMetricDistortion'),
+    dict(type='PackSegInputs'),
+]
+val_cfg = dict(type='ValLoop')
+val_dataloader = dict(
+    batch_size=1,
+    dataset=dict(
+        data_prefix=dict(
+            img_path='images/val', seg_map_path='annotations/val'),
+        data_root='/workspace/wwtp_semantic_dataset',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='LoadAnnotations'),
+            dict(type='PackSegInputs'),
+        ],
+        type='WWTPDataset'),
+    num_workers=2,
+    persistent_workers=True,
+    sampler=dict(shuffle=False, type='DefaultSampler'))
+val_evaluator = [
+    dict(
+        iou_metrics=[
+            'mIoU',
+            'mDice',
+            'mFscore',
+        ],
+        nan_to_num=0,
+        type='IoUMetric'),
+    dict(boundary_tolerance=3, pixel_size_m=0.5, type='BinaryBoundaryMetric'),
+]
+vis_backends = [
+    dict(type='LocalVisBackend'),
+]
+visualizer = dict(
+    name='visualizer',
+    type='SegLocalVisualizer',
+    vis_backends=[
+        dict(type='LocalVisBackend'),
+    ])
+work_dir = 'work_dirs/segformer_extended'
+
+2026/09/20 12:17:44 - mmengine - INFO - Distributed training is not used, all SyncBatchNorm (SyncBN) layers in the model will be automatically reverted to BatchNormXd layers if they are used.
+2026/09/20 12:17:44 - mmengine - INFO - Hooks will be executed in the following order:
+before_run:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(BELOW_NORMAL) LoggerHook                         
+(LOWEST      ) EarlyStoppingHook                  
+ -------------------- 
+before_train:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+(VERY_LOW    ) CheckpointHook                     
+ -------------------- 
+before_train_epoch:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+(NORMAL      ) DistSamplerSeedHook                
+ -------------------- 
+before_train_iter:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+ -------------------- 
+after_train_iter:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+(NORMAL      ) SegVisualizationHook               
+(BELOW_NORMAL) LoggerHook                         
+(LOW         ) ParamSchedulerHook                 
+(VERY_LOW    ) CheckpointHook                     
+ -------------------- 
+after_train_epoch:
+(NORMAL      ) IterTimerHook                      
+(LOW         ) ParamSchedulerHook                 
+(VERY_LOW    ) CheckpointHook                     
+ -------------------- 
+before_val:
+(VERY_HIGH   ) RuntimeInfoHook                    
+ -------------------- 
+before_val_epoch:
+(NORMAL      ) IterTimerHook                      
+ -------------------- 
+before_val_iter:
+(NORMAL      ) IterTimerHook                      
+ -------------------- 
+after_val_iter:
+(NORMAL      ) IterTimerHook                      
+(NORMAL      ) SegVisualizationHook               
+(BELOW_NORMAL) LoggerHook                         
+ -------------------- 
+after_val_epoch:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+(BELOW_NORMAL) LoggerHook                         
+(LOW         ) ParamSchedulerHook                 
+(VERY_LOW    ) CheckpointHook                     
+(LOWEST      ) EarlyStoppingHook                  
+ -------------------- 
+after_val:
+(VERY_HIGH   ) RuntimeInfoHook                    
+ -------------------- 
+after_train:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(VERY_LOW    ) CheckpointHook                     
+ -------------------- 
+before_test:
+(VERY_HIGH   ) RuntimeInfoHook                    
+ -------------------- 
+before_test_epoch:
+(NORMAL      ) IterTimerHook                      
+ -------------------- 
+before_test_iter:
+(NORMAL      ) IterTimerHook                      
+ -------------------- 
+after_test_iter:
+(NORMAL      ) IterTimerHook                      
+(NORMAL      ) SegVisualizationHook               
+(BELOW_NORMAL) LoggerHook                         
+ -------------------- 
+after_test_epoch:
+(VERY_HIGH   ) RuntimeInfoHook                    
+(NORMAL      ) IterTimerHook                      
+(BELOW_NORMAL) LoggerHook                         
+ -------------------- 
+after_test:
+(VERY_HIGH   ) RuntimeInfoHook                    
+ -------------------- 
+after_run:
+(BELOW_NORMAL) LoggerHook                         
+ -------------------- 
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.0.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.0.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.0.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.0.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.0.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.0.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.0.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.1.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.1.2.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.0.2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.0.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.0.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.0.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.0.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.0.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.0.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.0.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.1.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.2.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.1.3.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.1.2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.0.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.0.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.0.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.0.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.0.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.0.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.0.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.1.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.2.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.3.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm1.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm1.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm2.weight:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm2.bias:lr=0.0006
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:44 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.4.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm1.weight:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm1.bias:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.attn.norm.weight:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.attn.norm.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.attn.norm.weight:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.attn.norm.bias:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.attn.norm.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.attn.norm.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm2.weight:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm2.bias:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.1.5.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.2.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.2.2.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.0.norm.weight:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.0.norm.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.0.norm.weight:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.0.norm.bias:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.0.norm.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.0.norm.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm1.weight:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm1.bias:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm2.weight:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm2.bias:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.0.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm1.weight:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm1.bias:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm2.weight:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm2.bias:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.1.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm1.weight:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm1.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm1.weight:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm1.bias:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm1.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm1.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm2.weight:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm2.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm2.weight:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm2.bias:lr=0.0006
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm2.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.1.2.norm2.bias:decay_mult=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.2.weight:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- backbone.layers.3.2.bias:weight_decay=0.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.conv_seg.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.conv_seg.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.conv_seg.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.conv_seg.bias:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.conv_seg.bias:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.conv_seg.bias:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.0.conv.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.0.conv.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.0.conv.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.0.bn.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.0.bn.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.0.bn.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.0.bn.bias:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.0.bn.bias:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.0.bn.bias:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.1.conv.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.1.conv.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.1.conv.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.1.bn.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.1.bn.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.1.bn.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.1.bn.bias:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.1.bn.bias:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.1.bn.bias:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.2.conv.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.2.conv.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.2.conv.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.2.bn.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.2.bn.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.2.bn.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.2.bn.bias:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.2.bn.bias:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.2.bn.bias:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.3.conv.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.3.conv.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.3.conv.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.3.bn.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.3.bn.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.3.bn.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.3.bn.bias:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.3.bn.bias:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.convs.3.bn.bias:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.fusion_conv.conv.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.fusion_conv.conv.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.fusion_conv.conv.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.fusion_conv.bn.weight:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.fusion_conv.bn.weight:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.fusion_conv.bn.weight:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.fusion_conv.bn.bias:lr=0.005999999999999999
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.fusion_conv.bn.bias:weight_decay=0.01
+2026/09/20 12:17:45 - mmengine - INFO - paramwise_options -- decode_head.fusion_conv.bn.bias:lr_mult=10.0
+2026/09/20 12:17:45 - mmengine - WARNING - The prefix is not set in metric class IoUMetric.
+2026/09/20 12:17:46 - mmengine - INFO - load model from: https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth
+2026/09/20 12:17:46 - mmengine - INFO - Loads checkpoint by http backend from path: https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth
+Name of parameter - Initialization information
+
+backbone.layers.0.0.projection.weight - torch.Size([64, 3, 7, 7]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.0.projection.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.0.norm.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.0.norm.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.norm1.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.norm1.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.attn.attn.in_proj_weight - torch.Size([192, 64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.attn.attn.in_proj_bias - torch.Size([192]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.attn.attn.out_proj.weight - torch.Size([64, 64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.attn.attn.out_proj.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.attn.sr.weight - torch.Size([64, 64, 8, 8]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.attn.sr.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.attn.norm.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.attn.norm.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.norm2.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.norm2.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.ffn.layers.0.weight - torch.Size([256, 64, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.ffn.layers.0.bias - torch.Size([256]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.ffn.layers.1.weight - torch.Size([256, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.ffn.layers.1.bias - torch.Size([256]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.ffn.layers.4.weight - torch.Size([64, 256, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.0.ffn.layers.4.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.norm1.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.norm1.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.attn.attn.in_proj_weight - torch.Size([192, 64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.attn.attn.in_proj_bias - torch.Size([192]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.attn.attn.out_proj.weight - torch.Size([64, 64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.attn.attn.out_proj.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.attn.sr.weight - torch.Size([64, 64, 8, 8]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.attn.sr.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.attn.norm.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.attn.norm.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.norm2.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.norm2.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.ffn.layers.0.weight - torch.Size([256, 64, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.ffn.layers.0.bias - torch.Size([256]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.ffn.layers.1.weight - torch.Size([256, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.ffn.layers.1.bias - torch.Size([256]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.ffn.layers.4.weight - torch.Size([64, 256, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.1.ffn.layers.4.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.norm1.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.norm1.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.attn.attn.in_proj_weight - torch.Size([192, 64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.attn.attn.in_proj_bias - torch.Size([192]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.attn.attn.out_proj.weight - torch.Size([64, 64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.attn.attn.out_proj.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.attn.sr.weight - torch.Size([64, 64, 8, 8]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.attn.sr.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.attn.norm.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.attn.norm.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.norm2.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.norm2.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.ffn.layers.0.weight - torch.Size([256, 64, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.ffn.layers.0.bias - torch.Size([256]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.ffn.layers.1.weight - torch.Size([256, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.ffn.layers.1.bias - torch.Size([256]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.ffn.layers.4.weight - torch.Size([64, 256, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.1.2.ffn.layers.4.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.2.weight - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.0.2.bias - torch.Size([64]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.0.projection.weight - torch.Size([128, 64, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.0.projection.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.0.norm.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.0.norm.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.norm1.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.norm1.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.attn.attn.in_proj_weight - torch.Size([384, 128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.attn.attn.in_proj_bias - torch.Size([384]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.attn.attn.out_proj.weight - torch.Size([128, 128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.attn.attn.out_proj.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.attn.sr.weight - torch.Size([128, 128, 4, 4]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.attn.sr.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.attn.norm.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.attn.norm.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.norm2.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.norm2.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.ffn.layers.0.weight - torch.Size([512, 128, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.ffn.layers.0.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.ffn.layers.1.weight - torch.Size([512, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.ffn.layers.1.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.ffn.layers.4.weight - torch.Size([128, 512, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.0.ffn.layers.4.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.norm1.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.norm1.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.attn.attn.in_proj_weight - torch.Size([384, 128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.attn.attn.in_proj_bias - torch.Size([384]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.attn.attn.out_proj.weight - torch.Size([128, 128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.attn.attn.out_proj.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.attn.sr.weight - torch.Size([128, 128, 4, 4]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.attn.sr.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.attn.norm.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.attn.norm.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.norm2.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.norm2.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.ffn.layers.0.weight - torch.Size([512, 128, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.ffn.layers.0.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.ffn.layers.1.weight - torch.Size([512, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.ffn.layers.1.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.ffn.layers.4.weight - torch.Size([128, 512, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.1.ffn.layers.4.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.norm1.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.norm1.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.attn.attn.in_proj_weight - torch.Size([384, 128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.attn.attn.in_proj_bias - torch.Size([384]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.attn.attn.out_proj.weight - torch.Size([128, 128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.attn.attn.out_proj.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.attn.sr.weight - torch.Size([128, 128, 4, 4]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.attn.sr.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.attn.norm.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.attn.norm.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.norm2.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.norm2.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.ffn.layers.0.weight - torch.Size([512, 128, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.ffn.layers.0.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.ffn.layers.1.weight - torch.Size([512, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.ffn.layers.1.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.ffn.layers.4.weight - torch.Size([128, 512, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.2.ffn.layers.4.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.norm1.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.norm1.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.attn.attn.in_proj_weight - torch.Size([384, 128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.attn.attn.in_proj_bias - torch.Size([384]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.attn.attn.out_proj.weight - torch.Size([128, 128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.attn.attn.out_proj.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.attn.sr.weight - torch.Size([128, 128, 4, 4]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.attn.sr.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.attn.norm.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.attn.norm.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.norm2.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.norm2.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.ffn.layers.0.weight - torch.Size([512, 128, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.ffn.layers.0.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.ffn.layers.1.weight - torch.Size([512, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.ffn.layers.1.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.ffn.layers.4.weight - torch.Size([128, 512, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.1.3.ffn.layers.4.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.2.weight - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.1.2.bias - torch.Size([128]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.0.projection.weight - torch.Size([320, 128, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.0.projection.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.0.norm.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.0.norm.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.norm1.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.norm1.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.attn.attn.in_proj_weight - torch.Size([960, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.attn.attn.in_proj_bias - torch.Size([960]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.attn.attn.out_proj.weight - torch.Size([320, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.attn.attn.out_proj.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.attn.sr.weight - torch.Size([320, 320, 2, 2]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.attn.sr.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.attn.norm.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.attn.norm.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.norm2.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.norm2.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.ffn.layers.0.weight - torch.Size([1280, 320, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.ffn.layers.0.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.ffn.layers.1.weight - torch.Size([1280, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.ffn.layers.1.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.ffn.layers.4.weight - torch.Size([320, 1280, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.0.ffn.layers.4.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.norm1.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.norm1.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.attn.attn.in_proj_weight - torch.Size([960, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.attn.attn.in_proj_bias - torch.Size([960]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.attn.attn.out_proj.weight - torch.Size([320, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.attn.attn.out_proj.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.attn.sr.weight - torch.Size([320, 320, 2, 2]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.attn.sr.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.attn.norm.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.attn.norm.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.norm2.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.norm2.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.ffn.layers.0.weight - torch.Size([1280, 320, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.ffn.layers.0.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.ffn.layers.1.weight - torch.Size([1280, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.ffn.layers.1.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.ffn.layers.4.weight - torch.Size([320, 1280, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.1.ffn.layers.4.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.norm1.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.norm1.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.attn.attn.in_proj_weight - torch.Size([960, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.attn.attn.in_proj_bias - torch.Size([960]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.attn.attn.out_proj.weight - torch.Size([320, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.attn.attn.out_proj.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.attn.sr.weight - torch.Size([320, 320, 2, 2]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.attn.sr.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.attn.norm.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.attn.norm.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.norm2.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.norm2.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.ffn.layers.0.weight - torch.Size([1280, 320, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.ffn.layers.0.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.ffn.layers.1.weight - torch.Size([1280, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.ffn.layers.1.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.ffn.layers.4.weight - torch.Size([320, 1280, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.2.ffn.layers.4.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.norm1.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.norm1.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.attn.attn.in_proj_weight - torch.Size([960, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.attn.attn.in_proj_bias - torch.Size([960]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.attn.attn.out_proj.weight - torch.Size([320, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.attn.attn.out_proj.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.attn.sr.weight - torch.Size([320, 320, 2, 2]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.attn.sr.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.attn.norm.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.attn.norm.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.norm2.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.norm2.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.ffn.layers.0.weight - torch.Size([1280, 320, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.ffn.layers.0.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.ffn.layers.1.weight - torch.Size([1280, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.ffn.layers.1.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.ffn.layers.4.weight - torch.Size([320, 1280, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.3.ffn.layers.4.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.norm1.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.norm1.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.attn.attn.in_proj_weight - torch.Size([960, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.attn.attn.in_proj_bias - torch.Size([960]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.attn.attn.out_proj.weight - torch.Size([320, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.attn.attn.out_proj.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.attn.sr.weight - torch.Size([320, 320, 2, 2]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.attn.sr.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.attn.norm.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.attn.norm.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.norm2.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.norm2.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.ffn.layers.0.weight - torch.Size([1280, 320, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.ffn.layers.0.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.ffn.layers.1.weight - torch.Size([1280, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.ffn.layers.1.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.ffn.layers.4.weight - torch.Size([320, 1280, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.4.ffn.layers.4.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.norm1.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.norm1.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.attn.attn.in_proj_weight - torch.Size([960, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.attn.attn.in_proj_bias - torch.Size([960]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.attn.attn.out_proj.weight - torch.Size([320, 320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.attn.attn.out_proj.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.attn.sr.weight - torch.Size([320, 320, 2, 2]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.attn.sr.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.attn.norm.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.attn.norm.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.norm2.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.norm2.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.ffn.layers.0.weight - torch.Size([1280, 320, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.ffn.layers.0.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.ffn.layers.1.weight - torch.Size([1280, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.ffn.layers.1.bias - torch.Size([1280]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.ffn.layers.4.weight - torch.Size([320, 1280, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.1.5.ffn.layers.4.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.2.weight - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.2.2.bias - torch.Size([320]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.0.projection.weight - torch.Size([512, 320, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.0.projection.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.0.norm.weight - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.0.norm.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.norm1.weight - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.norm1.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.attn.attn.in_proj_weight - torch.Size([1536, 512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.attn.attn.in_proj_bias - torch.Size([1536]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.attn.attn.out_proj.weight - torch.Size([512, 512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.attn.attn.out_proj.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.norm2.weight - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.norm2.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.ffn.layers.0.weight - torch.Size([2048, 512, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.ffn.layers.0.bias - torch.Size([2048]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.ffn.layers.1.weight - torch.Size([2048, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.ffn.layers.1.bias - torch.Size([2048]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.ffn.layers.4.weight - torch.Size([512, 2048, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.0.ffn.layers.4.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.norm1.weight - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.norm1.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.attn.attn.in_proj_weight - torch.Size([1536, 512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.attn.attn.in_proj_bias - torch.Size([1536]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.attn.attn.out_proj.weight - torch.Size([512, 512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.attn.attn.out_proj.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.norm2.weight - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.norm2.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.ffn.layers.0.weight - torch.Size([2048, 512, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.ffn.layers.0.bias - torch.Size([2048]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.ffn.layers.1.weight - torch.Size([2048, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.ffn.layers.1.bias - torch.Size([2048]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.ffn.layers.4.weight - torch.Size([512, 2048, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.1.ffn.layers.4.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.norm1.weight - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.norm1.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.attn.attn.in_proj_weight - torch.Size([1536, 512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.attn.attn.in_proj_bias - torch.Size([1536]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.attn.attn.out_proj.weight - torch.Size([512, 512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.attn.attn.out_proj.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.norm2.weight - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.norm2.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.ffn.layers.0.weight - torch.Size([2048, 512, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.ffn.layers.0.bias - torch.Size([2048]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.ffn.layers.1.weight - torch.Size([2048, 1, 3, 3]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.ffn.layers.1.bias - torch.Size([2048]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.ffn.layers.4.weight - torch.Size([512, 2048, 1, 1]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.1.2.ffn.layers.4.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.2.weight - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+backbone.layers.3.2.bias - torch.Size([512]): 
+PretrainedInit: load from https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/segformer/mit_b2_20220624-66e8bf70.pth 
+
+decode_head.conv_seg.weight - torch.Size([2, 256, 1, 1]): 
+NormalInit: mean=0, std=0.01, bias=0 
+
+decode_head.conv_seg.bias - torch.Size([2]): 
+NormalInit: mean=0, std=0.01, bias=0 
+
+decode_head.convs.0.conv.weight - torch.Size([256, 64, 1, 1]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.0.bn.weight - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.0.bn.bias - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.1.conv.weight - torch.Size([256, 128, 1, 1]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.1.bn.weight - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.1.bn.bias - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.2.conv.weight - torch.Size([256, 320, 1, 1]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.2.bn.weight - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.2.bn.bias - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.3.conv.weight - torch.Size([256, 512, 1, 1]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.3.bn.weight - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.convs.3.bn.bias - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.fusion_conv.conv.weight - torch.Size([256, 1024, 1, 1]): 
+Initialized by user-defined `init_weights` in ConvModule  
+
+decode_head.fusion_conv.bn.weight - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+
+decode_head.fusion_conv.bn.bias - torch.Size([256]): 
+The value is the same before and after calling `init_weights` of EncoderDecoder  
+2026/09/20 12:17:48 - mmengine - INFO - Load checkpoint from work_dirs/segformer/iter_3000.pth
+2026/09/20 12:17:48 - mmengine - INFO - resumed epoch: 0, iter: 3000
+2026/09/20 12:17:48 - mmengine - WARNING - "FileClient" will be deprecated in future. Please use io functions in https://mmengine.readthedocs.io/en/latest/api/fileio.html#file-io
+2026/09/20 12:17:48 - mmengine - WARNING - "HardDiskBackend" is the alias of "LocalBackend" and the former will be deprecated in future.
+2026/09/20 12:17:48 - mmengine - INFO - Checkpoints will be saved to /workspace/work_dirs/segformer_extended.
+2026/09/20 12:18:05 - mmengine - INFO - Iter(train) [ 3050/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:37:54  time: 0.2844  data_time: 0.0610  memory: 3154  grad_norm: 2.1318  loss: 0.8757  decode.loss_ce: 0.6307  decode.loss_dice: 0.2449  decode.acc_seg: 87.1064
+2026/09/20 12:18:20 - mmengine - INFO - Iter(train) [ 3100/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:29:51  time: 0.2650  data_time: 0.0520  memory: 2899  grad_norm: 1.3917  loss: 0.5282  decode.loss_ce: 0.3851  decode.loss_dice: 0.1431  decode.acc_seg: 75.4464
+2026/09/20 12:18:33 - mmengine - INFO - Iter(train) [ 3150/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:25:36  time: 0.2882  data_time: 0.0847  memory: 2899  grad_norm: 2.4033  loss: 0.5099  decode.loss_ce: 0.3760  decode.loss_dice: 0.1339  decode.acc_seg: 87.1657
+2026/09/20 12:18:47 - mmengine - INFO - Iter(train) [ 3200/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:23:23  time: 0.3078  data_time: 0.1056  memory: 2899  grad_norm: 1.8928  loss: 0.5259  decode.loss_ce: 0.3821  decode.loss_dice: 0.1438  decode.acc_seg: 87.9131
+2026/09/20 12:19:01 - mmengine - INFO - Iter(train) [ 3250/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:21:43  time: 0.2790  data_time: 0.0603  memory: 2899  grad_norm: 1.7467  loss: 0.6945  decode.loss_ce: 0.4946  decode.loss_dice: 0.1999  decode.acc_seg: 73.1431
+2026/09/20 12:19:15 - mmengine - INFO - Iter(train) [ 3300/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:20:53  time: 0.2862  data_time: 0.0815  memory: 2899  grad_norm: 1.9414  loss: 0.6302  decode.loss_ce: 0.4531  decode.loss_dice: 0.1772  decode.acc_seg: 80.5820
+2026/09/20 12:19:29 - mmengine - INFO - Iter(train) [ 3350/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:20:09  time: 0.2561  data_time: 0.0394  memory: 2899  grad_norm: 2.3906  loss: 0.5929  decode.loss_ce: 0.4343  decode.loss_dice: 0.1586  decode.acc_seg: 76.3476
+2026/09/20 12:19:42 - mmengine - INFO - Iter(train) [ 3400/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:19:09  time: 0.2729  data_time: 0.0440  memory: 2899  grad_norm: 1.8817  loss: 0.5998  decode.loss_ce: 0.4389  decode.loss_dice: 0.1609  decode.acc_seg: 56.2884
+2026/09/20 12:19:56 - mmengine - INFO - Iter(train) [ 3450/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:18:54  time: 0.3176  data_time: 0.0932  memory: 2899  grad_norm: 2.0451  loss: 0.5535  decode.loss_ce: 0.4043  decode.loss_dice: 0.1493  decode.acc_seg: 87.5516
+2026/09/20 12:20:10 - mmengine - INFO - Iter(train) [ 3500/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:18:24  time: 0.2669  data_time: 0.0553  memory: 2899  grad_norm: 2.3096  loss: 0.6922  decode.loss_ce: 0.4946  decode.loss_dice: 0.1976  decode.acc_seg: 66.7622
+2026/09/20 12:20:25 - mmengine - INFO - Iter(train) [ 3550/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:18:16  time: 0.3023  data_time: 0.0795  memory: 2899  grad_norm: 1.6682  loss: 0.5442  decode.loss_ce: 0.4017  decode.loss_dice: 0.1425  decode.acc_seg: 74.4639
+2026/09/20 12:20:38 - mmengine - INFO - Iter(train) [ 3600/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:17:38  time: 0.2265  data_time: 0.0106  memory: 2899  grad_norm: 2.0731  loss: 0.5357  decode.loss_ce: 0.3922  decode.loss_dice: 0.1434  decode.acc_seg: 72.2742
+2026/09/20 12:20:52 - mmengine - INFO - Iter(train) [ 3650/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:17:11  time: 0.2667  data_time: 0.0379  memory: 2899  grad_norm: 1.5667  loss: 0.5011  decode.loss_ce: 0.3631  decode.loss_dice: 0.1380  decode.acc_seg: 91.9756
+2026/09/20 12:21:05 - mmengine - INFO - Iter(train) [ 3700/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:16:37  time: 0.2886  data_time: 0.0519  memory: 2899  grad_norm: 1.6754  loss: 0.4608  decode.loss_ce: 0.3342  decode.loss_dice: 0.1267  decode.acc_seg: 95.9901
+2026/09/20 12:21:19 - mmengine - INFO - Iter(train) [ 3750/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:16:22  time: 0.2951  data_time: 0.0905  memory: 2899  grad_norm: 1.9040  loss: 0.5410  decode.loss_ce: 0.3938  decode.loss_dice: 0.1472  decode.acc_seg: 80.4461
+2026/09/20 12:21:32 - mmengine - INFO - Iter(train) [ 3800/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:15:52  time: 0.2621  data_time: 0.0403  memory: 2899  grad_norm: 1.6117  loss: 0.6061  decode.loss_ce: 0.4310  decode.loss_dice: 0.1751  decode.acc_seg: 73.4660
+2026/09/20 12:21:46 - mmengine - INFO - Iter(train) [ 3850/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:15:36  time: 0.2476  data_time: 0.0469  memory: 2899  grad_norm: 1.8008  loss: 0.4440  decode.loss_ce: 0.3316  decode.loss_dice: 0.1123  decode.acc_seg: 92.1082
+2026/09/20 12:22:01 - mmengine - INFO - Iter(train) [ 3900/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:15:26  time: 0.2591  data_time: 0.0369  memory: 2899  grad_norm: 2.5888  loss: 0.5157  decode.loss_ce: 0.3748  decode.loss_dice: 0.1409  decode.acc_seg: 93.1484
+2026/09/20 12:22:14 - mmengine - INFO - Iter(train) [ 3950/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:14:57  time: 0.2801  data_time: 0.0505  memory: 2899  grad_norm: 1.7692  loss: 0.5311  decode.loss_ce: 0.3854  decode.loss_dice: 0.1456  decode.acc_seg: 86.6588
+2026/09/20 12:22:27 - mmengine - INFO - Exp name: segformer_20260920_121742
+2026/09/20 12:22:27 - mmengine - INFO - Iter(train) [ 4000/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:14:26  time: 0.2459  data_time: 0.0204  memory: 2899  grad_norm: 1.9112  loss: 0.6964  decode.loss_ce: 0.5000  decode.loss_dice: 0.1965  decode.acc_seg: 86.2390
+2026/09/20 12:22:27 - mmengine - INFO - Saving checkpoint at 4000 iterations
+2026/09/20 12:23:03 - mmengine - INFO - Iter(val) [ 50/304]    eta: 0:02:54  time: 0.6797  data_time: 0.0079  memory: 711  
+2026/09/20 12:24:29 - mmengine - INFO - Iter(val) [100/304]    eta: 0:04:05  time: 1.6878  data_time: 0.0083  memory: 603  
+2026/09/20 12:25:52 - mmengine - INFO - Iter(val) [150/304]    eta: 0:03:28  time: 1.6412  data_time: 0.0080  memory: 603  
+2026/09/20 12:27:20 - mmengine - INFO - Iter(val) [200/304]    eta: 0:02:31  time: 1.8560  data_time: 0.0090  memory: 603  
+2026/09/20 12:28:49 - mmengine - INFO - Iter(val) [250/304]    eta: 0:01:22  time: 1.7764  data_time: 0.0090  memory: 603  
+2026/09/20 12:30:16 - mmengine - INFO - Iter(val) [300/304]    eta: 0:00:06  time: 1.7121  data_time: 0.0099  memory: 603  
+2026/09/20 12:30:23 - mmengine - INFO - per class results:
+2026/09/20 12:30:23 - mmengine - INFO - 
++------------------+-------+-------+-------+--------+-----------+--------+
+|      Class       |  IoU  |  Acc  |  Dice | Fscore | Precision | Recall |
++------------------+-------+-------+-------+--------+-----------+--------+
+|    background    |  89.3 | 91.96 | 94.35 | 94.35  |   96.86   | 91.96  |
+| wastewater_plant | 34.59 | 66.16 |  51.4 |  51.4  |   42.03   | 66.16  |
++------------------+-------+-------+-------+--------+-----------+--------+
+2026/09/20 12:30:23 - mmengine - INFO - Iter(val) [304/304]    aAcc: 89.8700  mIoU: 61.9500  mAcc: 79.0600  mDice: 72.8700  mFscore: 72.8700  mPrecision: 69.4400  mRecall: 79.0600  binary/Foreground_IoU: 34.5897  binary/Dice: 51.4002  binary/F1: 51.4002  binary/Precision: 42.0250  binary/Recall: 66.1594  binary/Boundary_F1: 2.2716  binary/BFScore: 2.2716  binary/Boundary_Precision: 1.2959  binary/Boundary_Recall: 9.1926  binary/Hausdorff_px: 1203.0909  binary/HD95_px: 1038.5845  binary/Hausdorff_m: 601.5455  binary/HD95_m: 519.2922  data_time: 0.0100  time: 1.5595
+2026/09/20 12:30:24 - mmengine - INFO - The best checkpoint with 34.5897 binary/Foreground_IoU at 4000 iter is saved to best_binary_Foreground_IoU_iter_4000.pth.
+2026/09/20 12:30:39 - mmengine - INFO - Iter(train) [ 4050/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:14:54  time: 0.2928  data_time: 0.0755  memory: 2900  grad_norm: 1.2225  loss: 0.4329  decode.loss_ce: 0.3184  decode.loss_dice: 0.1145  decode.acc_seg: 91.1723
+2026/09/20 12:30:53 - mmengine - INFO - Iter(train) [ 4100/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:14:35  time: 0.2833  data_time: 0.0727  memory: 2899  grad_norm: 1.8491  loss: 0.5835  decode.loss_ce: 0.4222  decode.loss_dice: 0.1613  decode.acc_seg: 74.2352
+2026/09/20 12:31:07 - mmengine - INFO - Iter(train) [ 4150/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:14:22  time: 0.2770  data_time: 0.0751  memory: 2899  grad_norm: 1.5909  loss: 0.5058  decode.loss_ce: 0.3698  decode.loss_dice: 0.1359  decode.acc_seg: 78.5349
+2026/09/20 12:31:21 - mmengine - INFO - Iter(train) [ 4200/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:14:08  time: 0.2610  data_time: 0.0479  memory: 2899  grad_norm: 1.5432  loss: 0.5175  decode.loss_ce: 0.3793  decode.loss_dice: 0.1382  decode.acc_seg: 86.1006
+2026/09/20 12:31:35 - mmengine - INFO - Iter(train) [ 4250/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:13:46  time: 0.2594  data_time: 0.0432  memory: 2899  grad_norm: 1.2594  loss: 0.4793  decode.loss_ce: 0.3513  decode.loss_dice: 0.1280  decode.acc_seg: 72.9383
+2026/09/20 12:31:50 - mmengine - INFO - Iter(train) [ 4300/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:13:39  time: 0.2822  data_time: 0.0778  memory: 2899  grad_norm: 2.0551  loss: 0.4732  decode.loss_ce: 0.3483  decode.loss_dice: 0.1249  decode.acc_seg: 89.4201
+2026/09/20 12:32:04 - mmengine - INFO - Iter(train) [ 4350/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:13:24  time: 0.2516  data_time: 0.0320  memory: 2899  grad_norm: 1.3201  loss: 0.4396  decode.loss_ce: 0.3228  decode.loss_dice: 0.1167  decode.acc_seg: 98.4194
+2026/09/20 12:32:17 - mmengine - INFO - Iter(train) [ 4400/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:12:58  time: 0.2846  data_time: 0.0690  memory: 2899  grad_norm: 1.2645  loss: 0.4444  decode.loss_ce: 0.3259  decode.loss_dice: 0.1185  decode.acc_seg: 86.6021
+2026/09/20 12:32:30 - mmengine - INFO - Iter(train) [ 4450/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:12:39  time: 0.2417  data_time: 0.0277  memory: 2899  grad_norm: 1.0424  loss: 0.3819  decode.loss_ce: 0.2856  decode.loss_dice: 0.0962  decode.acc_seg: 91.2131
+2026/09/20 12:32:44 - mmengine - INFO - Iter(train) [ 4500/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:12:23  time: 0.2645  data_time: 0.0434  memory: 2899  grad_norm: 1.4731  loss: 0.6885  decode.loss_ce: 0.4882  decode.loss_dice: 0.2002  decode.acc_seg: 81.4475
+2026/09/20 12:32:58 - mmengine - INFO - Iter(train) [ 4550/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:12:13  time: 0.3179  data_time: 0.1015  memory: 2899  grad_norm: 2.5392  loss: 0.6435  decode.loss_ce: 0.4655  decode.loss_dice: 0.1780  decode.acc_seg: 72.1015
+2026/09/20 12:33:12 - mmengine - INFO - Iter(train) [ 4600/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:11:54  time: 0.2746  data_time: 0.0624  memory: 2899  grad_norm: 1.7369  loss: 0.4597  decode.loss_ce: 0.3378  decode.loss_dice: 0.1220  decode.acc_seg: 92.4838
+2026/09/20 12:33:26 - mmengine - INFO - Iter(train) [ 4650/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:11:37  time: 0.2548  data_time: 0.0389  memory: 2899  grad_norm: 1.6858  loss: 0.5001  decode.loss_ce: 0.3630  decode.loss_dice: 0.1372  decode.acc_seg: 86.2274
+2026/09/20 12:33:40 - mmengine - INFO - Iter(train) [ 4700/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:11:24  time: 0.2515  data_time: 0.0380  memory: 2899  grad_norm: 1.0642  loss: 0.4135  decode.loss_ce: 0.3052  decode.loss_dice: 0.1083  decode.acc_seg: 90.5213
+2026/09/20 12:33:53 - mmengine - INFO - Iter(train) [ 4750/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:11:07  time: 0.2716  data_time: 0.0419  memory: 2899  grad_norm: 1.4479  loss: 0.3234  decode.loss_ce: 0.2407  decode.loss_dice: 0.0827  decode.acc_seg: 91.2818
+2026/09/20 12:34:07 - mmengine - INFO - Iter(train) [ 4800/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:10:51  time: 0.3050  data_time: 0.0971  memory: 2899  grad_norm: 2.1059  loss: 0.7801  decode.loss_ce: 0.5856  decode.loss_dice: 0.1944  decode.acc_seg: 76.8104
+2026/09/20 12:34:20 - mmengine - INFO - Iter(train) [ 4850/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:10:31  time: 0.2746  data_time: 0.0390  memory: 2899  grad_norm: 2.9681  loss: 0.7458  decode.loss_ce: 0.5474  decode.loss_dice: 0.1985  decode.acc_seg: 61.3136
+2026/09/20 12:34:34 - mmengine - INFO - Iter(train) [ 4900/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:10:16  time: 0.3127  data_time: 0.0915  memory: 2899  grad_norm: 2.0661  loss: 0.5848  decode.loss_ce: 0.4222  decode.loss_dice: 0.1626  decode.acc_seg: 85.6451
+2026/09/20 12:34:48 - mmengine - INFO - Iter(train) [ 4950/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:09:58  time: 0.3150  data_time: 0.0904  memory: 2899  grad_norm: 1.3339  loss: 0.4795  decode.loss_ce: 0.3528  decode.loss_dice: 0.1268  decode.acc_seg: 92.8717
+2026/09/20 12:35:01 - mmengine - INFO - Exp name: segformer_20260920_121742
+2026/09/20 12:35:01 - mmengine - INFO - Iter(train) [ 5000/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:09:42  time: 0.2690  data_time: 0.0519  memory: 2899  grad_norm: 1.8995  loss: 0.6280  decode.loss_ce: 0.4599  decode.loss_dice: 0.1681  decode.acc_seg: 65.7966
+2026/09/20 12:35:01 - mmengine - INFO - Saving checkpoint at 5000 iterations
+2026/09/20 12:35:34 - mmengine - INFO - Iter(val) [ 50/304]    eta: 0:02:41  time: 0.6275  data_time: 0.0080  memory: 602  
+2026/09/20 12:36:34 - mmengine - INFO - Iter(val) [100/304]    eta: 0:03:06  time: 1.1788  data_time: 0.0093  memory: 602  
+2026/09/20 12:37:33 - mmengine - INFO - Iter(val) [150/304]    eta: 0:02:34  time: 1.1864  data_time: 0.0087  memory: 602  
+2026/09/20 12:38:31 - mmengine - INFO - Iter(val) [200/304]    eta: 0:01:48  time: 1.1698  data_time: 0.0085  memory: 602  
+2026/09/20 12:39:29 - mmengine - INFO - Iter(val) [250/304]    eta: 0:00:57  time: 1.2175  data_time: 0.0089  memory: 602  
+2026/09/20 12:40:26 - mmengine - INFO - Iter(val) [300/304]    eta: 0:00:04  time: 1.1161  data_time: 0.0088  memory: 602  
+2026/09/20 12:40:30 - mmengine - INFO - per class results:
+2026/09/20 12:40:30 - mmengine - INFO - 
++------------------+-------+-------+-------+--------+-----------+--------+
+|      Class       |  IoU  |  Acc  |  Dice | Fscore | Precision | Recall |
++------------------+-------+-------+-------+--------+-----------+--------+
+|    background    | 91.29 | 93.99 | 95.45 | 95.45  |   96.94   | 93.99  |
+| wastewater_plant | 39.45 | 66.37 | 56.58 | 56.58  |   49.31   | 66.37  |
++------------------+-------+-------+-------+--------+-----------+--------+
+2026/09/20 12:40:30 - mmengine - INFO - Iter(val) [304/304]    aAcc: 91.7500  mIoU: 65.3700  mAcc: 80.1800  mDice: 76.0100  mFscore: 76.0100  mPrecision: 73.1300  mRecall: 80.1800  binary/Foreground_IoU: 39.4494  binary/Dice: 56.5788  binary/F1: 56.5788  binary/Precision: 49.3066  binary/Recall: 66.3672  binary/Boundary_F1: 3.1542  binary/BFScore: 3.1542  binary/Boundary_Precision: 1.9405  binary/Boundary_Recall: 8.4221  binary/Hausdorff_px: 1032.3123  binary/HD95_px: 904.0010  binary/Hausdorff_m: 516.1562  binary/HD95_m: 452.0005  data_time: 0.0096  time: 1.0799
+2026/09/20 12:40:30 - mmengine - INFO - The previous best checkpoint /workspace/work_dirs/segformer_extended/best_binary_Foreground_IoU_iter_4000.pth is removed
+2026/09/20 12:40:31 - mmengine - INFO - The best checkpoint with 39.4494 binary/Foreground_IoU at 5000 iter is saved to best_binary_Foreground_IoU_iter_5000.pth.
+2026/09/20 12:40:46 - mmengine - INFO - Iter(train) [ 5050/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:09:41  time: 0.2746  data_time: 0.0607  memory: 2899  grad_norm: 1.1742  loss: 0.4544  decode.loss_ce: 0.3280  decode.loss_dice: 0.1264  decode.acc_seg: 93.5604
+2026/09/20 12:41:00 - mmengine - INFO - Iter(train) [ 5100/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:09:28  time: 0.2877  data_time: 0.0763  memory: 2899  grad_norm: 2.0448  loss: 0.7101  decode.loss_ce: 0.5151  decode.loss_dice: 0.1950  decode.acc_seg: 75.3903
+2026/09/20 12:41:13 - mmengine - INFO - Iter(train) [ 5150/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:09:10  time: 0.3062  data_time: 0.1001  memory: 2899  grad_norm: 1.1089  loss: 0.4614  decode.loss_ce: 0.3384  decode.loss_dice: 0.1230  decode.acc_seg: 87.9901
+2026/09/20 12:41:26 - mmengine - INFO - Iter(train) [ 5200/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:08:50  time: 0.2596  data_time: 0.0312  memory: 2899  grad_norm: 1.5819  loss: 0.4820  decode.loss_ce: 0.3566  decode.loss_dice: 0.1254  decode.acc_seg: 91.7160
+2026/09/20 12:41:41 - mmengine - INFO - Iter(train) [ 5250/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:08:37  time: 0.2609  data_time: 0.0743  memory: 2899  grad_norm: 1.2751  loss: 0.5143  decode.loss_ce: 0.3794  decode.loss_dice: 0.1349  decode.acc_seg: 65.7547
+2026/09/20 12:41:54 - mmengine - INFO - Iter(train) [ 5300/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:08:20  time: 0.2688  data_time: 0.0442  memory: 2899  grad_norm: 1.8850  loss: 0.4880  decode.loss_ce: 0.3602  decode.loss_dice: 0.1279  decode.acc_seg: 85.9995
+2026/09/20 12:42:07 - mmengine - INFO - Iter(train) [ 5350/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:08:01  time: 0.2277  data_time: 0.0108  memory: 2899  grad_norm: 1.7458  loss: 0.4388  decode.loss_ce: 0.3241  decode.loss_dice: 0.1147  decode.acc_seg: 90.9413
+2026/09/20 12:42:21 - mmengine - INFO - Iter(train) [ 5400/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:07:44  time: 0.2700  data_time: 0.0438  memory: 2899  grad_norm: 2.0169  loss: 0.5263  decode.loss_ce: 0.3857  decode.loss_dice: 0.1406  decode.acc_seg: 83.5459
+2026/09/20 12:42:34 - mmengine - INFO - Iter(train) [ 5450/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:07:28  time: 0.2634  data_time: 0.0398  memory: 2899  grad_norm: 4.1806  loss: 0.6305  decode.loss_ce: 0.4621  decode.loss_dice: 0.1684  decode.acc_seg: 83.8191
+2026/09/20 12:42:47 - mmengine - INFO - Iter(train) [ 5500/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:07:08  time: 0.2373  data_time: 0.0118  memory: 2899  grad_norm: 1.2405  loss: 0.4448  decode.loss_ce: 0.3276  decode.loss_dice: 0.1172  decode.acc_seg: 88.5641
+2026/09/20 12:43:01 - mmengine - INFO - Iter(train) [ 5550/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:06:53  time: 0.2983  data_time: 0.0856  memory: 2899  grad_norm: 1.9933  loss: 0.5601  decode.loss_ce: 0.4052  decode.loss_dice: 0.1549  decode.acc_seg: 74.2130
+2026/09/20 12:43:14 - mmengine - INFO - Iter(train) [ 5600/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:06:35  time: 0.2603  data_time: 0.0448  memory: 2899  grad_norm: 1.5959  loss: 0.6017  decode.loss_ce: 0.4288  decode.loss_dice: 0.1729  decode.acc_seg: 82.0125
+2026/09/20 12:43:27 - mmengine - INFO - Iter(train) [ 5650/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:06:19  time: 0.2783  data_time: 0.0578  memory: 2899  grad_norm: 1.4614  loss: 0.4280  decode.loss_ce: 0.3208  decode.loss_dice: 0.1072  decode.acc_seg: 83.5148
+2026/09/20 12:43:41 - mmengine - INFO - Iter(train) [ 5700/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:06:06  time: 0.2872  data_time: 0.0886  memory: 2899  grad_norm: 1.7366  loss: 0.5696  decode.loss_ce: 0.4122  decode.loss_dice: 0.1574  decode.acc_seg: 88.2586
+2026/09/20 12:43:55 - mmengine - INFO - Iter(train) [ 5750/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:05:52  time: 0.2981  data_time: 0.0605  memory: 2899  grad_norm: 2.0932  loss: 0.6056  decode.loss_ce: 0.4333  decode.loss_dice: 0.1723  decode.acc_seg: 86.5762
+2026/09/20 12:44:09 - mmengine - INFO - Iter(train) [ 5800/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:05:36  time: 0.2647  data_time: 0.0515  memory: 2899  grad_norm: 1.1767  loss: 0.5123  decode.loss_ce: 0.3680  decode.loss_dice: 0.1443  decode.acc_seg: 67.8199
+2026/09/20 12:44:23 - mmengine - INFO - Iter(train) [ 5850/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:05:25  time: 0.2680  data_time: 0.0814  memory: 2899  grad_norm: 2.5657  loss: 0.5537  decode.loss_ce: 0.4083  decode.loss_dice: 0.1453  decode.acc_seg: 86.0404
+2026/09/20 12:44:37 - mmengine - INFO - Iter(train) [ 5900/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:05:12  time: 0.3100  data_time: 0.1005  memory: 2899  grad_norm: 1.5289  loss: 0.5322  decode.loss_ce: 0.3913  decode.loss_dice: 0.1409  decode.acc_seg: 94.8534
+2026/09/20 12:44:51 - mmengine - INFO - Iter(train) [ 5950/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:04:56  time: 0.2642  data_time: 0.0423  memory: 2899  grad_norm: 1.7857  loss: 0.5585  decode.loss_ce: 0.4071  decode.loss_dice: 0.1514  decode.acc_seg: 92.9298
+2026/09/20 12:45:04 - mmengine - INFO - Exp name: segformer_20260920_121742
+2026/09/20 12:45:04 - mmengine - INFO - Iter(train) [ 6000/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:04:40  time: 0.2662  data_time: 0.0306  memory: 2899  grad_norm: 1.1909  loss: 0.5152  decode.loss_ce: 0.3766  decode.loss_dice: 0.1386  decode.acc_seg: 92.0417
+2026/09/20 12:45:04 - mmengine - INFO - Saving checkpoint at 6000 iterations
+2026/09/20 12:45:38 - mmengine - INFO - Iter(val) [ 50/304]    eta: 0:02:48  time: 0.6791  data_time: 0.0086  memory: 602  
+2026/09/20 12:46:38 - mmengine - INFO - Iter(val) [100/304]    eta: 0:03:09  time: 1.1843  data_time: 0.0088  memory: 602  
+2026/09/20 12:47:37 - mmengine - INFO - Iter(val) [150/304]    eta: 0:02:35  time: 1.1699  data_time: 0.0087  memory: 602  
+2026/09/20 12:48:35 - mmengine - INFO - Iter(val) [200/304]    eta: 0:01:49  time: 1.1667  data_time: 0.0087  memory: 602  
+2026/09/20 12:49:33 - mmengine - INFO - Iter(val) [250/304]    eta: 0:00:57  time: 1.1747  data_time: 0.0091  memory: 602  
+2026/09/20 12:50:30 - mmengine - INFO - Iter(val) [300/304]    eta: 0:00:04  time: 1.1295  data_time: 0.0095  memory: 602  
+2026/09/20 12:50:34 - mmengine - INFO - per class results:
+2026/09/20 12:50:34 - mmengine - INFO - 
++------------------+-------+-------+-------+--------+-----------+--------+
+|      Class       |  IoU  |  Acc  |  Dice | Fscore | Precision | Recall |
++------------------+-------+-------+-------+--------+-----------+--------+
+|    background    | 89.56 | 92.12 | 94.49 | 94.49  |   96.99   | 92.12  |
+| wastewater_plant | 35.66 | 67.56 | 52.57 | 52.57  |   43.03   | 67.56  |
++------------------+-------+-------+-------+--------+-----------+--------+
+2026/09/20 12:50:34 - mmengine - INFO - Iter(val) [304/304]    aAcc: 90.1300  mIoU: 62.6100  mAcc: 79.8400  mDice: 73.5300  mFscore: 73.5300  mPrecision: 70.0100  mRecall: 79.8400  binary/Foreground_IoU: 35.6606  binary/Dice: 52.5733  binary/F1: 52.5733  binary/Precision: 43.0271  binary/Recall: 67.5630  binary/Boundary_F1: 2.9520  binary/BFScore: 2.9520  binary/Boundary_Precision: 1.7361  binary/Boundary_Recall: 9.8496  binary/Hausdorff_px: 1140.5487  binary/HD95_px: 1004.9640  binary/Hausdorff_m: 570.2744  binary/HD95_m: 502.4820  data_time: 0.0100  time: 1.0821
+2026/09/20 12:50:47 - mmengine - INFO - Iter(train) [ 6050/20000]  base_lr: 0.0000e+00 lr: 5.9459e-05  eta: 1:04:23  time: 0.2621  data_time: 0.0437  memory: 2899  grad_norm: 1.2935  loss: 0.4844  decode.loss_ce: 0.3560  decode.loss_dice: 0.1285  decode.acc_seg: 70.7424
+2026/09/20 12:51:00 - mmengine - INFO - Iter(train) [ 6100/20000]  base_lr: 0.0000e+00 lr: 1.1952e-04  eta: 1:04:04  time: 0.2546  data_time: 0.0279  memory: 2899  grad_norm: 1.5890  loss: 0.4605  decode.loss_ce: 0.3399  decode.loss_dice: 0.1206  decode.acc_seg: 84.7139
+2026/09/20 12:51:14 - mmengine - INFO - Iter(train) [ 6150/20000]  base_lr: 0.0000e+00 lr: 1.7958e-04  eta: 1:03:52  time: 0.3381  data_time: 0.1270  memory: 2899  grad_norm: 1.5685  loss: 0.5396  decode.loss_ce: 0.3973  decode.loss_dice: 0.1423  decode.acc_seg: 79.2689
+2026/09/20 12:51:28 - mmengine - INFO - Iter(train) [ 6200/20000]  base_lr: 0.0000e+00 lr: 2.3964e-04  eta: 1:03:36  time: 0.2759  data_time: 0.0666  memory: 2899  grad_norm: 1.9469  loss: 0.4887  decode.loss_ce: 0.3560  decode.loss_dice: 0.1327  decode.acc_seg: 68.1533
+2026/09/20 12:51:41 - mmengine - INFO - Iter(train) [ 6250/20000]  base_lr: 0.0000e+00 lr: 2.9970e-04  eta: 1:03:22  time: 0.2945  data_time: 0.0755  memory: 2899  grad_norm: 1.6074  loss: 0.4757  decode.loss_ce: 0.3467  decode.loss_dice: 0.1289  decode.acc_seg: 87.7526
+2026/09/20 12:51:55 - mmengine - INFO - Iter(train) [ 6300/20000]  base_lr: 0.0000e+00 lr: 3.5976e-04  eta: 1:03:06  time: 0.2661  data_time: 0.0468  memory: 2899  grad_norm: 2.1431  loss: 0.4676  decode.loss_ce: 0.3427  decode.loss_dice: 0.1249  decode.acc_seg: 74.5776
+2026/09/20 12:52:08 - mmengine - INFO - Iter(train) [ 6350/20000]  base_lr: 0.0000e+00 lr: 4.1982e-04  eta: 1:02:49  time: 0.2510  data_time: 0.0298  memory: 2899  grad_norm: 2.5102  loss: 0.5844  decode.loss_ce: 0.4325  decode.loss_dice: 0.1518  decode.acc_seg: 79.5855
+2026/09/20 12:52:21 - mmengine - INFO - Iter(train) [ 6400/20000]  base_lr: 0.0000e+00 lr: 4.7988e-04  eta: 1:02:34  time: 0.2733  data_time: 0.0505  memory: 2899  grad_norm: 1.7928  loss: 0.5567  decode.loss_ce: 0.4073  decode.loss_dice: 0.1494  decode.acc_seg: 93.9688
+2026/09/20 12:52:35 - mmengine - INFO - Iter(train) [ 6450/20000]  base_lr: 0.0000e+00 lr: 5.3994e-04  eta: 1:02:21  time: 0.3062  data_time: 0.0970  memory: 2899  grad_norm: 1.9310  loss: 0.4620  decode.loss_ce: 0.3386  decode.loss_dice: 0.1234  decode.acc_seg: 82.6162
+2026/09/20 12:52:49 - mmengine - INFO - Iter(train) [ 6500/20000]  base_lr: 0.0000e+00 lr: 6.0000e-04  eta: 1:02:07  time: 0.2845  data_time: 0.0758  memory: 2899  grad_norm: 1.9602  loss: 0.6277  decode.loss_ce: 0.4612  decode.loss_dice: 0.1665  decode.acc_seg: 82.2599
+2026/09/20 12:53:03 - mmengine - INFO - Iter(train) [ 6550/20000]  base_lr: 0.0000e+00 lr: 5.9840e-04  eta: 1:01:55  time: 0.3056  data_time: 0.0955  memory: 2899  grad_norm: 1.0409  loss: 0.4676  decode.loss_ce: 0.3427  decode.loss_dice: 0.1248  decode.acc_seg: 72.8290
+2026/09/20 12:53:18 - mmengine - INFO - Iter(train) [ 6600/20000]  base_lr: 0.0000e+00 lr: 5.9676e-04  eta: 1:01:44  time: 0.2707  data_time: 0.0706  memory: 2899  grad_norm: 1.4588  loss: 0.4861  decode.loss_ce: 0.3556  decode.loss_dice: 0.1305  decode.acc_seg: 93.7728
+2026/09/20 12:53:32 - mmengine - INFO - Iter(train) [ 6650/20000]  base_lr: 0.0000e+00 lr: 5.9512e-04  eta: 1:01:30  time: 0.3205  data_time: 0.0950  memory: 2899  grad_norm: 1.6140  loss: 0.7095  decode.loss_ce: 0.5111  decode.loss_dice: 0.1984  decode.acc_seg: 64.3069
+2026/09/20 12:53:45 - mmengine - INFO - Iter(train) [ 6700/20000]  base_lr: 0.0000e+00 lr: 5.9348e-04  eta: 1:01:14  time: 0.2905  data_time: 0.0700  memory: 2899  grad_norm: 1.5175  loss: 0.3695  decode.loss_ce: 0.2678  decode.loss_dice: 0.1016  decode.acc_seg: 93.1254
+2026/09/20 12:53:58 - mmengine - INFO - Iter(train) [ 6750/20000]  base_lr: 0.0000e+00 lr: 5.9184e-04  eta: 1:00:58  time: 0.2559  data_time: 0.0345  memory: 2899  grad_norm: 1.9984  loss: 0.4483  decode.loss_ce: 0.3228  decode.loss_dice: 0.1255  decode.acc_seg: 89.4126
+2026/09/20 12:54:11 - mmengine - INFO - Iter(train) [ 6800/20000]  base_lr: 0.0000e+00 lr: 5.9021e-04  eta: 1:00:42  time: 0.2360  data_time: 0.0123  memory: 2899  grad_norm: 3.1187  loss: 0.5861  decode.loss_ce: 0.4244  decode.loss_dice: 0.1617  decode.acc_seg: 84.0333
+2026/09/20 12:54:25 - mmengine - INFO - Iter(train) [ 6850/20000]  base_lr: 0.0000e+00 lr: 5.8857e-04  eta: 1:00:27  time: 0.2479  data_time: 0.0290  memory: 2899  grad_norm: 1.6579  loss: 0.4466  decode.loss_ce: 0.3324  decode.loss_dice: 0.1142  decode.acc_seg: 85.7068
+2026/09/20 12:54:38 - mmengine - INFO - Iter(train) [ 6900/20000]  base_lr: 0.0000e+00 lr: 5.8693e-04  eta: 1:00:12  time: 0.2712  data_time: 0.0481  memory: 2899  grad_norm: 1.5652  loss: 0.5688  decode.loss_ce: 0.4133  decode.loss_dice: 0.1556  decode.acc_seg: 90.7517
+2026/09/20 12:54:51 - mmengine - INFO - Iter(train) [ 6950/20000]  base_lr: 0.0000e+00 lr: 5.8528e-04  eta: 0:59:57  time: 0.2506  data_time: 0.0277  memory: 2899  grad_norm: 1.9862  loss: 0.5618  decode.loss_ce: 0.4071  decode.loss_dice: 0.1547  decode.acc_seg: 87.6821
+2026/09/20 12:55:05 - mmengine - INFO - Exp name: segformer_20260920_121742
+2026/09/20 12:55:05 - mmengine - INFO - Iter(train) [ 7000/20000]  base_lr: 0.0000e+00 lr: 5.8364e-04  eta: 0:59:42  time: 0.2476  data_time: 0.0257  memory: 2899  grad_norm: 1.7244  loss: 0.5062  decode.loss_ce: 0.3687  decode.loss_dice: 0.1374  decode.acc_seg: 65.0112
+2026/09/20 12:55:05 - mmengine - INFO - Saving checkpoint at 7000 iterations
+2026/09/20 12:55:37 - mmengine - INFO - Iter(val) [ 50/304]    eta: 0:02:38  time: 0.6212  data_time: 0.0088  memory: 602  
+2026/09/20 12:56:32 - mmengine - INFO - Iter(val) [100/304]    eta: 0:02:56  time: 1.0812  data_time: 0.0094  memory: 602  
+2026/09/20 12:57:26 - mmengine - INFO - Iter(val) [150/304]    eta: 0:02:23  time: 1.0291  data_time: 0.0089  memory: 602  
+2026/09/20 12:58:18 - mmengine - INFO - Iter(val) [200/304]    eta: 0:01:39  time: 1.0538  data_time: 0.0089  memory: 602  
+2026/09/20 12:59:09 - mmengine - INFO - Iter(val) [250/304]    eta: 0:00:52  time: 1.0091  data_time: 0.0089  memory: 602  
+2026/09/20 13:00:01 - mmengine - INFO - Iter(val) [300/304]    eta: 0:00:03  time: 1.0240  data_time: 0.0098  memory: 602  
+2026/09/20 13:00:05 - mmengine - INFO - per class results:
+2026/09/20 13:00:05 - mmengine - INFO - 
++------------------+-------+-------+-------+--------+-----------+--------+
+|      Class       |  IoU  |  Acc  |  Dice | Fscore | Precision | Recall |
++------------------+-------+-------+-------+--------+-----------+--------+
+|    background    | 94.68 | 98.54 | 97.27 | 97.27  |   96.03   | 98.54  |
+| wastewater_plant | 46.08 | 53.71 | 63.09 | 63.09  |   76.44   | 53.71  |
++------------------+-------+-------+-------+--------+-----------+--------+
+2026/09/20 13:00:05 - mmengine - INFO - Iter(val) [304/304]    aAcc: 94.9100  mIoU: 70.3800  mAcc: 76.1300  mDice: 80.1800  mFscore: 80.1800  mPrecision: 86.2300  mRecall: 76.1300  binary/Foreground_IoU: 46.0826  binary/Dice: 63.0911  binary/F1: 63.0911  binary/Precision: 76.4420  binary/Recall: 53.7104  binary/Boundary_F1: 4.5460  binary/BFScore: 4.5460  binary/Boundary_Precision: 3.4490  binary/Boundary_Recall: 6.6662  binary/Hausdorff_px: 639.9772  binary/HD95_px: 530.9444  binary/Hausdorff_m: 319.9886  binary/HD95_m: 265.4722  data_time: 0.0099  time: 0.9842
+2026/09/20 13:00:05 - mmengine - INFO - The previous best checkpoint /workspace/work_dirs/segformer_extended/best_binary_Foreground_IoU_iter_5000.pth is removed
+2026/09/20 13:00:06 - mmengine - INFO - The best checkpoint with 46.0826 binary/Foreground_IoU at 7000 iter is saved to best_binary_Foreground_IoU_iter_7000.pth.
+2026/09/20 13:00:21 - mmengine - INFO - Iter(train) [ 7050/20000]  base_lr: 0.0000e+00 lr: 5.8200e-04  eta: 0:59:36  time: 0.2669  data_time: 0.0584  memory: 2899  grad_norm: 2.3998  loss: 0.4713  decode.loss_ce: 0.3421  decode.loss_dice: 0.1292  decode.acc_seg: 80.0693
+2026/09/20 13:00:35 - mmengine - INFO - Iter(train) [ 7100/20000]  base_lr: 0.0000e+00 lr: 5.8036e-04  eta: 0:59:21  time: 0.2527  data_time: 0.0296  memory: 2899  grad_norm: 2.0528  loss: 0.6703  decode.loss_ce: 0.4851  decode.loss_dice: 0.1852  decode.acc_seg: 84.8374
+2026/09/20 13:00:49 - mmengine - INFO - Iter(train) [ 7150/20000]  base_lr: 0.0000e+00 lr: 5.7872e-04  eta: 0:59:10  time: 0.2681  data_time: 0.0521  memory: 2899  grad_norm: 2.3037  loss: 0.4738  decode.loss_ce: 0.3512  decode.loss_dice: 0.1226  decode.acc_seg: 74.3748
+2026/09/20 13:01:03 - mmengine - INFO - Iter(train) [ 7200/20000]  base_lr: 0.0000e+00 lr: 5.7707e-04  eta: 0:58:55  time: 0.2383  data_time: 0.0216  memory: 2899  grad_norm: 1.3936  loss: 0.4426  decode.loss_ce: 0.3248  decode.loss_dice: 0.1178  decode.acc_seg: 83.8807
+2026/09/20 13:01:17 - mmengine - INFO - Iter(train) [ 7250/20000]  base_lr: 0.0000e+00 lr: 5.7543e-04  eta: 0:58:41  time: 0.2867  data_time: 0.0700  memory: 2899  grad_norm: inf  loss: 0.5288  decode.loss_ce: 0.3813  decode.loss_dice: 0.1475  decode.acc_seg: 80.2899
+2026/09/20 13:01:30 - mmengine - INFO - Iter(train) [ 7300/20000]  base_lr: 0.0000e+00 lr: 5.7378e-04  eta: 0:58:26  time: 0.2561  data_time: 0.0319  memory: 2899  grad_norm: 1.0543  loss: 0.4660  decode.loss_ce: 0.3417  decode.loss_dice: 0.1242  decode.acc_seg: 92.0822
+2026/09/20 13:01:44 - mmengine - INFO - Iter(train) [ 7350/20000]  base_lr: 0.0000e+00 lr: 5.7214e-04  eta: 0:58:12  time: 0.2756  data_time: 0.0756  memory: 2899  grad_norm: 1.3354  loss: 0.4546  decode.loss_ce: 0.3372  decode.loss_dice: 0.1173  decode.acc_seg: 82.6539
+2026/09/20 13:01:57 - mmengine - INFO - Iter(train) [ 7400/20000]  base_lr: 0.0000e+00 lr: 5.7049e-04  eta: 0:57:58  time: 0.2514  data_time: 0.0268  memory: 2899  grad_norm: 1.7523  loss: 0.6263  decode.loss_ce: 0.4664  decode.loss_dice: 0.1599  decode.acc_seg: 77.8358
+2026/09/20 13:02:11 - mmengine - INFO - Iter(train) [ 7450/20000]  base_lr: 0.0000e+00 lr: 5.6885e-04  eta: 0:57:43  time: 0.2439  data_time: 0.0177  memory: 2899  grad_norm: 1.6846  loss: 0.4711  decode.loss_ce: 0.3526  decode.loss_dice: 0.1185  decode.acc_seg: 94.8174
+2026/09/20 13:02:25 - mmengine - INFO - Iter(train) [ 7500/20000]  base_lr: 0.0000e+00 lr: 5.6720e-04  eta: 0:57:29  time: 0.3141  data_time: 0.0948  memory: 2899  grad_norm: 0.9398  loss: 0.4073  decode.loss_ce: 0.3017  decode.loss_dice: 0.1056  decode.acc_seg: 84.2745
+2026/09/20 13:02:38 - mmengine - INFO - Iter(train) [ 7550/20000]  base_lr: 0.0000e+00 lr: 5.6556e-04  eta: 0:57:14  time: 0.2839  data_time: 0.0643  memory: 2899  grad_norm: 1.4095  loss: 0.5307  decode.loss_ce: 0.3840  decode.loss_dice: 0.1467  decode.acc_seg: 72.2370
+2026/09/20 13:02:53 - mmengine - INFO - Iter(train) [ 7600/20000]  base_lr: 0.0000e+00 lr: 5.6391e-04  eta: 0:57:02  time: 0.2479  data_time: 0.0418  memory: 2899  grad_norm: 2.3333  loss: 0.6080  decode.loss_ce: 0.4527  decode.loss_dice: 0.1553  decode.acc_seg: 77.8628
+2026/09/20 13:03:07 - mmengine - INFO - Iter(train) [ 7650/20000]  base_lr: 0.0000e+00 lr: 5.6226e-04  eta: 0:56:49  time: 0.2769  data_time: 0.0486  memory: 2899  grad_norm: 1.3605  loss: 0.5437  decode.loss_ce: 0.3901  decode.loss_dice: 0.1537  decode.acc_seg: 81.7685
+2026/09/20 13:03:20 - mmengine - INFO - Iter(train) [ 7700/20000]  base_lr: 0.0000e+00 lr: 5.6061e-04  eta: 0:56:35  time: 0.2457  data_time: 0.0209  memory: 2899  grad_norm: 1.6791  loss: 0.4888  decode.loss_ce: 0.3656  decode.loss_dice: 0.1231  decode.acc_seg: 87.1262
+2026/09/20 13:03:34 - mmengine - INFO - Iter(train) [ 7750/20000]  base_lr: 0.0000e+00 lr: 5.5896e-04  eta: 0:56:22  time: 0.2930  data_time: 0.0851  memory: 2899  grad_norm: 1.5111  loss: 0.5158  decode.loss_ce: 0.3784  decode.loss_dice: 0.1374  decode.acc_seg: 80.1253
+2026/09/20 13:03:49 - mmengine - INFO - Iter(train) [ 7800/20000]  base_lr: 0.0000e+00 lr: 5.5731e-04  eta: 0:56:10  time: 0.3351  data_time: 0.1367  memory: 2899  grad_norm: 1.1496  loss: 0.3983  decode.loss_ce: 0.2916  decode.loss_dice: 0.1067  decode.acc_seg: 89.0012
+2026/09/20 13:04:03 - mmengine - INFO - Iter(train) [ 7850/20000]  base_lr: 0.0000e+00 lr: 5.5566e-04  eta: 0:55:56  time: 0.2584  data_time: 0.0394  memory: 2899  grad_norm: 1.1910  loss: 0.3624  decode.loss_ce: 0.2682  decode.loss_dice: 0.0942  decode.acc_seg: 91.8406
+2026/09/20 13:04:16 - mmengine - INFO - Iter(train) [ 7900/20000]  base_lr: 0.0000e+00 lr: 5.5401e-04  eta: 0:55:42  time: 0.2430  data_time: 0.0234  memory: 2899  grad_norm: 2.1676  loss: 0.4998  decode.loss_ce: 0.3665  decode.loss_dice: 0.1333  decode.acc_seg: 82.9623
+2026/09/20 13:04:29 - mmengine - INFO - Iter(train) [ 7950/20000]  base_lr: 0.0000e+00 lr: 5.5236e-04  eta: 0:55:26  time: 0.2525  data_time: 0.0250  memory: 2899  grad_norm: 1.3747  loss: 0.3583  decode.loss_ce: 0.2654  decode.loss_dice: 0.0930  decode.acc_seg: 94.0644
+2026/09/20 13:04:43 - mmengine - INFO - Exp name: segformer_20260920_121742
+2026/09/20 13:04:43 - mmengine - INFO - Iter(train) [ 8000/20000]  base_lr: 0.0000e+00 lr: 5.5071e-04  eta: 0:55:11  time: 0.2705  data_time: 0.0502  memory: 2899  grad_norm: 2.0893  loss: 0.7314  decode.loss_ce: 0.5430  decode.loss_dice: 0.1884  decode.acc_seg: 59.9866
+2026/09/20 13:04:43 - mmengine - INFO - Saving checkpoint at 8000 iterations
+2026/09/20 13:05:16 - mmengine - INFO - Iter(val) [ 50/304]    eta: 0:02:39  time: 0.6217  data_time: 0.0087  memory: 602  
+2026/09/20 13:06:12 - mmengine - INFO - Iter(val) [100/304]    eta: 0:02:59  time: 1.1197  data_time: 0.0087  memory: 602  
+2026/09/20 13:07:06 - mmengine - INFO - Iter(val) [150/304]    eta: 0:02:25  time: 1.0513  data_time: 0.0082  memory: 602  
+2026/09/20 13:07:59 - mmengine - INFO - Iter(val) [200/304]    eta: 0:01:41  time: 1.0911  data_time: 0.0088  memory: 602  
+2026/09/20 13:08:51 - mmengine - INFO - Iter(val) [250/304]    eta: 0:00:53  time: 1.0320  data_time: 0.0090  memory: 602  
+2026/09/20 13:09:43 - mmengine - INFO - Iter(val) [300/304]    eta: 0:00:03  time: 1.0095  data_time: 0.0086  memory: 602  
+2026/09/20 13:09:47 - mmengine - INFO - per class results:
+2026/09/20 13:09:47 - mmengine - INFO - 
++------------------+-------+-------+-------+--------+-----------+--------+
+|      Class       |  IoU  |  Acc  |  Dice | Fscore | Precision | Recall |
++------------------+-------+-------+-------+--------+-----------+--------+
+|    background    | 94.43 |  98.2 | 97.14 | 97.14  |    96.1   |  98.2  |
+| wastewater_plant | 45.46 | 54.77 |  62.5 |  62.5  |   72.77   | 54.77  |
++------------------+-------+-------+-------+--------+-----------+--------+
+2026/09/20 13:09:47 - mmengine - INFO - Iter(val) [304/304]    aAcc: 94.6800  mIoU: 69.9500  mAcc: 76.4800  mDice: 79.8200  mFscore: 79.8200  mPrecision: 84.4400  mRecall: 76.4800  binary/Foreground_IoU: 45.4586  binary/Dice: 62.5038  binary/F1: 62.5038  binary/Precision: 72.7738  binary/Recall: 54.7740  binary/Boundary_F1: 3.8819  binary/BFScore: 3.8819  binary/Boundary_Precision: 2.6666  binary/Boundary_Recall: 7.1331  binary/Hausdorff_px: 713.6550  binary/HD95_px: 592.9845  binary/Hausdorff_m: 356.8275  binary/HD95_m: 296.4922  data_time: 0.0093  time: 0.9969
+2026/09/20 13:10:01 - mmengine - INFO - Iter(train) [ 8050/20000]  base_lr: 0.0000e+00 lr: 5.4906e-04  eta: 0:54:57  time: 0.3303  data_time: 0.1246  memory: 2899  grad_norm: 1.6066  loss: 0.4280  decode.loss_ce: 0.3193  decode.loss_dice: 0.1087  decode.acc_seg: 90.0961
+2026/09/20 13:10:14 - mmengine - INFO - Iter(train) [ 8100/20000]  base_lr: 0.0000e+00 lr: 5.4740e-04  eta: 0:54:43  time: 0.3058  data_time: 0.0879  memory: 2899  grad_norm: 1.6502  loss: 0.5141  decode.loss_ce: 0.3793  decode.loss_dice: 0.1348  decode.acc_seg: 74.0433
+2026/09/20 13:10:28 - mmengine - INFO - Iter(train) [ 8150/20000]  base_lr: 0.0000e+00 lr: 5.4575e-04  eta: 0:54:28  time: 0.2455  data_time: 0.0223  memory: 2899  grad_norm: 1.7735  loss: 0.5823  decode.loss_ce: 0.4178  decode.loss_dice: 0.1644  decode.acc_seg: 71.7616
+2026/09/20 13:10:41 - mmengine - INFO - Iter(train) [ 8200/20000]  base_lr: 0.0000e+00 lr: 5.4410e-04  eta: 0:54:13  time: 0.2677  data_time: 0.0484  memory: 2899  grad_norm: 2.4065  loss: 0.6015  decode.loss_ce: 0.4368  decode.loss_dice: 0.1647  decode.acc_seg: 81.3109
+2026/09/20 13:10:54 - mmengine - INFO - Iter(train) [ 8250/20000]  base_lr: 0.0000e+00 lr: 5.4244e-04  eta: 0:53:58  time: 0.2746  data_time: 0.0597  memory: 2899  grad_norm: 1.3484  loss: 0.4509  decode.loss_ce: 0.3318  decode.loss_dice: 0.1190  decode.acc_seg: 91.3968
+2026/09/20 13:11:08 - mmengine - INFO - Iter(train) [ 8300/20000]  base_lr: 0.0000e+00 lr: 5.4079e-04  eta: 0:53:45  time: 0.2767  data_time: 0.0783  memory: 2899  grad_norm: 1.5440  loss: 0.4335  decode.loss_ce: 0.3187  decode.loss_dice: 0.1148  decode.acc_seg: 90.0955
+2026/09/20 13:11:22 - mmengine - INFO - Iter(train) [ 8350/20000]  base_lr: 0.0000e+00 lr: 5.3913e-04  eta: 0:53:31  time: 0.2850  data_time: 0.0681  memory: 2899  grad_norm: 2.2366  loss: 0.6280  decode.loss_ce: 0.4608  decode.loss_dice: 0.1672  decode.acc_seg: 99.2570
+2026/09/20 13:11:36 - mmengine - INFO - Iter(train) [ 8400/20000]  base_lr: 0.0000e+00 lr: 5.3747e-04  eta: 0:53:18  time: 0.2735  data_time: 0.0505  memory: 2899  grad_norm: 2.4859  loss: 0.6012  decode.loss_ce: 0.4322  decode.loss_dice: 0.1690  decode.acc_seg: 72.3518
+2026/09/20 13:11:49 - mmengine - INFO - Iter(train) [ 8450/20000]  base_lr: 0.0000e+00 lr: 5.3582e-04  eta: 0:53:03  time: 0.2603  data_time: 0.0528  memory: 2899  grad_norm: 2.1723  loss: 0.4945  decode.loss_ce: 0.3599  decode.loss_dice: 0.1346  decode.acc_seg: 74.9749
+2026/09/20 13:12:02 - mmengine - INFO - Iter(train) [ 8500/20000]  base_lr: 0.0000e+00 lr: 5.3416e-04  eta: 0:52:48  time: 0.2621  data_time: 0.0365  memory: 2899  grad_norm: 1.8048  loss: 0.5930  decode.loss_ce: 0.4267  decode.loss_dice: 0.1663  decode.acc_seg: 71.6092
+2026/09/20 13:12:16 - mmengine - INFO - Iter(train) [ 8550/20000]  base_lr: 0.0000e+00 lr: 5.3250e-04  eta: 0:52:33  time: 0.2735  data_time: 0.0498  memory: 2899  grad_norm: 1.9982  loss: 0.4985  decode.loss_ce: 0.3590  decode.loss_dice: 0.1395  decode.acc_seg: 78.5084
+2026/09/20 13:12:29 - mmengine - INFO - Iter(train) [ 8600/20000]  base_lr: 0.0000e+00 lr: 5.3084e-04  eta: 0:52:18  time: 0.3019  data_time: 0.0929  memory: 2899  grad_norm: 1.9766  loss: 0.5427  decode.loss_ce: 0.3960  decode.loss_dice: 0.1467  decode.acc_seg: 87.3713
+2026/09/20 13:12:42 - mmengine - INFO - Iter(train) [ 8650/20000]  base_lr: 0.0000e+00 lr: 5.2918e-04  eta: 0:52:03  time: 0.2377  data_time: 0.0147  memory: 2899  grad_norm: 1.5084  loss: 0.5010  decode.loss_ce: 0.3643  decode.loss_dice: 0.1367  decode.acc_seg: 84.9018
+2026/09/20 13:12:55 - mmengine - INFO - Iter(train) [ 8700/20000]  base_lr: 0.0000e+00 lr: 5.2752e-04  eta: 0:51:49  time: 0.2551  data_time: 0.0352  memory: 2899  grad_norm: 2.2976  loss: 0.5950  decode.loss_ce: 0.4441  decode.loss_dice: 0.1509  decode.acc_seg: 67.5114
+2026/09/20 13:13:09 - mmengine - INFO - Iter(train) [ 8750/20000]  base_lr: 0.0000e+00 lr: 5.2586e-04  eta: 0:51:35  time: 0.2583  data_time: 0.0410  memory: 2899  grad_norm: 1.4427  loss: 0.4380  decode.loss_ce: 0.3310  decode.loss_dice: 0.1070  decode.acc_seg: 69.1803
+2026/09/20 13:13:23 - mmengine - INFO - Iter(train) [ 8800/20000]  base_lr: 0.0000e+00 lr: 5.2420e-04  eta: 0:51:20  time: 0.3088  data_time: 0.0792  memory: 2899  grad_norm: 1.0044  loss: 0.4674  decode.loss_ce: 0.3432  decode.loss_dice: 0.1243  decode.acc_seg: 89.5782
+2026/09/20 13:13:36 - mmengine - INFO - Iter(train) [ 8850/20000]  base_lr: 0.0000e+00 lr: 5.2254e-04  eta: 0:51:06  time: 0.2631  data_time: 0.0446  memory: 2899  grad_norm: 1.5269  loss: 0.4835  decode.loss_ce: 0.3537  decode.loss_dice: 0.1298  decode.acc_seg: 84.4065
+2026/09/20 13:13:50 - mmengine - INFO - Iter(train) [ 8900/20000]  base_lr: 0.0000e+00 lr: 5.2088e-04  eta: 0:50:53  time: 0.2769  data_time: 0.0532  memory: 2899  grad_norm: 3.8837  loss: 0.6827  decode.loss_ce: 0.4937  decode.loss_dice: 0.1890  decode.acc_seg: 78.3209
+2026/09/20 13:14:03 - mmengine - INFO - Iter(train) [ 8950/20000]  base_lr: 0.0000e+00 lr: 5.1922e-04  eta: 0:50:38  time: 0.2765  data_time: 0.0652  memory: 2899  grad_norm: 1.6944  loss: 0.5570  decode.loss_ce: 0.4071  decode.loss_dice: 0.1499  decode.acc_seg: 64.6443
+2026/09/20 13:14:16 - mmengine - INFO - Exp name: segformer_20260920_121742
+2026/09/20 13:14:16 - mmengine - INFO - Iter(train) [ 9000/20000]  base_lr: 0.0000e+00 lr: 5.1755e-04  eta: 0:50:23  time: 0.2830  data_time: 0.0818  memory: 2899  grad_norm: 1.2773  loss: 0.4934  decode.loss_ce: 0.3623  decode.loss_dice: 0.1312  decode.acc_seg: 91.3020
+2026/09/20 13:14:16 - mmengine - INFO - Saving checkpoint at 9000 iterations
+2026/09/20 13:14:49 - mmengine - INFO - Iter(val) [ 50/304]    eta: 0:02:38  time: 0.6139  data_time: 0.0092  memory: 602  
+2026/09/20 13:15:41 - mmengine - INFO - Iter(val) [100/304]    eta: 0:02:50  time: 1.0123  data_time: 0.0089  memory: 602  
+2026/09/20 13:16:31 - mmengine - INFO - Iter(val) [150/304]    eta: 0:02:16  time: 0.9629  data_time: 0.0092  memory: 602  
+2026/09/20 13:17:19 - mmengine - INFO - Iter(val) [200/304]    eta: 0:01:34  time: 0.9591  data_time: 0.0083  memory: 602  
+2026/09/20 13:18:07 - mmengine - INFO - Iter(val) [250/304]    eta: 0:00:49  time: 0.9703  data_time: 0.0085  memory: 602  
+2026/09/20 13:18:54 - mmengine - INFO - Iter(val) [300/304]    eta: 0:00:03  time: 0.9183  data_time: 0.0085  memory: 602  
+2026/09/20 13:18:58 - mmengine - INFO - per class results:
+2026/09/20 13:18:58 - mmengine - INFO - 
++------------------+-------+-------+-------+--------+-----------+--------+
+|      Class       |  IoU  |  Acc  |  Dice | Fscore | Precision | Recall |
++------------------+-------+-------+-------+--------+-----------+--------+
+|    background    | 94.14 | 97.92 | 96.98 | 96.98  |   96.06   | 97.92  |
+| wastewater_plant | 44.02 | 54.39 | 61.13 | 61.13  |   69.77   | 54.39  |
++------------------+-------+-------+-------+--------+-----------+--------+
+2026/09/20 13:18:58 - mmengine - INFO - Iter(val) [304/304]    aAcc: 94.4000  mIoU: 69.0800  mAcc: 76.1600  mDice: 79.0600  mFscore: 79.0600  mPrecision: 82.9100  mRecall: 76.1600  binary/Foreground_IoU: 44.0172  binary/Dice: 61.1277  binary/F1: 61.1277  binary/Precision: 69.7666  binary/Recall: 54.3926  binary/Boundary_F1: 3.9754  binary/BFScore: 3.9754  binary/Boundary_Precision: 2.8029  binary/Boundary_Recall: 6.8342  binary/Hausdorff_px: 752.0915  binary/HD95_px: 630.5550  binary/Hausdorff_m: 376.0458  binary/HD95_m: 315.2775  data_time: 0.0095  time: 0.9214
+2026/09/20 13:19:10 - mmengine - INFO - Iter(train) [ 9050/20000]  base_lr: 0.0000e+00 lr: 5.1589e-04  eta: 0:50:07  time: 0.2751  data_time: 0.0776  memory: 2899  grad_norm: 2.3745  loss: 0.7507  decode.loss_ce: 0.5484  decode.loss_dice: 0.2023  decode.acc_seg: 61.8384
+2026/09/20 13:19:24 - mmengine - INFO - Iter(train) [ 9100/20000]  base_lr: 0.0000e+00 lr: 5.1422e-04  eta: 0:49:54  time: 0.2822  data_time: 0.0589  memory: 2899  grad_norm: 1.4889  loss: 0.5031  decode.loss_ce: 0.3717  decode.loss_dice: 0.1313  decode.acc_seg: 81.4332
+2026/09/20 13:19:38 - mmengine - INFO - Iter(train) [ 9150/20000]  base_lr: 0.0000e+00 lr: 5.1256e-04  eta: 0:49:40  time: 0.2508  data_time: 0.0475  memory: 2899  grad_norm: 1.1686  loss: 0.3629  decode.loss_ce: 0.2702  decode.loss_dice: 0.0926  decode.acc_seg: 98.0519
+2026/09/20 13:19:51 - mmengine - INFO - Iter(train) [ 9200/20000]  base_lr: 0.0000e+00 lr: 5.1089e-04  eta: 0:49:25  time: 0.2563  data_time: 0.0448  memory: 2899  grad_norm: 1.0317  loss: 0.4059  decode.loss_ce: 0.3021  decode.loss_dice: 0.1038  decode.acc_seg: 90.5937
+2026/09/20 13:20:05 - mmengine - INFO - Iter(train) [ 9250/20000]  base_lr: 0.0000e+00 lr: 5.0923e-04  eta: 0:49:12  time: 0.2782  data_time: 0.0694  memory: 2899  grad_norm: 1.9052  loss: 0.4672  decode.loss_ce: 0.3383  decode.loss_dice: 0.1288  decode.acc_seg: 87.2926
+2026/09/20 13:20:18 - mmengine - INFO - Iter(train) [ 9300/20000]  base_lr: 0.0000e+00 lr: 5.0756e-04  eta: 0:48:57  time: 0.3047  data_time: 0.0831  memory: 2899  grad_norm: 2.6577  loss: 0.6285  decode.loss_ce: 0.4599  decode.loss_dice: 0.1686  decode.acc_seg: 92.9304
+2026/09/20 13:20:32 - mmengine - INFO - Iter(train) [ 9350/20000]  base_lr: 0.0000e+00 lr: 5.0589e-04  eta: 0:48:44  time: 0.2533  data_time: 0.0323  memory: 2899  grad_norm: 1.7160  loss: 0.5669  decode.loss_ce: 0.4144  decode.loss_dice: 0.1526  decode.acc_seg: 78.7487
+2026/09/20 13:20:45 - mmengine - INFO - Iter(train) [ 9400/20000]  base_lr: 0.0000e+00 lr: 5.0423e-04  eta: 0:48:29  time: 0.2542  data_time: 0.0418  memory: 2899  grad_norm: 1.4300  loss: 0.4598  decode.loss_ce: 0.3364  decode.loss_dice: 0.1234  decode.acc_seg: 91.8892
+2026/09/20 13:20:59 - mmengine - INFO - Iter(train) [ 9450/20000]  base_lr: 0.0000e+00 lr: 5.0256e-04  eta: 0:48:16  time: 0.2680  data_time: 0.0507  memory: 2899  grad_norm: 1.2294  loss: 0.4783  decode.loss_ce: 0.3445  decode.loss_dice: 0.1337  decode.acc_seg: 92.6362
+2026/09/20 13:21:13 - mmengine - INFO - Iter(train) [ 9500/20000]  base_lr: 0.0000e+00 lr: 5.0089e-04  eta: 0:48:02  time: 0.2809  data_time: 0.0526  memory: 2899  grad_norm: 1.1290  loss: 0.4528  decode.loss_ce: 0.3339  decode.loss_dice: 0.1190  decode.acc_seg: 93.4045
+2026/09/20 13:21:26 - mmengine - INFO - Iter(train) [ 9550/20000]  base_lr: 0.0000e+00 lr: 4.9922e-04  eta: 0:47:48  time: 0.2504  data_time: 0.0412  memory: 2899  grad_norm: 1.4098  loss: 0.4206  decode.loss_ce: 0.3107  decode.loss_dice: 0.1099  decode.acc_seg: 91.1826
+2026/09/20 13:21:39 - mmengine - INFO - Iter(train) [ 9600/20000]  base_lr: 0.0000e+00 lr: 4.9755e-04  eta: 0:47:33  time: 0.2505  data_time: 0.0281  memory: 2899  grad_norm: 2.3890  loss: 0.7216  decode.loss_ce: 0.5296  decode.loss_dice: 0.1920  decode.acc_seg: 80.5939
+2026/09/20 13:21:53 - mmengine - INFO - Iter(train) [ 9650/20000]  base_lr: 0.0000e+00 lr: 4.9588e-04  eta: 0:47:20  time: 0.2710  data_time: 0.0510  memory: 2899  grad_norm: 1.1748  loss: 0.3163  decode.loss_ce: 0.2362  decode.loss_dice: 0.0802  decode.acc_seg: 89.1679
+2026/09/20 13:22:07 - mmengine - INFO - Iter(train) [ 9700/20000]  base_lr: 0.0000e+00 lr: 4.9420e-04  eta: 0:47:06  time: 0.2513  data_time: 0.0281  memory: 2899  grad_norm: 1.2077  loss: 0.4179  decode.loss_ce: 0.3152  decode.loss_dice: 0.1027  decode.acc_seg: 88.5744
+2026/09/20 13:22:20 - mmengine - INFO - Iter(train) [ 9750/20000]  base_lr: 0.0000e+00 lr: 4.9253e-04  eta: 0:46:52  time: 0.2484  data_time: 0.0230  memory: 2899  grad_norm: 1.4131  loss: 0.5059  decode.loss_ce: 0.3704  decode.loss_dice: 0.1355  decode.acc_seg: 93.1139
+2026/09/20 13:22:34 - mmengine - INFO - Iter(train) [ 9800/20000]  base_lr: 0.0000e+00 lr: 4.9086e-04  eta: 0:46:38  time: 0.2423  data_time: 0.0224  memory: 2899  grad_norm: 0.9910  loss: 0.3702  decode.loss_ce: 0.2763  decode.loss_dice: 0.0939  decode.acc_seg: 95.3266
+2026/09/20 13:22:48 - mmengine - INFO - Iter(train) [ 9850/20000]  base_lr: 0.0000e+00 lr: 4.8918e-04  eta: 0:46:24  time: 0.2830  data_time: 0.0720  memory: 2899  grad_norm: 4.5515  loss: 0.8078  decode.loss_ce: 0.5912  decode.loss_dice: 0.2166  decode.acc_seg: 47.8752
+2026/09/20 13:23:01 - mmengine - INFO - Iter(train) [ 9900/20000]  base_lr: 0.0000e+00 lr: 4.8751e-04  eta: 0:46:10  time: 0.2976  data_time: 0.0880  memory: 2899  grad_norm: 1.2079  loss: 0.4235  decode.loss_ce: 0.3072  decode.loss_dice: 0.1164  decode.acc_seg: 85.9210
+2026/09/20 13:23:15 - mmengine - INFO - Iter(train) [ 9950/20000]  base_lr: 0.0000e+00 lr: 4.8584e-04  eta: 0:45:56  time: 0.2413  data_time: 0.0214  memory: 2899  grad_norm: 1.9930  loss: 0.6098  decode.loss_ce: 0.4513  decode.loss_dice: 0.1585  decode.acc_seg: 83.1768
+2026/09/20 13:23:28 - mmengine - INFO - Exp name: segformer_20260920_121742
+2026/09/20 13:23:28 - mmengine - INFO - Iter(train) [10000/20000]  base_lr: 0.0000e+00 lr: 4.8416e-04  eta: 0:45:42  time: 0.2572  data_time: 0.0320  memory: 2899  grad_norm: 1.6996  loss: 0.4793  decode.loss_ce: 0.3557  decode.loss_dice: 0.1236  decode.acc_seg: 95.3195
+2026/09/20 13:23:28 - mmengine - INFO - Saving checkpoint at 10000 iterations
+2026/09/20 13:24:00 - mmengine - INFO - Iter(val) [ 50/304]    eta: 0:02:35  time: 0.6021  data_time: 0.0090  memory: 602  
+2026/09/20 13:24:53 - mmengine - INFO - Iter(val) [100/304]    eta: 0:02:50  time: 1.0294  data_time: 0.0089  memory: 602  
+2026/09/20 13:25:44 - mmengine - INFO - Iter(val) [150/304]    eta: 0:02:18  time: 0.9875  data_time: 0.0078  memory: 602  
+2026/09/20 13:26:35 - mmengine - INFO - Iter(val) [200/304]    eta: 0:01:36  time: 1.0187  data_time: 0.0085  memory: 602  
+2026/09/20 13:27:24 - mmengine - INFO - Iter(val) [250/304]    eta: 0:00:50  time: 1.0059  data_time: 0.0083  memory: 602  
+2026/09/20 13:28:13 - mmengine - INFO - Iter(val) [300/304]    eta: 0:00:03  time: 0.9829  data_time: 0.0087  memory: 602  
+2026/09/20 13:28:17 - mmengine - INFO - per class results:
+2026/09/20 13:28:17 - mmengine - INFO - 
++------------------+-------+-------+-------+--------+-----------+--------+
+|      Class       |  IoU  |  Acc  |  Dice | Fscore | Precision | Recall |
++------------------+-------+-------+-------+--------+-----------+--------+
+|    background    | 94.55 | 99.43 |  97.2 |  97.2  |   95.07   | 99.43  |
+| wastewater_plant |  38.9 | 41.41 | 56.02 | 56.02  |   86.53   | 41.41  |
++------------------+-------+-------+-------+--------+-----------+--------+
+2026/09/20 13:28:17 - mmengine - INFO - Iter(val) [304/304]    aAcc: 94.7400  mIoU: 66.7300  mAcc: 70.4200  mDice: 76.6100  mFscore: 76.6100  mPrecision: 90.8000  mRecall: 70.4200  binary/Foreground_IoU: 38.9050  binary/Dice: 56.0167  binary/F1: 56.0167  binary/Precision: 86.5287  binary/Recall: 41.4134  binary/Boundary_F1: 3.9847  binary/BFScore: 3.9847  binary/Boundary_Precision: 3.5743  binary/Boundary_Recall: 4.5015  binary/Hausdorff_px: 408.8491  binary/HD95_px: 347.9624  binary/Hausdorff_m: 204.4245  binary/HD95_m: 173.9812  data_time: 0.0094  time: 0.9459
+2026/09/20 13:28:17 - mmengine - INFO - the monitored metric did not improve in the last 3 records. best score: 46.083. 

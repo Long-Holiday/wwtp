@@ -1,0 +1,66 @@
+{
+  "stage": "finetune",
+  "metric": "binary/Foreground_IoU",
+  "rows": [
+    {
+      "rank": 1,
+      "variant": "progressive_rgr",
+      "foreground_iou": 71.38862572382509,
+      "dice": 83.30614172595142,
+      "precision": 73.73309102214391,
+      "recall": 95.73590197429702,
+      "delta_from_full": 0.27929963187938256,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_rgr/train/best_mIoU_iter_1000.pth"
+    },
+    {
+      "rank": 2,
+      "variant": "progressive_contour",
+      "foreground_iou": 71.19809386588555,
+      "dice": 83.17626938260335,
+      "precision": 73.57624059113355,
+      "recall": 95.65738632245062,
+      "delta_from_full": 0.0887677739398498,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_contour/train/best_mIoU_iter_1000.pth"
+    },
+    {
+      "rank": 3,
+      "variant": "full",
+      "foreground_iou": 71.1093260919457,
+      "dice": 83.11566378764775,
+      "precision": 73.47816420780667,
+      "recall": 95.66295131198179,
+      "delta_from_full": 0.0,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/full/train/best_mIoU_iter_1000.pth"
+    },
+    {
+      "rank": 4,
+      "variant": "progressive_base",
+      "foreground_iou": 71.03005922554844,
+      "dice": 83.06149170173236,
+      "precision": 73.40846795071647,
+      "recall": 95.63758715924622,
+      "delta_from_full": -0.07926686639726199,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_base/train/best_mIoU_iter_1000.pth"
+    },
+    {
+      "rank": 5,
+      "variant": "progressive_dfgv",
+      "foreground_iou": 70.81461585716787,
+      "dice": 82.91400065715897,
+      "precision": 73.08324342496554,
+      "recall": 95.8005678211165,
+      "delta_from_full": -0.2947102347778383,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_dfgv/train/best_mIoU_iter_1000.pth"
+    },
+    {
+      "rank": 6,
+      "variant": "progressive_weighted",
+      "foreground_iou": 70.34674304973613,
+      "dice": 82.59241332157082,
+      "precision": 72.56545726278351,
+      "recall": 95.83466382679514,
+      "delta_from_full": -0.7625830422095703,
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_quick_screen/finetune/progressive_weighted/train/best_mIoU_iter_1000.pth"
+    }
+  ]
+}

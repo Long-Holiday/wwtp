@@ -1,0 +1,402 @@
+Waiting for training container 5a868c1899e9 to exit before starting inference
+0
+Training container exited; starting WWTP val/test inference
+ Container wwtp-wwtp-run-2001a4f94d6a Creating 
+ Container wwtp-wwtp-run-2001a4f94d6a Created 
+
+==========
+== CUDA ==
+==========
+
+CUDA Version 12.1.1
+
+Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+By pulling and using the container, you accept the terms and conditions of this license:
+https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+
+A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+
+Loads checkpoint by local backend from path: /workspace/work_dirs/rpgv_stage3_restart_30k/best_binary_Foreground_IoU_iter_6000.pth
+val RPGV-Net: 25/304
+val RPGV-Net: 50/304
+val RPGV-Net: 75/304
+val RPGV-Net: 100/304
+val RPGV-Net: 125/304
+val RPGV-Net: 150/304
+val RPGV-Net: 175/304
+val RPGV-Net: 200/304
+val RPGV-Net: 225/304
+val RPGV-Net: 250/304
+val RPGV-Net: 275/304
+val RPGV-Net: 300/304
+val RPGV-Net: 304/304
+Loads checkpoint by local backend from path: /workspace/work_dirs/rpgv_stage3_restart_30k/best_binary_Foreground_IoU_iter_6000.pth
+test RPGV-Net: 25/305
+test RPGV-Net: 50/305
+test RPGV-Net: 75/305
+test RPGV-Net: 100/305
+test RPGV-Net: 125/305
+test RPGV-Net: 150/305
+test RPGV-Net: 175/305
+test RPGV-Net: 200/305
+test RPGV-Net: 225/305
+test RPGV-Net: 250/305
+test RPGV-Net: 275/305
+test RPGV-Net: 300/305
+test RPGV-Net: 305/305
+/opt/conda/lib/python3.10/site-packages/mmseg/models/decode_heads/decode_head.py:120: UserWarning: For binary segmentation, we suggest using`out_channels = 1` to define the outputchannels of segmentor, and use `threshold`to convert `seg_logits` into a predictionapplying a threshold
+  warnings.warn('For binary segmentation, we suggest using'
+/opt/conda/lib/python3.10/site-packages/mmseg/models/builder.py:36: UserWarning: ``build_loss`` would be deprecated soon, please use ``mmseg.registry.MODELS.build()`` 
+  warnings.warn('``build_loss`` would be deprecated soon, please use '
+Loads checkpoint by local backend from path: /workspace/work_dirs/deeplabv3plus_extended/best_binary_Foreground_IoU_iter_10000.pth
+val DeepLabV3+: 25/304
+val DeepLabV3+: 50/304
+val DeepLabV3+: 75/304
+val DeepLabV3+: 100/304
+val DeepLabV3+: 125/304
+val DeepLabV3+: 150/304
+val DeepLabV3+: 175/304
+val DeepLabV3+: 200/304
+val DeepLabV3+: 225/304
+val DeepLabV3+: 250/304
+val DeepLabV3+: 275/304
+val DeepLabV3+: 300/304
+val DeepLabV3+: 304/304
+Loads checkpoint by local backend from path: /workspace/work_dirs/deeplabv3plus_extended/best_binary_Foreground_IoU_iter_10000.pth
+test DeepLabV3+: 25/305
+test DeepLabV3+: 50/305
+test DeepLabV3+: 75/305
+test DeepLabV3+: 100/305
+test DeepLabV3+: 125/305
+test DeepLabV3+: 150/305
+test DeepLabV3+: 175/305
+test DeepLabV3+: 200/305
+test DeepLabV3+: 225/305
+test DeepLabV3+: 250/305
+test DeepLabV3+: 275/305
+test DeepLabV3+: 300/305
+test DeepLabV3+: 305/305
+Loads checkpoint by local backend from path: /workspace/work_dirs/hrnet/best_binary_Foreground_IoU_iter_3000.pth
+val HRNet: 25/304
+val HRNet: 50/304
+val HRNet: 75/304
+val HRNet: 100/304
+val HRNet: 125/304
+val HRNet: 150/304
+val HRNet: 175/304
+val HRNet: 200/304
+val HRNet: 225/304
+val HRNet: 250/304
+val HRNet: 275/304
+val HRNet: 300/304
+val HRNet: 304/304
+Loads checkpoint by local backend from path: /workspace/work_dirs/hrnet/best_binary_Foreground_IoU_iter_3000.pth
+test HRNet: 25/305
+test HRNet: 50/305
+test HRNet: 75/305
+test HRNet: 100/305
+test HRNet: 125/305
+test HRNet: 150/305
+test HRNet: 175/305
+test HRNet: 200/305
+test HRNet: 225/305
+test HRNet: 250/305
+test HRNet: 275/305
+test HRNet: 300/305
+test HRNet: 305/305
+Loads checkpoint by local backend from path: /workspace/work_dirs/mask2former_extended/best_binary_Foreground_IoU_iter_5000.pth
+/opt/conda/lib/python3.10/site-packages/torch/functional.py:504: UserWarning: torch.meshgrid: in an upcoming release, it will be required to pass the indexing argument. (Triggered internally at /opt/conda/conda-bld/pytorch_1702400410390/work/aten/src/ATen/native/TensorShape.cpp:3526.)
+  return _VF.meshgrid(tensors, **kwargs)  # type: ignore[attr-defined]
+val Mask2Former: 25/304
+val Mask2Former: 50/304
+val Mask2Former: 75/304
+val Mask2Former: 100/304
+val Mask2Former: 125/304
+val Mask2Former: 150/304
+val Mask2Former: 175/304
+val Mask2Former: 200/304
+val Mask2Former: 225/304
+val Mask2Former: 250/304
+val Mask2Former: 275/304
+val Mask2Former: 300/304
+val Mask2Former: 304/304
+Loads checkpoint by local backend from path: /workspace/work_dirs/mask2former_extended/best_binary_Foreground_IoU_iter_5000.pth
+test Mask2Former: 25/305
+test Mask2Former: 50/305
+test Mask2Former: 75/305
+test Mask2Former: 100/305
+test Mask2Former: 125/305
+test Mask2Former: 150/305
+test Mask2Former: 175/305
+test Mask2Former: 200/305
+test Mask2Former: 225/305
+test Mask2Former: 250/305
+test Mask2Former: 275/305
+test Mask2Former: 300/305
+test Mask2Former: 305/305
+Loads checkpoint by local backend from path: /workspace/work_dirs/rs_mamba_extended/best_binary_Foreground_IoU_iter_12000.pth
+val RS-Mamba: 25/304
+val RS-Mamba: 50/304
+val RS-Mamba: 75/304
+val RS-Mamba: 100/304
+val RS-Mamba: 125/304
+val RS-Mamba: 150/304
+val RS-Mamba: 175/304
+val RS-Mamba: 200/304
+val RS-Mamba: 225/304
+val RS-Mamba: 250/304
+val RS-Mamba: 275/304
+val RS-Mamba: 300/304
+val RS-Mamba: 304/304
+/opt/conda/lib/python3.10/site-packages/mmseg/models/decode_heads/decode_head.py:120: UserWarning: For binary segmentation, we suggest using`out_channels = 1` to define the outputchannels of segmentor, and use `threshold`to convert `seg_logits` into a predictionapplying a threshold
+  warnings.warn('For binary segmentation, we suggest using'
+/opt/conda/lib/python3.10/site-packages/mmseg/models/builder.py:36: UserWarning: ``build_loss`` would be deprecated soon, please use ``mmseg.registry.MODELS.build()`` 
+  warnings.warn('``build_loss`` would be deprecated soon, please use '
+Loads checkpoint by local backend from path: /workspace/work_dirs/rs_mamba_extended/best_binary_Foreground_IoU_iter_12000.pth
+test RS-Mamba: 25/305
+test RS-Mamba: 50/305
+test RS-Mamba: 75/305
+test RS-Mamba: 100/305
+test RS-Mamba: 125/305
+test RS-Mamba: 150/305
+test RS-Mamba: 175/305
+test RS-Mamba: 200/305
+test RS-Mamba: 225/305
+test RS-Mamba: 250/305
+test RS-Mamba: 275/305
+test RS-Mamba: 300/305
+test RS-Mamba: 305/305
+Loads checkpoint by local backend from path: /workspace/work_dirs/segformer/best_binary_Foreground_IoU_iter_2500.pth
+val SegFormer: 25/304
+val SegFormer: 50/304
+val SegFormer: 75/304
+val SegFormer: 100/304
+val SegFormer: 125/304
+val SegFormer: 150/304
+val SegFormer: 175/304
+val SegFormer: 200/304
+val SegFormer: 225/304
+val SegFormer: 250/304
+val SegFormer: 275/304
+val SegFormer: 300/304
+val SegFormer: 304/304
+Loads checkpoint by local backend from path: /workspace/work_dirs/segformer/best_binary_Foreground_IoU_iter_2500.pth
+test SegFormer: 25/305
+test SegFormer: 50/305
+test SegFormer: 75/305
+test SegFormer: 100/305
+test SegFormer: 125/305
+test SegFormer: 150/305
+test SegFormer: 175/305
+test SegFormer: 200/305
+test SegFormer: 225/305
+test SegFormer: 250/305
+test SegFormer: 275/305
+test SegFormer: 300/305
+test SegFormer: 305/305
+Loads checkpoint by local backend from path: /workspace/work_dirs/segnext_extended/best_binary_Foreground_IoU_iter_8000.pth
+val SegNeXt: 25/304
+val SegNeXt: 50/304
+val SegNeXt: 75/304
+val SegNeXt: 100/304
+val SegNeXt: 125/304
+val SegNeXt: 150/304
+val SegNeXt: 175/304
+val SegNeXt: 200/304
+val SegNeXt: 225/304
+val SegNeXt: 250/304
+val SegNeXt: 275/304
+val SegNeXt: 300/304
+val SegNeXt: 304/304
+Loads checkpoint by local backend from path: /workspace/work_dirs/segnext_extended/best_binary_Foreground_IoU_iter_8000.pth
+test SegNeXt: 25/305
+test SegNeXt: 50/305
+test SegNeXt: 75/305
+test SegNeXt: 100/305
+test SegNeXt: 125/305
+test SegNeXt: 150/305
+test SegNeXt: 175/305
+test SegNeXt: 200/305
+test SegNeXt: 225/305
+test SegNeXt: 250/305
+test SegNeXt: 275/305
+test SegNeXt: 300/305
+test SegNeXt: 305/305
+Loads checkpoint by local backend from path: /workspace/work_dirs/unet_extended/best_binary_Foreground_IoU_iter_13000.pth
+val U-Net: 25/304
+val U-Net: 50/304
+val U-Net: 75/304
+val U-Net: 100/304
+val U-Net: 125/304
+val U-Net: 150/304
+val U-Net: 175/304
+val U-Net: 200/304
+val U-Net: 225/304
+val U-Net: 250/304
+val U-Net: 275/304
+val U-Net: 300/304
+val U-Net: 304/304
+Loads checkpoint by local backend from path: /workspace/work_dirs/unet_extended/best_binary_Foreground_IoU_iter_13000.pth
+test U-Net: 25/305
+test U-Net: 50/305
+test U-Net: 75/305
+test U-Net: 100/305
+test U-Net: 125/305
+test U-Net: 150/305
+
+ Container wwtp-wwtp-run-b27242023580 Creating 
+ Container wwtp-wwtp-run-b27242023580 Created 
+
+==========
+== CUDA ==
+==========
+
+CUDA Version 12.1.1
+
+Container image Copyright (c) 2016-2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+
+This container image and its contents are governed by the NVIDIA Deep Learning Container License.
+By pulling and using the container, you accept the terms and conditions of this license:
+https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+
+A copy of this license is made available in this container at /NGC-DL-CONTAINER-LICENSE for your convenience.
+
+val RPGV-Net: complete; skipping
+test RPGV-Net: complete; skipping
+val DeepLabV3+: complete; skipping
+test DeepLabV3+: complete; skipping
+val HRNet: complete; skipping
+test HRNet: complete; skipping
+val Mask2Former: complete; skipping
+test Mask2Former: complete; skipping
+val RS-Mamba: complete; skipping
+test RS-Mamba: complete; skipping
+val SegFormer: complete; skipping
+test SegFormer: complete; skipping
+val SegNeXt: complete; skipping
+test SegNeXt: complete; skipping
+val U-Net: complete; skipping
+/opt/conda/lib/python3.10/site-packages/mmseg/models/decode_heads/decode_head.py:120: UserWarning: For binary segmentation, we suggest using`out_channels = 1` to define the outputchannels of segmentor, and use `threshold`to convert `seg_logits` into a predictionapplying a threshold
+  warnings.warn('For binary segmentation, we suggest using'
+/opt/conda/lib/python3.10/site-packages/mmseg/models/builder.py:36: UserWarning: ``build_loss`` would be deprecated soon, please use ``mmseg.registry.MODELS.build()`` 
+  warnings.warn('``build_loss`` would be deprecated soon, please use '
+Loads checkpoint by local backend from path: /workspace/work_dirs/unet_extended/best_binary_Foreground_IoU_iter_13000.pth
+test U-Net: 25/152
+test U-Net: 50/152
+test U-Net: 75/152
+test U-Net: 100/152
+test U-Net: 125/152
+test U-Net: 150/152
+test U-Net: 152/152
+Loads checkpoint by local backend from path: /workspace/work_dirs/unetformer_extended/best_binary_Foreground_IoU_iter_11000.pth
+val UNetFormer: 25/304
+val UNetFormer: 50/304
+val UNetFormer: 75/304
+val UNetFormer: 100/304
+val UNetFormer: 125/304
+val UNetFormer: 150/304
+val UNetFormer: 175/304
+val UNetFormer: 200/304
+val UNetFormer: 225/304
+val UNetFormer: 250/304
+val UNetFormer: 275/304
+val UNetFormer: 300/304
+val UNetFormer: 304/304
+Loads checkpoint by local backend from path: /workspace/work_dirs/unetformer_extended/best_binary_Foreground_IoU_iter_11000.pth
+test UNetFormer: 25/305
+test UNetFormer: 50/305
+test UNetFormer: 75/305
+test UNetFormer: 100/305
+test UNetFormer: 125/305
+test UNetFormer: 150/305
+test UNetFormer: 175/305
+test UNetFormer: 200/305
+test UNetFormer: 225/305
+test UNetFormer: 250/305
+test UNetFormer: 275/305
+test UNetFormer: 300/305
+test UNetFormer: 305/305
+Loads checkpoint by local backend from path: /workspace/work_dirs/edge_baselines/cbr_net/best_binary_Foreground_IoU_iter_4000.pth
+val CBR-Net: 25/304
+val CBR-Net: 50/304
+val CBR-Net: 75/304
+val CBR-Net: 100/304
+val CBR-Net: 125/304
+val CBR-Net: 150/304
+val CBR-Net: 175/304
+val CBR-Net: 200/304
+val CBR-Net: 225/304
+val CBR-Net: 250/304
+val CBR-Net: 275/304
+val CBR-Net: 300/304
+val CBR-Net: 304/304
+Loads checkpoint by local backend from path: /workspace/work_dirs/edge_baselines/cbr_net/best_binary_Foreground_IoU_iter_4000.pth
+test CBR-Net: 25/305
+test CBR-Net: 50/305
+test CBR-Net: 75/305
+test CBR-Net: 100/305
+test CBR-Net: 125/305
+test CBR-Net: 150/305
+test CBR-Net: 175/305
+test CBR-Net: 200/305
+test CBR-Net: 225/305
+test CBR-Net: 250/305
+test CBR-Net: 275/305
+test CBR-Net: 300/305
+test CBR-Net: 305/305
+Loads checkpoint by local backend from path: /workspace/work_dirs/edge_baselines/hd_net/best_binary_Foreground_IoU_iter_18000.pth
+val HD-Net: 25/304
+val HD-Net: 50/304
+val HD-Net: 75/304
+val HD-Net: 100/304
+val HD-Net: 125/304
+val HD-Net: 150/304
+val HD-Net: 175/304
+val HD-Net: 200/304
+val HD-Net: 225/304
+val HD-Net: 250/304
+val HD-Net: 275/304
+val HD-Net: 300/304
+val HD-Net: 304/304
+Loads checkpoint by local backend from path: /workspace/work_dirs/edge_baselines/hd_net/best_binary_Foreground_IoU_iter_18000.pth
+test HD-Net: 25/305
+test HD-Net: 50/305
+test HD-Net: 75/305
+test HD-Net: 100/305
+test HD-Net: 125/305
+test HD-Net: 150/305
+test HD-Net: 175/305
+test HD-Net: 200/305
+test HD-Net: 225/305
+test HD-Net: 250/305
+test HD-Net: 275/305
+test HD-Net: 300/305
+test HD-Net: 305/305
+val comparison: 25/304
+val comparison: 50/304
+val comparison: 75/304
+val comparison: 100/304
+val comparison: 125/304
+val comparison: 150/304
+val comparison: 175/304
+val comparison: 200/304
+val comparison: 225/304
+val comparison: 250/304
+val comparison: 275/304
+val comparison: 300/304
+val comparison: 304/304
+test comparison: 25/305
+test comparison: 50/305
+test comparison: 75/305
+test comparison: 100/305
+test comparison: 125/305
+test comparison: 150/305
+test comparison: 175/305
+test comparison: 200/305
+test comparison: 225/305
+test comparison: 250/305
+test comparison: 275/305
+test comparison: 300/305
+test comparison: 305/305

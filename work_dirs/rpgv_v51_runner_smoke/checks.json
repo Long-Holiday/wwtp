@@ -1,0 +1,35 @@
+{
+  "source_checkpoint": "/workspace/work_dirs/rpgv_v51_initialization/init.pth",
+  "source_checkpoint_sha256": "ef877b322bc82ad1a793322678f9b56f20ab17839affcef30dee8dfdb619726b",
+  "config": "/workspace/work_dirs/rpgv_v51_runner_smoke/smoke_config.py",
+  "microsteps": 8,
+  "accumulation": 4,
+  "successful_optimizer_updates": 2,
+  "tracked_optimizer_steps": {
+    "rgb_encoder_first": 2,
+    "spatial8_output": 2,
+    "spatial4_output": 2
+  },
+  "parameter_max_abs_delta": {
+    "rgb_encoder_first": 2.2351741790771484e-06,
+    "spatial8_output": 0.00011135619570268318,
+    "spatial4_output": 0.00011135607928736135
+  },
+  "amp_loss_scale": {
+    "initial": 128.0,
+    "final": 128.0
+  },
+  "gpu": "NVIDIA L4",
+  "peak_cuda_memory_bytes": 316589056,
+  "input_size": [
+    1024,
+    1024
+  ],
+  "batch_size": 2,
+  "train_indices": [
+    0,
+    400
+  ],
+  "validation": false,
+  "checkpoint_saving": false
+}

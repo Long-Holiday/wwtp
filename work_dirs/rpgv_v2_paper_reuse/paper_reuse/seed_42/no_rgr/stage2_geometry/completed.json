@@ -1,0 +1,37 @@
+{
+  "initialization": {
+    "path": "/workspace/work_dirs/rpgv_v2_paper/full/seed_42/full/stage1_rgb/best_binary_Foreground_IoU_iter_36000.pth",
+    "sha256": "4b05366fd5083bc64d60fbd1c3220f2d88f6941ec53c802665d27d252f3b6b6f"
+  },
+  "checkpoint": "/workspace/work_dirs/rpgv_v2_paper_reuse/paper_reuse/seed_42/no_rgr/stage2_geometry/best_binary_Foreground_IoU_iter_20000.pth",
+  "checkpoint_sha256": "8b8bdd44306555936d7f598a41497fd23077b379dbccc54576bec4544df2af74",
+  "budget": 20000,
+  "last_val_iter": 20000,
+  "stopped_early": false,
+  "validation": {
+    "aAcc": 81.83,
+    "mIoU": 51.36,
+    "mAcc": 73.15,
+    "mDice": 62.64,
+    "mFscore": 62.64,
+    "mPrecision": 60.67,
+    "mRecall": 73.15,
+    "binary/Foreground_IoU": 21.85628392937156,
+    "binary/Dice": 35.87223116378563,
+    "binary/F1": 35.87223116378563,
+    "binary/Precision": 25.10772342375958,
+    "binary/Recall": 62.794151500833806,
+    "binary/Boundary_F1": 1.3580108371277742,
+    "binary/BFScore": 1.3580108371277742,
+    "binary/Boundary_Precision": 0.7362527319464589,
+    "binary/Boundary_Recall": 8.732629793179154,
+    "binary/Hausdorff_px": 1309.2563439855385,
+    "binary/HD95_px": 1151.6320494790232,
+    "binary/Hausdorff_m": 654.6281719927692,
+    "binary/HD95_m": 575.8160247395116,
+    "data_time": 0.021997039826189887,
+    "time": 1.5221137265690037,
+    "step": 20000,
+    "selected_iter": 20000
+  }
+}

@@ -1,0 +1,7 @@
+protocol,variant,seed,status,budget,last_val_iter,best_iter,val_iou,val_boundary_f1,split,delta_val_iou,iou,dice,precision,recall,boundary_f1,hd95_px,islands,island_pixels,holes,hole_pixels,parameters
+full,full,42,evaluated,40000,40000,38000,78.40414319784814,16.958838073355327,test,0.0,78.55998319659464,87.99282100077266,86.41908392734888,89.62493837360245,17.12861424254899,253.89573691675943,923,5265922,507,186402,26004091
+full,no_contour,42,planned,40000,,,,,test,,,,,,,,,,,,
+full,no_frequency_validation,42,planned,40000,,,,,test,,,,,,,,,,,,
+full,no_rgr,42,planned,40000,,,,,test,,,,,,,,,,,,
+full,no_structure_regularization,42,planned,40000,,,,,test,,,,,,,,,,,,
+full,unweighted_fusion,42,planned,40000,,,,,test,,,,,,,,,,,,

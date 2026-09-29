@@ -1,0 +1,19 @@
+{
+  "metric": "binary/Foreground_IoU",
+  "selection": "highest validation Foreground IoU",
+  "data_root": "/workspace/wwtp_semantic_dataset",
+  "models": [
+    {
+      "name": "SegFormer",
+      "slug": "segformer",
+      "config": "/workspace/configs/experiments/segformer.py",
+      "checkpoint": "/workspace/work_dirs/segformer/best_binary_Foreground_IoU_iter_2500.pth",
+      "validation_foreground_iou": 50.0737,
+      "checkpoint_size": 99526298,
+      "checkpoint_mtime_ns": 1789732859457088745
+    }
+  ],
+  "splits": {
+    "val": 1
+  }
+}

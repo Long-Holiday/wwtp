@@ -1,0 +1,1801 @@
+{
+  "schema": 1,
+  "size": 256,
+  "seed": 20260927,
+  "dataset_size": 304,
+  "dataset_config_hash": "1ea3288a1601744676f98ab6290bd5d89b182da3417911852d2e534ba6acf9e8",
+  "samples": [
+    {
+      "index": 0,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000401.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000401.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 1,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000402.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000402.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 2,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000403.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000403.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 3,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000404.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000404.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 4,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000405.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000405.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 5,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000406.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000406.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 8,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000409.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000409.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 9,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000410.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000410.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 10,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000411.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000411.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 11,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000412.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000412.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 12,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000413.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000413.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 13,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000414.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000414.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 14,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000415.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000415.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 15,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000416.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000416.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 16,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000417.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000417.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 18,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000419.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000419.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 19,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000420.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000420.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 20,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000421.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000421.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 22,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000423.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000423.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 24,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000425.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000425.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 25,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000426.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000426.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 26,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000427.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000427.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 27,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000428.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000428.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 28,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000429.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000429.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 29,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000430.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000430.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 30,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000431.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000431.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 32,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000433.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000433.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 33,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000434.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000434.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 35,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000436.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000436.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 36,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000437.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000437.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 37,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000438.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000438.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 38,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000439.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000439.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 39,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000440.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000440.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 40,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000441.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000441.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 41,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000442.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000442.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 42,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000443.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000443.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 43,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000444.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000444.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 45,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000446.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000446.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 46,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000447.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000447.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 47,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000448.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000448.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 48,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/neg_000449.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/neg_000449.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 50,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000019.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000019.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 51,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000023.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000023.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 52,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000044.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000044.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 53,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000058.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000058.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 54,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000063.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000063.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 55,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000072.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000072.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 56,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000077.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000077.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 58,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000095.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000095.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 59,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000104.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000104.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 60,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000134.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000134.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 61,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000142.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000142.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 62,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000149.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000149.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 64,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000171.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000171.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 65,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000195.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000195.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 66,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000198.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000198.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 67,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000231.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000231.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 68,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000233.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000233.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 69,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000238.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000238.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 70,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000249.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000249.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 71,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000251.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000251.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 72,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000263.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000263.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 74,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000278.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000278.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 75,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000281.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000281.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 0
+    },
+    {
+      "index": 76,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000295.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000295.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 77,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000298.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000298.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 78,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000331.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000331.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 79,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000357.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000357.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 80,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000359.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000359.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 81,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000371.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000371.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 82,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000373.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000373.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 83,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000390.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000390.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 84,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000405.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000405.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 86,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000422.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000422.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 87,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000426.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000426.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 88,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000450.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000450.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 89,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000459.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000459.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 90,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000467.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000467.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 91,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000469.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000469.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 92,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000473.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000473.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 94,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000478.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000478.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 95,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000493.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000493.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 96,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000518.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000518.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 97,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000526.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000526.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 98,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000530.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000530.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 99,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000532.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000532.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 101,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000542.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000542.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 102,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000548.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000548.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 103,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000549.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000549.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 104,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000572.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000572.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 106,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000604.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000604.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 107,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000608.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000608.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 108,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000617.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000617.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 109,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000622.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000622.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 110,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000636.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000636.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 111,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000649.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000649.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 112,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000651.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000651.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 113,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000665.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000665.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 115,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000686.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000686.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 116,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000692.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000692.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 117,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000812.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000812.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 118,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000845.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000845.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 119,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000848.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000848.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 120,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000850.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000850.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 121,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000862.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000862.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 122,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000863.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000863.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 123,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000864.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000864.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 124,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000885.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000885.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 125,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000891.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000891.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 126,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000893.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000893.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 127,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000902.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000902.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 129,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000918.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000918.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 130,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000920.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000920.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 131,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000939.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000939.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 132,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000942.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000942.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 133,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000952.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000952.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 134,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000959.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000959.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 135,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_000960.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_000960.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 138,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001001.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001001.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 139,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001013.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001013.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 140,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001021.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001021.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 141,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001036.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001036.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 143,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001097.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001097.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 146,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001105.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001105.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 148,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001150.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001150.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 149,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001175.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001175.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 150,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001182.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001182.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 151,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001191.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001191.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 1
+    },
+    {
+      "index": 153,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001207.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001207.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 154,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001210.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001210.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 155,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001220.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001220.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 156,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001223.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001223.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 157,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001233.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001233.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 158,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001237.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001237.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 159,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001248.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001248.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 160,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001253.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001253.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 161,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001268.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001268.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 163,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001280.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001280.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 164,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001304.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001304.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 165,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001316.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001316.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 166,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001319.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001319.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 167,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001320.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001320.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 168,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001326.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001326.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 169,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001337.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001337.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 170,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001348.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001348.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 171,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001352.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001352.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 172,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001359.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001359.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 173,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001372.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001372.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 175,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001399.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001399.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 176,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001402.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001402.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 177,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001415.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001415.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 178,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001438.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001438.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 179,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001454.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001454.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 180,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001458.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001458.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 181,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001460.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001460.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 182,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001473.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001473.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 183,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001478.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001478.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 184,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001486.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001486.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 185,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001564.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001564.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 186,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001569.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001569.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 188,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001589.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001589.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 189,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001598.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001598.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 190,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001601.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001601.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 191,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001619.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001619.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 192,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001623.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001623.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 193,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001639.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001639.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 194,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001644.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001644.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 196,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001669.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001669.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 198,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001741.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001741.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 200,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001756.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001756.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 202,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001774.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001774.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 204,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001797.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001797.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 205,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001803.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001803.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 206,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001808.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001808.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 207,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001809.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001809.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 208,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001819.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001819.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 209,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001828.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001828.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 211,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001837.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001837.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 212,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001847.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001847.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 213,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001868.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001868.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 214,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001870.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001870.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 215,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001876.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001876.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 218,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001911.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001911.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 219,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001922.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001922.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 220,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001937.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001937.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 221,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001941.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001941.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 222,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001942.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001942.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 223,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001946.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001946.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 224,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001975.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001975.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 225,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_001991.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_001991.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 226,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002004.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002004.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 227,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002013.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002013.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 2
+    },
+    {
+      "index": 228,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002041.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002041.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 229,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002054.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002054.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 230,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002066.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002066.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 231,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002070.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002070.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 234,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002093.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002093.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 235,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002117.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002117.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 236,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002155.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002155.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 237,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002160.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002160.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 239,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002174.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002174.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 240,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002182.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002182.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 242,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002208.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002208.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 243,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002218.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002218.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 244,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002257.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002257.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 245,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002259.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002259.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 246,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002294.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002294.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 248,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002313.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002313.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 249,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002314.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002314.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 251,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002338.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002338.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 252,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002343.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002343.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 253,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002352.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002352.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 254,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002379.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002379.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 255,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002418.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002418.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 256,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002458.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002458.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 257,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002475.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002475.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 258,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002500.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002500.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 259,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002512.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002512.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 260,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002519.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002519.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 261,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002520.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002520.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 262,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002534.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002534.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 264,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002539.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002539.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 265,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002547.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002547.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 266,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002554.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002554.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 267,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002564.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002564.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 268,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002600.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002600.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 269,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002623.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002623.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 270,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002626.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002626.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 271,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002686.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002686.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 272,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002704.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002704.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 273,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002717.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002717.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 274,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002748.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002748.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 275,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002749.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002749.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 276,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002758.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002758.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 277,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002770.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002770.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 278,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002771.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002771.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 279,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002780.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002780.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 281,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002787.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002787.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 282,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002852.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002852.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 283,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002871.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002871.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 284,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002886.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002886.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 285,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002889.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002889.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 286,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002890.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002890.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 287,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002906.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002906.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 288,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002914.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002914.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 289,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002918.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002918.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 290,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002932.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002932.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 291,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002943.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002943.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 292,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002952.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002952.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 293,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002955.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002955.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 294,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002979.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002979.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 295,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_002988.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_002988.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 296,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_003003.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_003003.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 298,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_003169.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_003169.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 299,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_003175.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_003175.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    },
+    {
+      "index": 301,
+      "image": "/workspace/wwtp_semantic_dataset/images/val/wwtp_003234.png",
+      "annotation": "/workspace/wwtp_semantic_dataset/annotations/val/wwtp_003234.png",
+      "foreground_fraction": 0.0,
+      "coverage_quartile": 3
+    }
+  ]
+}

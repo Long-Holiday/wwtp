@@ -1,0 +1,2 @@
+config=configs/ablations/rpgv_no_geometry_fusion.py
+stage2_checkpoint=work_dirs/rpgv_staged/stage2_geometry/best_binary_Foreground_IoU_iter_10000.pth

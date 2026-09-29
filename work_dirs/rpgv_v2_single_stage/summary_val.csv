@@ -1,0 +1,7 @@
+protocol,variant,seed,status,budget,last_val_iter,best_iter,val_iou,val_boundary_f1,split,delta_val_iou,delta_previous_val_iou,iou,dice,precision,recall,boundary_f1,hd95_px,islands,island_pixels,holes,hole_pixels,parameters
+single_stage,full,42,planned,100000,,,,,val,,,,,,,,,,,,,
+single_stage,progressive_base,42,planned,100000,,,,,val,,,,,,,,,,,,,
+single_stage,progressive_contour,42,planned,100000,,,,,val,,,,,,,,,,,,,
+single_stage,progressive_dfgv,42,planned,100000,,,,,val,,,,,,,,,,,,,
+single_stage,progressive_rgr,42,planned,100000,,,,,val,,,,,,,,,,,,,
+single_stage,progressive_weighted,42,planned,100000,,,,,val,,,,,,,,,,,,,

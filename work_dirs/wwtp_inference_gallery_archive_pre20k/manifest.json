@@ -1,0 +1,128 @@
+{
+  "metric": "binary/Foreground_IoU",
+  "selection": "highest validation Foreground IoU",
+  "data_root": "/workspace/wwtp_semantic_dataset",
+  "models": [
+    {
+      "name": "RPGV-Net",
+      "slug": "rpgv-net",
+      "config": "/workspace/configs/experiments/rpgv_stage3_joint.py",
+      "checkpoint": "/workspace/work_dirs/rpgv_stage3_restart_30k/best_binary_Foreground_IoU_iter_6000.pth",
+      "validation_foreground_iou": 77.361,
+      "checkpoint_size": 110339478,
+      "checkpoint_mtime_ns": 1789993603577531393
+    },
+    {
+      "name": "RPGV_v2",
+      "slug": "rpgv_v2",
+      "config": "/workspace/configs/experiments/rpgv_v2_stage3_joint.py",
+      "checkpoint": "/workspace/work_dirs/rpgv_v2_staged/stage3_joint/best_binary_Foreground_IoU_iter_38000.pth",
+      "validation_foreground_iou": 78.4041,
+      "checkpoint_size": 116922764,
+      "checkpoint_mtime_ns": 1790149042950842349
+    },
+    {
+      "name": "RPGV_v4",
+      "slug": "rpgv_v4",
+      "config": "/workspace/configs/v4/rpgv_v4.py",
+      "checkpoint": "/workspace/work_dirs/rpgv_v4/best_binary_Foreground_IoU_iter_26000.pth",
+      "validation_foreground_iou": 74.4435,
+      "checkpoint_size": 104069018,
+      "checkpoint_mtime_ns": 1790233613543690752
+    },
+    {
+      "name": "DeepLabV3+",
+      "slug": "deeplabv3plus",
+      "config": "/workspace/configs/experiments/deeplabv3plus.py",
+      "checkpoint": "/workspace/work_dirs/deeplabv3plus_extended/best_binary_Foreground_IoU_iter_10000.pth",
+      "validation_foreground_iou": 67.7401,
+      "checkpoint_size": 176915682,
+      "checkpoint_mtime_ns": 1789874354745940446
+    },
+    {
+      "name": "HRNet",
+      "slug": "hrnet",
+      "config": "/workspace/configs/experiments/hrnet.py",
+      "checkpoint": "/workspace/work_dirs/hrnet/best_binary_Foreground_IoU_iter_3000.pth",
+      "validation_foreground_iou": 60.7248,
+      "checkpoint_size": 39904092,
+      "checkpoint_mtime_ns": 1789756318842103751
+    },
+    {
+      "name": "Mask2Former",
+      "slug": "mask2former",
+      "config": "/workspace/configs/experiments/mask2former.py",
+      "checkpoint": "/workspace/work_dirs/mask2former_extended/best_binary_Foreground_IoU_iter_5000.pth",
+      "validation_foreground_iou": 61.9537,
+      "checkpoint_size": 193461552,
+      "checkpoint_mtime_ns": 1789891115302543270
+    },
+    {
+      "name": "RS-Mamba",
+      "slug": "rs-mamba",
+      "config": "/workspace/configs/experiments/rs_mamba.py",
+      "checkpoint": "/workspace/work_dirs/rs_mamba_extended/best_binary_Foreground_IoU_iter_12000.pth",
+      "validation_foreground_iou": 23.3831,
+      "checkpoint_size": 203766166,
+      "checkpoint_mtime_ns": 1789904171395169939
+    },
+    {
+      "name": "SegFormer",
+      "slug": "segformer",
+      "config": "/workspace/configs/experiments/segformer.py",
+      "checkpoint": "/workspace/work_dirs/segformer/best_binary_Foreground_IoU_iter_2500.pth",
+      "validation_foreground_iou": 50.0737,
+      "checkpoint_size": 99526298,
+      "checkpoint_mtime_ns": 1789732859457088745
+    },
+    {
+      "name": "SegNeXt",
+      "slug": "segnext",
+      "config": "/workspace/configs/experiments/segnext.py",
+      "checkpoint": "/workspace/work_dirs/segnext_extended/best_binary_Foreground_IoU_iter_8000.pth",
+      "validation_foreground_iou": 64.7047,
+      "checkpoint_size": 57231306,
+      "checkpoint_mtime_ns": 1789914256791084374
+    },
+    {
+      "name": "U-Net",
+      "slug": "u-net",
+      "config": "/workspace/configs/experiments/unet.py",
+      "checkpoint": "/workspace/work_dirs/unet_extended/best_binary_Foreground_IoU_iter_13000.pth",
+      "validation_foreground_iou": 44.2286,
+      "checkpoint_size": 119148042,
+      "checkpoint_mtime_ns": 1789926490064859890
+    },
+    {
+      "name": "UNetFormer",
+      "slug": "unetformer",
+      "config": "/workspace/configs/experiments/unetformer.py",
+      "checkpoint": "/workspace/work_dirs/unetformer_extended/best_binary_Foreground_IoU_iter_11000.pth",
+      "validation_foreground_iou": 57.1428,
+      "checkpoint_size": 49397358,
+      "checkpoint_mtime_ns": 1789934414281938676
+    },
+    {
+      "name": "CBR-Net",
+      "slug": "cbr-net",
+      "config": "/workspace/configs/edge_baselines/cbr_net.py",
+      "checkpoint": "/workspace/work_dirs/edge_baselines/cbr_net/best_binary_Foreground_IoU_iter_4000.pth",
+      "validation_foreground_iou": 24.9006,
+      "checkpoint_size": 92255256,
+      "checkpoint_mtime_ns": 1789998963341923558
+    },
+    {
+      "name": "HD-Net",
+      "slug": "hd-net",
+      "config": "/workspace/configs/edge_baselines/hd_net.py",
+      "checkpoint": "/workspace/work_dirs/edge_baselines/hd_net/best_binary_Foreground_IoU_iter_18000.pth",
+      "validation_foreground_iou": 35.7642,
+      "checkpoint_size": 62887196,
+      "checkpoint_mtime_ns": 1790019128783343157
+    }
+  ],
+  "splits": {
+    "val": 304,
+    "test": 305
+  }
+}
