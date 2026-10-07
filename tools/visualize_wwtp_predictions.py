@@ -14,35 +14,19 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 METRIC = 'binary/Foreground_IoU'
+from wwtpseg.experiments import MAINSTREAM_MODELS, experiment_config
 SPECS = {
-    'RPGV-Net': ('configs/experiments/rpgv_stage3_joint.py',
-                 ['work_dirs/rpgv_staged/stage3_joint',
-                  'work_dirs/rpgv_stage3_restart_30k']),
-    'RPGV_v2': ('configs/experiments/rpgv_v2_stage3_joint.py',
-                ['work_dirs/rpgv_v2_staged/stage3_joint']),
-    'RPGV_v4': ('configs/v4/rpgv_v4.py',
-                ['work_dirs/rpgv_v4']),
-    'DeepLabV3+': ('configs/experiments/deeplabv3plus.py',
-                   ['work_dirs/deeplabv3plus', 'work_dirs/deeplabv3plus_extended']),
-    'HRNet': ('configs/experiments/hrnet.py',
-              ['work_dirs/hrnet', 'work_dirs/hrnet_extended']),
-    'Mask2Former': ('configs/experiments/mask2former.py',
-                    ['work_dirs/mask2former', 'work_dirs/mask2former_extended']),
-    'RS-Mamba': ('configs/experiments/rs_mamba.py',
-                 ['work_dirs/rs_mamba', 'work_dirs/rs_mamba_extended']),
-    'SegFormer': ('configs/experiments/segformer.py',
-                  ['work_dirs/segformer', 'work_dirs/segformer_extended']),
-    'SegNeXt': ('configs/experiments/segnext.py',
-                ['work_dirs/segnext', 'work_dirs/segnext_extended']),
-    'U-Net': ('configs/experiments/unet.py',
-              ['work_dirs/unet', 'work_dirs/unet_extended']),
-    'UNetFormer': ('configs/experiments/unetformer.py',
-                   ['work_dirs/unetformer', 'work_dirs/unetformer_extended']),
-    'CBR-Net': ('configs/edge_baselines/cbr_net.py',
-                ['work_dirs/edge_baselines/cbr_net']),
-    'HD-Net': ('configs/edge_baselines/hd_net.py',
-               ['work_dirs/edge_baselines/hd_net']),
+    name: (str(experiment_config('wwtp', name).relative_to(ROOT)), [f'work_dirs/wwtp/{name}'])
+    for name in MAINSTREAM_MODELS
 }
+SPECS.update({
+    'RPGV-Net': ('configs/experiments/rpgv_net.py', ['work_dirs/rpgv_net']),
+    'RPGV_v2': ('configs/experiments/rpgv_v2_joint.py', ['work_dirs/rpgv_v2_joint_fixed']),
+    'RPGV_v3': ('configs/v3/rpgv_v3_adapter.py', ['work_dirs/rpgv_v3_adapter']),
+    'RPGV_v4': ('configs/v4/rpgv_v4.py', ['work_dirs/rpgv_v4']),
+    'RPGV_v5': ('configs/v5/rpgv_v5.py', ['work_dirs/rpgv_v5_1m']),
+    'RPGV_v51': ('configs/v51/rpgv_v51.py', ['work_dirs/rpgv_v51_1m']),
+})
 BEST_LINE = re.compile(
     r'The best checkpoint with ([0-9.]+) binary/Foreground_IoU at (\d+) iter')
 
@@ -152,26 +136,6 @@ def infer(model_spec: dict, split: str, data_root: Path, output: Path,
     import wwtpseg  # noqa: F401 - registers custom models/dataset/transforms
     import wwtpseg.edge_baselines  # noqa: F401
     import mmdet.models  # noqa: F401
-
-    # Keep the same sliding-window compatibility fix used by tools/test.py.
-    try:
-        from mmseg.models.decode_heads.mask2former_head import Mask2FormerHead
-        if not getattr(Mask2FormerHead.predict, '_wwtp_slide_compat', False):
-            original_predict = Mask2FormerHead.predict
-
-            def predict_for_slide(self, features, image_metas, test_cfg):
-                logits = original_predict(self, features, image_metas, test_cfg)
-                if test_cfg.get('mode', 'whole') == 'slide':
-                    size = tuple(test_cfg.get('crop_size', (512, 512)))
-                    if logits.shape[-2:] != size:
-                        logits = F.interpolate(logits, size=size, mode='bilinear',
-                                               align_corners=False)
-                return logits
-
-            predict_for_slide._wwtp_slide_compat = True
-            Mask2FormerHead.predict = predict_for_slide
-    except ImportError:
-        pass
 
     target = output / 'masks' / split / model_spec['slug']
     missing = {item for item in expected_ids if not (target / (item + '.png')).exists()}
@@ -283,7 +247,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['plan', 'run', 'compose'])
     parser.add_argument('--data-root', type=Path,
-                        default=ROOT / 'wwtp_semantic_dataset')
+                        default=ROOT / 'wwtp_semantic_dataset_1m')
     parser.add_argument('--output', type=Path,
                         default=ROOT / 'work_dirs/wwtp_inference_gallery')
     parser.add_argument('--splits', nargs='+', choices=['val', 'test'],

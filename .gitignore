@@ -37,3 +37,9 @@ last_checkpoint
 *.lock
 .*.lock
 *.tmp
+
+# Generated experiment artifacts and local environments
+work_dirs/
+analysis/
+.venv*/
+.cache/

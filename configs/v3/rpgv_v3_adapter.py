@@ -1,6 +1,7 @@
+_base_ = ['../experiments/rpgv_v2_stage3_joint.py']
 import os
 
-_base_ = ['../experiments/rpgv_v2_stage3_joint.py']
+
 
 model = dict(
     type='RPGVNetV3', training_stage='joint', adapter_channels=24,

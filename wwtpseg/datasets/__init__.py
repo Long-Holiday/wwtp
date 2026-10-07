@@ -1,3 +1,5 @@
+from .uavid import UAVidDataset
+from .transforms.shape import RequireImageShape
 from .transforms import (
     GenerateGlobalThumbnail,
     LoadPseudoGeometry,

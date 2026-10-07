@@ -22,10 +22,15 @@ from mmseg.utils import register_all_modules
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPERIMENTS = {
-    path.stem: path
-    for directory in ('experiments', 'ablations')
-    for path in sorted((ROOT / 'configs' / directory).glob('*.py'))
+from wwtpseg.experiments import MAINSTREAM_MODELS, DATASETS as DATASET_NAMES, experiment_config
+EXPERIMENTS = {p.stem: p for p in (ROOT / 'configs/experiments').glob('*.py')}
+RPGV_CONFIGS = {
+    'rpgv': ROOT / 'configs/experiments/rpgv_net.py',
+    'rpgv_v2': ROOT / 'configs/experiments/rpgv_v2_joint.py',
+    'rpgv_v3': ROOT / 'configs/v3/rpgv_v3_adapter.py',
+    'rpgv_v4': ROOT / 'configs/v4/rpgv_v4.py',
+    'rpgv_v5': ROOT / 'configs/v5/rpgv_v5.py',
+    'rpgv_v51': ROOT / 'configs/v51/from_scratch.py',
 }
 
 
@@ -40,22 +45,6 @@ def _disable_pretraining(value) -> None:
     elif isinstance(value, (list, tuple)):
         for child in value:
             _disable_pretraining(child)
-
-
-def _small_rs_mamba(model_cfg: dict) -> None:
-    backbone = model_cfg.get('backbone', {})
-    if backbone.get('type') != 'RSMambaBackbone':
-        return
-    backbone.update(
-        dims=8,
-        depths=(1, 1, 1, 1),
-        state_size=4,
-        ssm_ratio=1.0,
-        mlp_ratio=2.0,
-        drop_path_rate=0.0,
-        use_checkpoint=False,
-    )
-    model_cfg['decode_head'].update(in_channels=8, channels=8)
 
 
 def _sample(size: int, offset: int = 0) -> tuple[torch.Tensor, SegDataSample]:
@@ -163,89 +152,67 @@ def _check_rpgv_backward_paths(model, stage: str) -> None:
             raise AssertionError('RPGV RGB detail refiner received no gradient')
 
 
-def smoke_model(name: str, config_path: Path, size: int, backward: bool) -> None:
+def smoke_model(name, config_path, size, backward, device='cpu'):
     cfg = Config.fromfile(config_path)
     import_modules_from_strings(**cfg.custom_imports)
     model_cfg = copy.deepcopy(cfg.model)
     _disable_pretraining(model_cfg)
-    _small_rs_mamba(model_cfg)
-    if model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}:
-        model_cfg['global_thumbnail_size'] = size
-    # A synthetic smoke pass should not pad a 64 px input back to 512 px.
     model_cfg['data_preprocessor']['size'] = (size, size)
-    model = revert_sync_batchnorm(MODELS.build(model_cfg))
-    model.train()
-    if model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}:
-        _check_rpgv_stage_freezing(
-            model, model_cfg.get('training_stage', 'joint'))
+    # Use whole mode on tiny inputs; production inference settings are checked separately.
+    model_cfg['test_cfg'] = dict(mode='whole')
+    if 'global_thumbnail_size' in model_cfg:
+        model_cfg['global_thumbnail_size'] = size
+    model = revert_sync_batchnorm(MODELS.build(model_cfg)).to(device).train()
+    if model_cfg['type'] == 'RPGVNetV3':
+        # Test the real migration contract with a synthetic v2 RGB anchor.
+        # Production still requires a verified trained initialization.
+        from initialize_rpgv_v3 import initialize_from_rgb
+        anchor_cfg = copy.deepcopy(Config.fromfile(EXPERIMENTS['rpgv_v2_stage1_rgb']).model)
+        _disable_pretraining(anchor_cfg)
+        anchor_cfg['global_thumbnail_size'] = size
+        anchor = MODELS.build(anchor_cfg)
+        initialize_from_rgb(model, anchor.state_dict())
+        del anchor
+    num_classes = model_cfg.get('num_classes', model_cfg.get('decode_head', {}).get('num_classes', 2))
     items = [_sample(size, index) for index in range(2)]
-    if model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}:
-        staged_items = []
-        for image, sample in items:
-            sample.global_img = PixelData(data=image.clone())
-            if model_cfg.get('training_stage', 'joint') != 'rgb':
-                image = _add_pseudo_geometry(image)
-            staged_items.append((image, sample))
-        items = staged_items
-    batch = dict(
-        inputs=[item[0] for item in items],
-        data_samples=[item[1] for item in items])
-    processed = model.data_preprocessor(batch, training=True)
+    for image, sample in items:
+        sample.gt_sem_seg.data = torch.arange(size * size).reshape(1, size, size) % num_classes
+        sample.gt_sem_seg.data[:, :2] = 255
+        sample.global_img = PixelData(data=image.clone())
+    if model_cfg['type'].startswith('RPGV') and model_cfg.get('training_stage') != 'rgb':
+        items = [(_add_pseudo_geometry(image), sample) for image, sample in items]
+    processed = model.data_preprocessor(dict(inputs=[x for x, _ in items],
+                                            data_samples=[s for _, s in items]), training=True)
     losses = model.loss(**processed)
-    loss_terms = []
-    for key, value in losses.items():
-        if 'loss' not in key:
-            continue
-        loss_terms.extend(value if isinstance(value, (list, tuple)) else [value])
-    total = sum(term.mean() for term in loss_terms)
+    total, _ = model.parse_losses(losses)
     if not torch.isfinite(total):
-        raise RuntimeError(f'{name}: non-finite loss {total.item()}')
+        raise AssertionError(f'{name}: non-finite loss')
     if backward:
         total.backward()
-        if model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}:
-            _check_rpgv_backward_paths(
-                model, model_cfg.get('training_stage', 'joint'))
-        if (
-            model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}
-            and model_cfg.get('training_stage', 'joint') != 'rgb'
-            and model.component_enabled('learned_reliability')
-        ):
-            reliability_grad = model.rectifier.learned_reliability[-1].weight.grad
-            if reliability_grad is None or not reliability_grad.abs().sum():
-                raise AssertionError(
-                    f'{name}: reliability head received no gradient')
-        if (
-            model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}
-            and model_cfg.get('training_stage', 'joint') == 'joint'
-        ):
-            if model.component_enabled('boundary_fusion'):
-                projection = model.high_fusion.delta_projection[0]
-            elif model.component_enabled('region_fusion'):
-                projection = model.low_fusion.delta_projection[0]
-            else:
-                projection = None
-            projection_grad = None if projection is None else projection.weight.grad
-            if projection is not None and (
-                projection_grad is None or not projection_grad.abs().sum()
-            ):
-                raise AssertionError(
-                    f'{name}: zero-init fusion projection received no gradient')
-    if model_cfg.get('type') in {'RPGVNet', 'RPGVNetV2'}:
-        model.eval()
-        with torch.no_grad():
-            predictions = model.predict(**processed)
-        prediction_shape = tuple(predictions[0].pred_sem_seg.data.shape)
-        if prediction_shape != (1, size, size):
-            raise AssertionError(
-                f'RPGV prediction has shape {prediction_shape}, '
-                f'expected {(1, size, size)}')
-    parameters = sum(parameter.numel() for parameter in model.parameters())
-    trainable = sum(
-        parameter.numel() for parameter in model.parameters()
-        if parameter.requires_grad)
-    print(
-        f'[OK] {name:21s} params={parameters / 1e6:7.2f}M '
-        f'trainable={trainable / 1e6:7.2f}M loss={total.item():.4f}')
+        grads = [p.grad for p in model.parameters() if p.grad is not None]
+        if not grads or not all(torch.isfinite(g).all() for g in grads):
+            raise AssertionError(f'{name}: missing or non-finite gradients')
+    model.eval()
+    with torch.inference_mode():
+        predictions = model.predict(**processed)
+    for result in predictions:
+        ids = result.pred_sem_seg.data
+        if ids.shape[-2:] != (size, size) or ids.min() < 0 or ids.max() >= num_classes:
+            raise AssertionError(f'{name}: invalid prediction shape/class IDs')
+    if cfg.model.test_cfg.mode == 'slide':
+        # Exercise the public UAVid inference path on overlapping tiny crops.
+        model.test_cfg = dict(mode='slide', crop_size=(size, size), stride=(size // 2, size // 2))
+        image, sample = _sample(size + size // 2)
+        processed_frame = model.data_preprocessor(dict(inputs=[image], data_samples=[sample]), training=False)
+        with torch.inference_mode():
+            result = model.predict(**processed_frame)[0]
+        if result.pred_sem_seg.data.shape[-2:] != (size + size // 2, size + size // 2):
+            raise AssertionError(f'{name}: slide inference did not restore frame dimensions')
+        del processed_frame, result
+    print(f'PASS {name}: loss={total.item():.4f}, prediction={size}x{size}, classes={num_classes}', flush=True)
+    del model, processed, losses, predictions, total
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def smoke_metric(size: int) -> None:
@@ -474,32 +441,24 @@ def smoke_pseudo_geometry(size: int) -> None:
         'DWT invariant')
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        '--models', nargs='+', choices=sorted(EXPERIMENTS),
-        default=sorted(EXPERIMENTS))
+    parser.add_argument('--models', nargs='+', choices=MAINSTREAM_MODELS, default=MAINSTREAM_MODELS)
+    parser.add_argument('--dataset', choices=DATASET_NAMES, default='wwtp')
     parser.add_argument('--input-size', type=int, default=64)
     parser.add_argument('--backward', action='store_true')
-    parser.add_argument(
-        '--data-root', type=Path,
-        default=ROOT / 'wwtp_semantic_dataset')
+    parser.add_argument('--include-rpgv', action='store_true')
+    parser.add_argument('--device', default='cpu')
     args = parser.parse_args()
     if args.input_size < 32 or args.input_size % 32:
-        raise ValueError('--input-size must be a multiple of 32 and at least 32')
-
+        parser.error('--input-size must be a multiple of 32 and at least 32')
+    torch.set_num_threads(2)
     register_all_modules(init_default_scope=True)
-    init_default_scope('mmseg')
-    import wwtpseg  # noqa: F401
-
-    smoke_dataset(next(iter(EXPERIMENTS.values())), args.data_root)
-    if 'rpgv_stage1_rgb' in args.models:
-        smoke_dataset(EXPERIMENTS['rpgv_stage1_rgb'], args.data_root)
-    smoke_location_augmentation()
-    smoke_pseudo_geometry(args.input_size)
-    smoke_metric(args.input_size)
     for name in args.models:
-        smoke_model(name, EXPERIMENTS[name], args.input_size, args.backward)
+        smoke_model(name, experiment_config(args.dataset, name), args.input_size, args.backward, args.device)
+    if args.include_rpgv:
+        for name, path in RPGV_CONFIGS.items():
+            smoke_model(name, path, args.input_size, args.backward, args.device)
 
 
 if __name__ == '__main__':

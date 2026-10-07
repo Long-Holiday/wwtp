@@ -1,11 +1,12 @@
-import os
-
 _base_ = [
     '../_base_/models/rpgv_net.py',
     '../_base_/datasets/wwtp_pseudo_1024x1024.py',
     '../_base_/schedules/rpgv_iter_40k.py',
     '../_base_/default_runtime.py',
 ]
+import os
+
+
 
 model = dict(training_stage='joint')
 load_from = os.getenv('RPGV_STAGE2_CHECKPOINT') or None

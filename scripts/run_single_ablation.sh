@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ablation="${1:?Usage: $0 <ablation_name> [stage2_checkpoint]}"
-stage2_ckpt="${2:-work_dirs/rpgv_staged/stage2_geometry/best_binary_Foreground_IoU_iter_10000.pth}"
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+ablation="${1:?Usage: $0 <ablation_name> <stage2_checkpoint>}"
+stage2_ckpt="${2:-${RPGV_STAGE2_CHECKPOINT:-}}"
+if [[ -z "$stage2_ckpt" || ! -f "$stage2_ckpt" ]]; then
+  echo "Supply a validation-selected Stage 2 checkpoint trained on the 1024 dataset." >&2
+  exit 1
+fi
 work_root="${RPGV_ABLATION_WORK_ROOT:-work_dirs/rpgv_ablations}"
 python_bin="${PYTHON_BIN:-python3}"
 

@@ -8,7 +8,7 @@ data_preprocessor = dict(
     bgr_to_rgb=True,
     pad_val=0,
     seg_pad_val=255,
-    size=(512, 512),
+    size=(1024, 1024),
     test_cfg=dict(size_divisor=32))
 
 model = dict(
@@ -32,7 +32,7 @@ model = dict(
         frozen_stages=-1,
         init_cfg=dict(type='Pretrained', checkpoint=pretrained)),
     decode_head=dict(
-        type='Mask2FormerHead',
+        type='SlidingMask2FormerHead',
         in_channels=[96, 192, 384, 768],
         strides=[4, 8, 16, 32],
         feat_channels=256,
@@ -136,4 +136,4 @@ model = dict(
                 ]),
             sampler=dict(type='mmdet.MaskPseudoSampler'))),
     train_cfg=dict(),
-    test_cfg=dict(mode='slide', crop_size=(512, 512), stride=(384, 384)))
+    test_cfg=dict(mode='whole'))

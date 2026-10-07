@@ -1,6 +1,6 @@
 default_scope = 'mmseg'
 custom_imports = dict(
-    imports=['wwtpseg', 'mmdet.models'], allow_failed_imports=False)
+    imports=['wwtpseg', 'wwtpseg.edge_baselines', 'mmdet.models'], allow_failed_imports=False)
 
 default_hooks = dict(
     timer=dict(type='IterTimerHook'),
@@ -9,7 +9,7 @@ default_hooks = dict(
     checkpoint=dict(
         type='CheckpointHook',
         by_epoch=False,
-        interval=500,
+        interval=1000,
         max_keep_ckpts=3,
         save_best='binary/Foreground_IoU',
         rule='greater'),

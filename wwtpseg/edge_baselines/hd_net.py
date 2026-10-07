@@ -118,17 +118,17 @@ class _DecoupledStage(nn.Module):
         return out, edge, edge_logit
 
 
-def _prediction_head(channels: int, in_channels: int) -> nn.Sequential:
+def _prediction_head(channels: int, in_channels: int, out_channels: int = 1) -> nn.Sequential:
     return nn.Sequential(
         nn.Conv2d(in_channels, channels, 1),
         nn.BatchNorm2d(channels), nn.ReLU(inplace=True),
-        nn.Conv2d(channels, 1, 1))
+        nn.Conv2d(channels, out_channels, 1))
 
 
 class HDNet(nn.Module):
     """Six-stage high-resolution body/boundary decomposition network."""
 
-    def __init__(self, base_channel: int = 48) -> None:
+    def __init__(self, base_channel: int = 48, out_channels: int = 1) -> None:
         super().__init__()
         c = base_channel
         self.stem = nn.Sequential(
@@ -145,11 +145,11 @@ class HDNet(nn.Module):
               for i in range(4)],
         ])
         self.seg_heads = nn.ModuleList([
-            _prediction_head(c, 3 * c),
-            _prediction_head(c, 3 * c),
-            *[_prediction_head(c, 7 * c) for _ in range(4)],
+            _prediction_head(c, 3 * c, out_channels),
+            _prediction_head(c, 3 * c, out_channels),
+            *[_prediction_head(c, 7 * c, out_channels) for _ in range(4)],
         ])
-        self.final_seg = nn.Conv2d(6, 1, 1)
+        self.final_seg = nn.Conv2d(6 * out_channels, out_channels, 1)
         self.final_boundary = nn.Conv2d(6, 1, 1)
 
     @staticmethod

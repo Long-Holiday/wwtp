@@ -10,7 +10,7 @@ from PIL import Image
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('data_root', nargs='?', default='wwtp_semantic_dataset')
+    parser.add_argument('data_root', nargs='?', default='wwtp_semantic_dataset_1m')
     parser.add_argument(
         '--limit', type=int, default=0,
         help='check at most N pairs per split; zero checks every pair')
@@ -24,6 +24,8 @@ def main() -> None:
             path.name: path
             for path in (root / 'annotations' / split).glob('*.png')
         }
+        if not images or not masks:
+            failed.append(f'{split}: missing or empty image/mask directory')
         if images.keys() != masks.keys():
             failed.append(
                 f'{split}: unpaired images={sorted(images.keys() - masks.keys())[:5]}, '
@@ -42,6 +44,8 @@ def main() -> None:
             if image.shape[:2] != mask.shape[:2]:
                 failed.append(
                     f'{split}/{name}: shape mismatch {image.shape} vs {mask.shape}')
+            if image.shape[:2] != (1024, 1024) or mask.ndim != 2:
+                failed.append(f'{split}/{name}: expected a 1024x1024 image and indexed 2D mask')
             labels = set(np.unique(mask).tolist())
             if not labels.issubset({0, 1, 255}):
                 failed.append(f'{split}/{name}: unexpected labels {sorted(labels)}')

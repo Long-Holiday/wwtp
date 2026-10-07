@@ -32,10 +32,10 @@ def topology(mask, valid, small_area):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--gallery', type=Path, default=Path('work_dirs/wwtp_inference_gallery'))
-    parser.add_argument('--data-root', type=Path, default=Path('wwtp_semantic_dataset'))
+    parser.add_argument('--data-root', type=Path, default=Path('wwtp_semantic_dataset_1m'))
     parser.add_argument('--models', nargs='+', default=['rpgv-net', 'deeplabv3plus'])
     parser.add_argument('--split', choices=['val', 'test'], default='val')
-    parser.add_argument('--small-area', type=int, default=256)
+    parser.add_argument('--small-area', type=int, default=64)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     if args.small_area < 1:

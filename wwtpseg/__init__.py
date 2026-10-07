@@ -9,7 +9,7 @@ from .datasets import (
     WWTPDataset,
 )
 from .evaluation import BinaryBoundaryMetric
-from .models import RPGVNet, RPGVNetV2, RPGVNetV3, RPGVNetV4, RSMambaBackbone, UNetFormerBackbone
+from .models import RPGVNet, RPGVNetV2, RPGVNetV3, RPGVNetV4, RPGVNetV5, RPGVNetV51, UNetFormerBackbone
 
 __all__ = [
     'WWTPDataset', 'RandomForegroundCrop', 'LoadPseudoGeometry',
@@ -17,9 +17,8 @@ __all__ = [
     'PackRPGVInputs',
     'BinaryBoundaryMetric',
     'UNetFormerBackbone',
-    'RSMambaBackbone',
     'RPGVNet',
     'RPGVNetV2',
     'RPGVNetV3',
-    'RPGVNetV4',
+    'RPGVNetV4', 'RPGVNetV5', 'RPGVNetV51',
 ]

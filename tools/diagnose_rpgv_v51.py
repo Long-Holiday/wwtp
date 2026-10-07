@@ -28,7 +28,6 @@ import wwtpseg  # noqa: F401 -- registers WWTP dataset/model/metrics
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / 'configs/v5/rpgv_v5.py'
-DEFAULT_CHECKPOINT = ROOT / 'work_dirs/rpgv_v5_1m/best_binary_Foreground_IoU_iter_12000.pth'
 MODES = ('full', 'no_geometry', 'no_contour', 'shuffled_depth')
 
 
@@ -95,7 +94,8 @@ def build_model(cfg: Config, checkpoint: Path, device: torch.device):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--checkpoint', type=Path, default=DEFAULT_CHECKPOINT)
+    parser.add_argument('--checkpoint', type=Path, required=True,
+                        help='Validation-selected v5 checkpoint trained on the same 1024 data')
     parser.add_argument('--output', type=Path, required=True,
                         help='New JSON path; existing files are never overwritten')
     parser.add_argument('--limit', type=int, default=0, help='0 means all 304 val images')

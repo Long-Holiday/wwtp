@@ -1,3 +1,4 @@
+from .shape import RequireImageShape
 from .foreground_crop import RandomForegroundCrop
 from .load_pseudo_geometry import LoadPseudoGeometry
 from .rpgv_transforms import (

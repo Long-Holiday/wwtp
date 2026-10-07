@@ -3,7 +3,7 @@ _base_ = ['./rpgv_stage1_rgb.py']
 
 model = dict(
     type='RPGVNetV2', decoder_channels=64, detail_channels=24,
-    contour_truncation=10.0, max_logit_correction=2.0,
+    contour_truncation=5.0, max_logit_correction=2.0,
     coarse_loss_weight=0.3, region_loss_weight=0.1,
     correction_smoothness_weight=0.02, use_contour=True)
 # The training entry point otherwise injects min_delta=1.0, patience=3,

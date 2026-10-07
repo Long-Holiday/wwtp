@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
-RPGV_V3_ROOT="${RPGV_V3_WORK_ROOT:-work_dirs/rpgv_v3_adapter}"
-RPGV_V3_SOURCE="${RPGV_V3_RGB_CHECKPOINT:-work_dirs/rpgv_v2_staged/stage1_rgb/best_binary_Foreground_IoU_iter_36000.pth}"
-PYTHON_BIN="${PYTHON_BIN:-python}"
-if [[ -e "${RPGV_V3_ROOT}" ]]; then
-  echo "Directory exists: ${RPGV_V3_ROOT}. Resume explicitly or choose a new RPGV_V3_WORK_ROOT." >&2
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+work_root="${RPGV_V3_WORK_ROOT:-work_dirs/rpgv_v3_adapter}"
+python_bin="${PYTHON_BIN:-python}"
+for arg in "$@"; do
+  if [[ "$arg" == --resume* ]]; then
+    exec "$python_bin" tools/train.py configs/v3/rpgv_v3_adapter.py --work-dir "$work_root" "$@"
+  fi
+done
+if [[ -e "$work_root" ]]; then
+  echo "Work directory exists: $work_root. Use --resume or a fresh RPGV_V3_WORK_ROOT." >&2
   exit 1
 fi
-if [[ ! -f "${RPGV_V3_SOURCE}" ]]; then
-  echo "Set RPGV_V3_RGB_CHECKPOINT to the validation-selected v2 RGB checkpoint." >&2
+source_checkpoint="${RPGV_V3_RGB_CHECKPOINT:-}"
+if [[ -z "$source_checkpoint" || ! -f "$source_checkpoint" ]]; then
+  echo "Set RPGV_V3_RGB_CHECKPOINT to a validation-selected v2 RGB checkpoint trained on the same 1024 data." >&2
   exit 1
 fi
-"${PYTHON_BIN}" tools/initialize_rpgv_v3.py "${RPGV_V3_SOURCE}" "${RPGV_V3_ROOT}/init.pth"
-RPGV_V3_INIT_CHECKPOINT="${RPGV_V3_ROOT}/init.pth" \
-  "${PYTHON_BIN}" tools/train.py configs/v3/rpgv_v3_adapter.py --work-dir "${RPGV_V3_ROOT}"
+"$python_bin" tools/initialize_rpgv_v3.py "$source_checkpoint" "$work_root/init.pth"
+RPGV_V3_INIT_CHECKPOINT="$work_root/init.pth" \
+  "$python_bin" tools/train.py configs/v3/rpgv_v3_adapter.py --work-dir "$work_root" "$@"

@@ -1,333 +1,133 @@
-# WWTP 遥感影像语义分割基线
+# WWTP 遥感语义分割实验
 
-本项目基于 MMSegmentation 1.2.2，为污水处理厂（WWTP）二分类遥感语义分割提供统一、可复现、便于扩展的实验骨架。已接入以下模型：
+基于 MMSegmentation 1.2.2，统一 WWTP、UAVid2020 和 LoveDA 的模型、训练与评估入口。
 
-- U-Net（S5-D16）
-- DeepLabV3+（ResNet-50）
-- HRNet（W18）
-- SegFormer（MiT-B2）
-- SegNeXt（MSCAN-S + LightHamHead）
-- Mask2Former（Swin-T）
-- UNetFormer（ResNet-18）
-- RS-Mamba（Tiny，八方向 selective scan）
-- RPGV-Net（MiT-B2 + 可靠性感知伪几何校正与双频验证）
-- CBR-Net、HD-Net（独立边界模型对比配置，见 [使用说明](docs/edge_baselines.md)）
+主流模型固定为 **HRNet-W18、UNetFormer-R18、SegNeXt-S、SegFormer-B2、DeepLabV3+-R50、Mask2Former-Swin-T、HDNet**。`untformer` 指 UNetFormer，`deeplab` 指 DeepLabV3+。训练批处理、测试批处理和合成冒烟测试使用同一份模型清单：`wwtpseg/experiments/__init__.py`。
 
-数据、模型、训练策略、评价指标和命令入口彼此解耦。新增模型或消融实验通常只需增加一个注册模块和一份继承配置，不需要修改训练器。
+RPGV v1、v2、v3、v4、v5、v5.1 的实现、阶段配置、消融、初始化与数值测试全部保留。公开数据集另保留已有 RPGV RGB／完整几何／v2 多分类适配；v3–v5.1 原生二分类实现继续用于 WWTP，未把它们改名成多分类实验。
 
-## 目录结构
+## 项目结构
 
 ```text
-configs/
-├── _base_/
-│   ├── datasets/             # WWTP 数据与增强
-│   ├── models/               # 单一职责的模型定义
-│   ├── schedules/            # 优化器与训练周期
-│   └── default_runtime.py    # 日志、checkpoint、随机种子
-└── experiments/              # 8 个可直接运行的实验
-wwtpseg/
-├── datasets/                 # WWTPDataset
-├── evaluation/               # 前景、边界、Hausdorff 指标
-└── models/                   # 自定义 backbone 与 RPGV-Net 分割器
-tools/                        # train / test / smoke_test / 数据校验
-docker/                       # 固定 CUDA/PyTorch/OpenMMLab 环境
+configs/_base_/       模型、1024 数据管线、运行与训练协议
+configs/experiments/  WWTP 七个主流模型与 RPGV v1/v2 阶段配置
+configs/remote_sensing/{uavid,loveda}/  相同的七个主流模型与已有 RPGV 多分类适配
+configs/{ablations,ablations_v2,v3,v4,v5,v51}/  全部 RPGV 版本及消融
+wwtpseg/              数据、模型、指标、运行时与统一模型清单
+tools/                单实验 train/test、预测导出、数据准备及模型测试
+scripts/              主流模型批处理与 RPGV 实验编排
+tests/                官方划分、标签编码和配置回归测试
+docs/                 数据协议与 RPGV 结构说明
+docker/               新版训练镜像
 ```
 
-## 环境
+历史日志、审计、结果、中间可视化与原实验报告归档到本地分支 **`experiment-logs/2026-10-07`**，索引为该分支的 `experiment_archive/README.md` 与 `index.json`。主分支不再追踪 `work_dirs/`、`analysis/`；数据和权重也不入 Git。没有改写已有提交历史。归档分支需按需要另行推送。
 
-推荐镜像基于 `pytorch/pytorch:2.1.2-cuda12.1-cudnn8-devel`，固定核心版本如下：
+```bash
+git show experiment-logs/2026-10-07:experiment_archive/README.md
+git show experiment-logs/2026-10-07:EXPERIMENT_REPORT.md
+```
 
-| 组件 | 版本 |
-| --- | --- |
-| PyTorch | 2.1.2 + CUDA 12.1 |
-| MMSegmentation | 1.2.2 |
-| MMCV | 2.1.0 |
-| MMEngine | 0.10.7 |
-| MMDetection | 3.3.0（Mask2Former 组件） |
-| timm | 0.9.16 |
-| mamba-ssm | 1.2.2 |
+## Docker 环境
 
-使用 `devel` 而非 `runtime` 镜像是因为 RS-Mamba 的 fused selective-scan 需要 CUDA 编译工具链。宿主机只需要合适版本的 NVIDIA 驱动、Docker 和 NVIDIA Container Toolkit。
+默认升级到 **PyTorch 2.5.1 / CUDA 12.4 / cuDNN 9 devel**，保留 MMEngine 0.10.7、MMCV 2.1.0、MMDetection 3.3.0、MMSeg 1.2.2。MMSeg 1.2.2 的官方版本约束是 MMCV `<2.2.0`；较新 PyTorch 没有对应的 MMCV 2.1 官方轮子，因此镜像从源码编译真实 CUDA 算子，不放宽版本检查、不用旧 ABI 轮子。镜像不再安装 Mamba CUDA 扩展。源码编译首次耗时较长，后续 Docker 层可复用。
 
 ```bash
 docker compose build
+docker compose run --rm wwtp python tools/smoke_test.py --device cuda --backward
 ```
 
-镜像构建时会编译 Mamba CUDA 扩展，首次构建时间较长。若 GPU 架构不在默认的 `7.0;7.5;8.0;8.6;8.9+PTX` 中，可这样覆盖：
+`TORCH_CUDA_ARCH_LIST` 默认 `8.6;8.9+PTX`（RTX 3050／3090／4090 等），其他显卡构建时覆盖；`MAX_JOBS=2` 限制编译内存。Compose 缓存卷替代原来写死的个人 home 路径。
+
+提供已知兼容的旧环境回退，使用官方预编译 MMCV 轮子：
 
 ```bash
-docker compose build --build-arg TORCH_CUDA_ARCH_LIST="8.0;8.6+PTX"
+PYTORCH_IMAGE=pytorch/pytorch:2.1.2-cuda12.1-cudnn8-devel \
+MMCV_FROM_SOURCE=0 WWTP_IMAGE=wwtp-mmseg:torch2.1.2-cu121 docker compose build
+# 运行时仍用同一 WWTP_IMAGE 选择回退镜像
+WWTP_IMAGE=wwtp-mmseg:torch2.1.2-cu121 docker compose run --rm wwtp python tools/smoke_test.py
 ```
 
-## 数据校验与冒烟测试
+依赖源可用 `PIP_INDEX_URL` 覆盖；Linux 上需要主机网络构建时可设置 `BUILD_NETWORK=host`。Docker daemon 的拉取代理与容器内依赖下载代理需分别配置，后者可通过 Docker 预定义的 `HTTP_PROXY`／`HTTPS_PROXY` 构建参数传入。
 
-仓库默认数据路径是 `wwtp_semantic_dataset/`，也可通过环境变量 `WWTP_DATA_ROOT` 指向其他位置。掩膜是调色板 PNG；加载时必须保留调色板索引 0/1，项目使用 MMSeg 默认的 Pillow annotation backend 处理这一点。
+**验证状态：按本次要求只修改代码与文件，镜像构建已停止，未运行 Docker 模型／训练测试。新版 MMCV 源码编译兼容性、实际吞吐与 24GB 显卡显存占用均待在目标环境验证。** 下文列出后续验证入口；不代表本次已经通过这些测试。
 
-如需将原始 2048×2048、0.5 m/px 数据集转换为 1024×1024、1 m/px，运行：
+## 数据与训练协议
+
+WWTP 默认根目录 `wwtp_semantic_dataset_1m/`，**1024×1024 整图、1 m/px**，沿用 v5 的光度扰动和精确翻转，不在线放大到 2048、不随机裁小块。误用非 1024 数据会明确报错。已有原始 WWTP 数据可用 `tools/resample_wwtp_dataset.py` 转换；影像面积采样、掩膜最近邻，划分保持不变。
+
+公开集仅使用 **UAVid2020、LoveDA**，本项目不下载数据。准备工具只读取官方解压目录。LoveDA 严格 `2522/1669/1796` 张；UAVid2020 严格 `200/70/150` 帧，按官方 sequence 保留 split，检查每个 sequence 十帧、划分间无 sequence 重叠。准备失败不会生成可用于训练的完整数据目录。详细目录与类别编码见 [数据协议](docs/datasets.md)。
 
 ```bash
-docker run --rm --network none -v "$PWD":/workspace -w /workspace \
-  wwtp-mmseg:1.2.2-cu121 \
-  python tools/resample_wwtp_dataset.py
+docker compose run --rm wwtp python tools/remote_sensing/prepare.py loveda \
+  --source data/remote_sensing/raw/loveda --output data/remote_sensing/prepared/loveda
+docker compose run --rm wwtp python tools/remote_sensing/prepare.py uavid \
+  --source data/remote_sensing/raw/uavid --output data/remote_sensing/prepared/uavid
 ```
 
-输出在 `wwtp_semantic_dataset_1m/`，原始数据不变。影像使用面积平均，类别掩膜使用最近邻；`.pgw` 和伪几何图同步转换，划分索引保持一致。转换后训练时设置 `WWTP_DATA_ROOT=wwtp_semantic_dataset_1m`、`WWTP_IMAGE_SIZE=1024`；后者同时调整随机缩放基准和边界指标的像素尺度。
+LoveDA 保留官方 1024 整图；UAVid 仅在官方训练 sequence 内切成 1024 块，边缘补零、标签补 255，不丢失边缘像素。验证与官方测试保留完整原始帧，用 1024／stride 768 滑窗拼接。**200 是原始训练帧数，不是切片后的样本数。** 不随机拆帧、不合并 train/val。
 
-在 Docker Compose 中运行训练时，可这样传入新数据集路径：
+七个主流模型使用统一预算：batch 2 × 累积 4 = 有效 batch 8，20,000 个数据加载迭代 = 5,000 次优化器更新；每 1,000 迭代验证，不默认早停。保留各模型优化器参数组；SegNeXt 和 Mask2Former 使用 FP32，其余默认 AMP。WWTP 指标含前景、边界与拓扑，边界容差 1.5 px=1.5 m；公开多分类集使用 mIoU/mDice/mFscore，按验证 mIoU 选权重。
+
+## 训练与测试
 
 ```bash
-docker compose run --rm \
-  -e WWTP_DATA_ROOT=/workspace/wwtp_semantic_dataset_1m \
-  -e WWTP_IMAGE_SIZE=1024 \
-  wwtp python tools/train.py configs/experiments/unet.py
+# 单模型：train/test 始终使用同一份配置
+docker compose run --rm wwtp python tools/train.py configs/experiments/hrnet.py
+docker compose run --rm wwtp python tools/train.py configs/remote_sensing/uavid/hrnet.py
+docker compose run --rm wwtp python tools/train.py configs/remote_sensing/loveda/hrnet.py
+
+# 批处理：先查看所有七个模型的计划
+docker compose run --rm wwtp python scripts/run_experiments.py train --dataset wwtp --dry-run
+docker compose run --rm wwtp python scripts/run_experiments.py train --dataset loveda
+docker compose run --rm wwtp python scripts/run_experiments.py test --dataset loveda
+
+# 恢复原优化器、随机状态和调度器
+docker compose run --rm wwtp python tools/train.py configs/experiments/hrnet.py --resume
+
+# 评估指定 checkpoint
+docker compose run --rm wwtp python tools/test.py configs/experiments/hrnet.py \
+  work_dirs/wwtp/hrnet/iter_20000.pth --split val
 ```
 
-先校验全部 3044 对文件、尺寸和标签值：
+默认输出为 `work_dirs/<dataset>/<model>/`。`--cfg-options` 可覆盖 batch、累积、workers 等；变更 batch 时同步调整累积和迭代预算，保持有效 batch 与更新数。多卡批处理用 `--gpus N`。
+
+训练入口统一启用 TF32，数据加载使用 persistent workers 与 pin memory。删除训练循环与确定性设置的全局 monkey patch，恢复 MMEngine 原生断点续训语义。AMP 模型可用 `--amp-dtype bfloat16`，设备必须支持 BF16；FP32 配置不被该参数强制切换。测试/恢复从完整 checkpoint 加载时关闭骨干预训练下载。
+
+UAVid/LoveDA 官方测试标签不公开，`tools/test.py` 的公开集配置明确评估官方 **val**。测试集预测用独立导出入口，不生成伪测试分数：
 
 ```bash
-docker compose run --rm wwtp \
-  python tools/validate_dataset.py /workspace/wwtp_semantic_dataset
+docker compose run --rm wwtp python tools/remote_sensing/predict.py \
+  configs/remote_sensing/loveda/segformer.py work_dirs/loveda/segformer/BEST.pth \
+  --output work_dirs/loveda/segformer/submission
 ```
 
-再运行所有模型的极小合成输入 loss 前向、真实训练/验证样本读取、位置增强和指标不变量测试：
+LoveDA 提交沿用官方预测脚本：导出 **0–6 ID**，以原图片编号直接保存到输出目录；原始真值的 1–7 编号只用于读取训练标签。UAVid 导出与官方颜色匹配的 RGB mask，目录为 `seq*/Labels/<原帧名>.png`。
+
+## RPGV
+
+RPGV 的结构开关、损失和初始化规则继续保留。v1/v2 阶段配置改用相同 1024 WWTP 根目录与整图增强；v3 锚点初始化和 v5.1 权重迁移仍需运行原初始化工具。阶段训练预算按各版本原方案保留；严格等预算对照可用 `configs/v5/controls/`，不要把阶段实验与七个统一预算基线宣称为等预算比较。
 
 ```bash
-docker compose run --rm wwtp python tools/smoke_test.py
+docker compose run --rm wwtp python tools/generate_pseudo_geometry.py wwtp_semantic_dataset_1m --device cuda
+docker compose run --rm wwtp bash scripts/train_rpgv_v5.sh
+docker compose run --rm wwtp python tools/smoke_test.py --include-rpgv --backward --device cuda
 ```
 
-需要额外验证反向传播时：
+伪几何文件为 `pseudo_geometry/<split>/<image_stem>.npz`，与准备后的 1024 图像逐像素对齐。所有 RPGV 模型仍在 `wwtpseg/models/segmentors/`，消融和数值测试入口仍可直接调用。
+
+## 小规模验证
+
+无需数据集和预训练权重下载：
 
 ```bash
-docker compose run --rm wwtp \
-  python tools/smoke_test.py --backward
+docker compose run --rm wwtp python -m unittest discover -s tests -p 'test_experiment_protocol.py' -v
+docker compose run --rm wwtp python tools/smoke_test.py --dataset wwtp --backward --device cuda
+docker compose run --rm wwtp python tools/smoke_test.py --dataset uavid --backward --device cuda
+docker compose run --rm wwtp python tools/smoke_test.py --dataset loveda --backward --device cuda
+docker compose run --rm wwtp python tools/smoke_runner.py --device cuda
 ```
 
-冒烟测试会临时缩小 RS-Mamba 的宽度和深度，并禁用预训练权重下载；正式训练配置不会被修改。无 CUDA 时 RS-Mamba 会使用很慢但可微的 PyTorch 参考扫描，它仅适合 32/64 像素测试，完整训练必须使用 fused CUDA selective-scan。
+模型测试使用 64 像素、batch 2，检查前向、反向、有限梯度和预测类别/尺寸；Runner 测试执行 2 步训练、保存、测试，再恢复至 4 步。它们验证代码路径，不代表完整训练质量或最终 1024 分辨率显存要求。
 
-RPGV 的 CUDA FP16 数值回归（含三阶段 AdamW 更新、8 步梯度累积、饱和熵与
-1024 分辨率损失反向测试）：
-
-```bash
-docker compose run --rm wwtp python tools/test_rpgv_numerics.py -v
-```
-
-三阶段更新测试使用 64 像素合成输入，不下载预训练权重；无 CUDA 时会明确跳过
-GPU 用例。训练现在会在非有限前向 loss 出现时立即报出阶段与损失项，避免继续
-更新并保存无效权重。如果旧 checkpoint 已含 NaN/Inf，或 AMP `loss_scaler.scale`
-已为 0，不能用 `--resume` 恢复它。应选用已验证正常的断点，或从第一阶段在新
-工作目录重新训练（保留旧目录用于排查）：
-
-```bash
-docker compose run --rm -e RPGV_WORK_ROOT=work_dirs/rpgv_staged_amp_fixed wwtp \
-  bash scripts/train_rpgv_stages.sh
-```
-
-## 训练
-
-### RPGV-Net 伪几何预处理
-
-RPGV-Net 使用离线冻结的 Depth Anything V2，不会在分割训练时更新或重复运行深度模型。先为 train/val/test 生成整图归一化的伪深度和增强一致性可靠度：
-
-```bash
-docker compose run --rm wwtp \
-  python tools/generate_pseudo_geometry.py \
-  /workspace/wwtp_semantic_dataset \
-  --device cuda
-```
-
-默认对 2048 图像使用 1024、25% 重叠的局部块，与 518 全图预测做 scale-shift 对齐后以 Hann 权重拼接；随后用恒等、水平/垂直翻转及尺度变换的预测方差生成可靠度。结果以 16-bit 深度和 8-bit 可靠度压缩写入 `wwtp_semantic_dataset/pseudo_geometry/<split>/<stem>.npz`。可用 `WWTP_PSEUDO_ROOT` 指定其他目录。
-
-生成后按 RGB 预训练、几何预训练和联合微调三个阶段训练：
-
-```bash
-docker compose run --rm wwtp \
-  bash scripts/train_rpgv_stages.sh
-```
-
-三个阶段分别训练 40k、20k 和 40k iterations，脚本会验证并自动传递阶段间 checkpoint。可通过 `RPGV_WORK_ROOT` 修改工作目录。`configs/experiments/rpgv_net.py` 保留为不经过分阶段预训练的直接联合训练消融配置。
-
-RPGV-Net 的训练 crop 为 1024，batch size 1 并累积 8 步；推理采用 crop 1024、stride 768 的 Hann 加权滑窗。数据管线在局部增强前保留 512 全图 thumbnail，用共享 MiT-B2 生成 FiLM token；颜色增强只作用于 RGB，后续 resize/rotate/crop/flip 对 RGB、深度和可靠度同步执行。几何分支使用自顶向下 FPN，使四级几何编码器都能从辅助分割得到监督；高频边界残差在 1/4 融合，深层区域残差在 1/16 融合，解码后再以 1/2 RGB 细节分支精修边界。几何训练阶段以 30% 概率注入噪声、模糊、块缺失、scale-shift 或全零深度，并生成不作为模型输入的软有效度监督；联合阶段另以 15% 概率将整幅几何可靠度置零，用于维持 RGB-only 退化能力。
-
-单卡训练一个模型：
-
-```bash
-docker compose run --rm wwtp \
-  python tools/train.py configs/experiments/segformer.py \
-  --work-dir work_dirs/segformer
-```
-
-例如训练新增的 SegNeXt-MSCAN-S：
-
-```bash
-docker compose run --rm wwtp \
-  python tools/train.py configs/experiments/segnext.py \
-  --work-dir work_dirs/segnext
-```
-
-多卡训练：
-
-```bash
-docker compose run --rm wwtp \
-  torchrun --nproc-per-node=4 tools/train.py \
-  configs/experiments/deeplabv3plus.py \
-  --launcher pytorch --work-dir work_dirs/deeplabv3plus
-```
-
-依次训练全部不依赖伪几何预处理的基线模型：
-
-```bash
-docker compose run --rm -e GPU_COUNT=1 wwtp bash scripts/train_all.sh
-```
-
-八个主流模型已有首轮和 `_extended` checkpoint 时，可从最新迭代权重补训到统一的
-20k 步。脚本关闭早停，保留续训权重中的优化器和学习率调度状态；只有尚未开始续训
-的模型才从首轮 3k 权重切换到续训调度器。运行前先查看计划，正式补训需等其他
-GPU 训练结束：
-
-```bash
-docker compose run --rm wwtp python scripts/complete_mainstream_baselines.py --dry-run
-docker compose run --rm wwtp python scripts/complete_mainstream_baselines.py
-```
-
-脚本可中断后重复执行，也可加 `--models segformer rs_mamba` 只补指定模型。
-完成判定依据是 `iter_20000.pth`，已有测试结果不会使模型被跳过；训练结束后会
-列出首轮与续训中验证集 IoU 最佳的权重。旧测试结果和推理图仍对应旧权重，需
-另行更新。
-
-断点恢复：
-
-```bash
-python tools/train.py configs/experiments/unet.py \
-  --work-dir work_dirs/unet --resume
-```
-
-所有参数都可从命令行覆盖，适合快速资源适配：
-
-```bash
-python tools/train.py configs/experiments/hrnet.py \
-  --cfg-options train_dataloader.batch_size=2 \
-                train_cfg.max_iters=20000 \
-                train_cfg.val_interval=1000
-```
-
-默认训练增强依次包含 0.5–1.5 倍随机缩放、随机任意角度旋转、前景感知位置裁剪、水平/垂直/对角翻转和光度扰动。针对目标集中在原图中央的位置偏置，正样本有 80% 概率把前景质心放到 512×512 裁剪窗口内 15%–85% 的随机位置；其余 20% 正样本和全部负样本仍使用均匀随机裁剪，以保留纯背景与困难上下文。该裁剪在前景非常小时也会尽量保留目标，避免增强后正样本大量退化为负样本。
-
-当前八个主流基线的首轮配置训练 3k iterations、每 500 步验证；续训配置以总计 20k 步为目标、每 1k 步验证，并按 `binary/Foreground_IoU` 保存最佳权重。验证和测试不使用随机增强，在原始 2048×2048 影像上进行 512×512、stride 384 的滑窗推理，避免直接缩小影像导致小目标和边缘评价失真。RS-Mamba 默认 batch size 1、梯度累积 4 次，以维持有效 batch size 4。
-
-预训练权重会在首次正式训练时自动下载。若运行环境完全离线，请事先缓存权重，或者用配置覆盖相应 `init_cfg=None`；UNetFormer 的 timm encoder 可覆盖为 `model.backbone.pretrained=False`。
-
-## 测试
-
-```bash
-docker compose run --rm wwtp \
-  python tools/test.py configs/experiments/segformer.py \
-  work_dirs/segformer/best_binary_Foreground_IoU_iter_*.pth
-```
-
-结果同时写入终端和对应 `work_dirs/<model>/` 日志。
-
-WWTP 全模型 val/test 黑白掩码和逐图对比图的生成方式见 [推理对比图说明](docs/wwtp_inference_gallery.md)。
-
-## 指标定义
-
-MMSeg 原生 `IoUMetric` 输出 `aAcc`、`mIoU`、`mAcc`、`mDice`、`mFscore` 等常规指标；自定义 `BinaryBoundaryMetric` 额外输出：
-
-| 指标 | 含义 |
-| --- | --- |
-| `Foreground_IoU` | 仅类别 1（污水厂）的全局 IoU |
-| `Dice` / `F1` | 前景像素 Dice/F1，二者数值相同 |
-| `Precision` / `Recall` | 前景像素查准率/查全率 |
-| `Boundary_F1` / `BFScore` | 预测与真值轮廓在 3 px（1.5 m）容差内的全局边界 F1 |
-| `Boundary_Precision/Recall` | 边界匹配精度与召回率 |
-| `Hausdorff_px/m` | 每张图对称 Hausdorff distance 的均值 |
-| `HD95_px/m` | 每张图 95% Hausdorff distance 的均值，降低单个离群点影响 |
-
-重叠与 F1 类指标以百分数输出，距离指标保留像素或米。两张空掩膜的 HD 为 0；仅一张为空时，以图像对角线作为有限最差惩罚。全空负样本不人为抬高 Boundary F1，但错误预测出的边界会降低 Boundary Precision。
-
-## 新模型与消融实验
-
-新增 MMSeg 已有模型，只需在 `configs/_base_/models/` 写模型配置，并在 `configs/experiments/` 组合四类 base config。新增自定义模块时：
-
-1. 在 `wwtpseg/models/` 中实现并用 `@MODELS.register_module()` 注册；
-2. 在 `wwtpseg/models/__init__.py` 导出；
-3. 在模型 base config 中用注册名引用；
-4. 运行 `tools/smoke_test.py --models <实验名>`。
-
-消融配置建议继承目标实验，仅覆盖一个变量。例如对 UNetFormer 移除辅助头：
-
-```python
-_base_ = ['./unetformer.py']
-model = dict(auxiliary_head=None)
-```
-
-边缘改进模型可把边界分支、边界损失和结构模块分别注册成独立组件，再用配置开关组合；现有指标无需修改即可横向比较定位与轮廓完整性。
-
-数据增强同样采用注册组件与配置解耦。位置偏置消融可继承实验配置，把训练 pipeline 中 `RandomForegroundCrop` 的 `foreground_prob` 改为 `0.0`；其他参数不变即可与普通随机裁剪公平比较。
-
-RPGV-Net 的结构消融集中在 `configs/ablations/`，通过 `component_cfg` 旁路组件且
-保持 checkpoint 参数结构不变。正式对比使用同一三阶段协议完整重训：
-
-```bash
-bash scripts/train_rpgv_ablations.sh
-python tools/summarize_rpgv_ablations.py work_dirs/rpgv_ablations
-```
-
-若要复用已经训练好的统一阶段二 checkpoint，仅重跑各变体的阶段三：
-
-```bash
-bash scripts/train_rpgv_ablations_from_stage2.sh
-python tools/summarize_rpgv_ablations.py work_dirs/rpgv_ablations_stage3
-```
-
-开关语义、单因素控制方式、选择部分实验和快速阶段三诊断方法见
-[`docs/model_design.md`](docs/model_design.md#十六消融实验)。
-
-## RPGV-Net v2
-
-`RPGVNetV2` 使用轻量加法解码、统一 SDF 轮廓修正和可靠度几何分支。当前标准方案为**单阶段联合训练 + 固定损失系数 + 统一早停**：RGB、几何、融合与预测头从第一步同时优化，不加载任何 stage1/stage2/stage3 checkpoint。保留 ImageNet 骨干初始化，损失系数固定，RGB/几何辅助系数均为 0.2。
-
-训练与消融说明见 [v2 设计文档](docs/rpgv_v2_design.md)。新单阶段方案尚未完成正式训练。
-
-```bash
-docker compose run --rm wwtp bash scripts/train_rpgv_v2.sh
-```
-
-默认递进式消融共六组：基础 RGB＋原始几何 → RGR → DFGV → 可靠度加权 → 轮廓修正 → 结构约束（Full）。每组独立初始化、最多训练 100k iterations，不复用前一组或旧阶段权重。原单项删除消融可用 `--variants paper` 选择。每 2k iterations 验证，前景 IoU 连续 5 次未达到 0.1 个百分点的有效提升即早停；始终选取验证集最佳 checkpoint。
-
-```bash
-python scripts/run_rpgv_v2_ablations.py plan
-python scripts/run_rpgv_v2_ablations.py run
-python scripts/run_rpgv_v2_ablations.py evaluate --split val
-python tools/summarize_rpgv_v2_ablations.py work_dirs/rpgv_v2_single_stage_fixed --split val
-```
-
-代码验证：`python tools/test_rpgv_v2_ablations.py -v`、`python tools/test_rpgv_v2.py -v`。旧 `train_rpgv_v2_stages.sh` 入口转发到单阶段训练；历史阶段配置只保留用于旧实验诊断。
-
-## RPGV-Net v4：单阶段几何融合
-
-基于 v2 的 MiT-B2 与轻量解码/轮廓头，将 RGR 和独立几何分割替换为编码器内的四级 RGB–几何融合；浅层保留 Haar 频域特征，全部参数单阶段联合训练，默认不依赖已有阶段权重。设计依据、对照配置和恢复命令见 [v4 设计文档](docs/rpgv_v4_design.md)。已完成工程检查，尚未完整训练。
-
-```bash
-docker compose run --rm wwtp bash scripts/train_rpgv_v4.sh
-python tools/test_rpgv_v4.py -v
-```
-
-## RPGV-Net v3
-
-针对 v2 联合训练波动，新增 `RPGVNetV3`：固定 v2 最佳 RGB 主路径，使用轻量几何条件模块学习误差修正。它保留同权重 RGB 回退作为明确参照，并提供纯 RGB 修正模块对照。v3 尚未正式训练，日志诊断、结构和使用方式见 [v3 设计文档](docs/rpgv_v3_design.md)。
-
-```bash
-# 等待当前 GPU 训练结束后启动独立实验
-docker compose run --rm wwtp bash scripts/train_rpgv_v3.sh
-```
-
-CPU 检查：`python tools/test_rpgv_v3.py -v`。完整验证集几何增益检查：`python tools/evaluate_rpgv_v3.py PATH_TO_V3_BEST --output work_dirs/rpgv_v3_validation`。
-
-## 实现来源
-
-- MMSeg 原生模型和配置遵循 [OpenMMLab MMSegmentation](https://github.com/open-mmlab/mmsegmentation) 1.2.2 的组件接口。
-- SegNeXt 使用 MMSeg 原生 MSCAN-S 骨干和 LightHamHead，并加载官方 MSCAN-S ImageNet 预训练权重。
-- UNetFormer 模块依据论文及 [GeoSeg 官方实现](https://github.com/WangLibo1995/GeoSeg) 的 global-local attention、weighted fusion 和 feature refinement 结构接入 MMSeg。
-- RS-Mamba 模块依据论文及 [官方 RS-Mamba 实现](https://github.com/NJU-LHRS/Official_Remote_Sensing_Mamba) 的八方向扫描、RSM block 与 U 形解码结构接入 MMSeg；CUDA 扫描由 `mamba-ssm` 提供。
-
-模型对比时请保留同一数据划分、裁剪尺度、训练 iterations 和评价脚本，并同时记录参数量、显存、吞吐与是否加载预训练权重，避免只比较最终精度。
+模型组件来源：[MMSegmentation](https://github.com/open-mmlab/mmsegmentation/tree/v1.2.2)、[UNetFormer/GeoSeg](https://github.com/WangLibo1995/GeoSeg)、[HDNet](https://github.com/danfenghong/ISPRS_HD-Net)。HDNet 的 GPL-3.0 许可证保留在 `wwtpseg/edge_baselines/`。

@@ -199,7 +199,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         'data_root', type=Path,
-        help='dataset root containing images/{train,val,test}')
+        help='dataset root containing images/ or img_dir/ splits')
+    parser.add_argument('--image-dir', choices=('images', 'img_dir'), default='images',
+                        help='images for WWTP; img_dir for prepared public datasets')
     parser.add_argument(
         '--output-root', type=Path,
         help='default: DATA_ROOT/pseudo_geometry')
@@ -241,7 +243,7 @@ def main() -> None:
     ]
 
     for split in args.splits:
-        image_dir = args.data_root / 'images' / split
+        image_dir = args.data_root / args.image_dir / split
         image_paths = sorted(image_dir.glob('*.png'))
         if not image_paths:
             raise FileNotFoundError(f'no PNG images found in {image_dir}')

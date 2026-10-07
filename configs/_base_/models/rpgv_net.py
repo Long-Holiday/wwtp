@@ -67,4 +67,4 @@ model = dict(
         preserve=0.05,
         equivariance=0.05),
     train_cfg=dict(),
-    test_cfg=dict(mode='slide', crop_size=(1024, 1024), stride=(768, 768)))
+    test_cfg=dict(mode='whole'))

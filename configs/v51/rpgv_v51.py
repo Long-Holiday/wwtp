@@ -1,7 +1,8 @@
+_base_ = ['../v5/rpgv_v5.py']
 """V5.1: six-thousand-microstep refinement from the validation-selected v5."""
 import os
 
-_base_ = ['../v5/rpgv_v5.py']
+
 model = dict(
     type='RPGVNetV51', spatial_refinement=True,
     boundary_mode='band', boundary_band_loss_weight=0.05,

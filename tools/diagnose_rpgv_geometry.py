@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Paired geometry-on/off diagnostics on fixed WWTP validation windows.
 
-This is a bounded diagnostic, not a replacement for full slide validation.
+This is a bounded diagnostic, not a replacement for full validation.
 Reuses each checkpoint's RGB features and global token for both predictions.
 """
 import argparse
@@ -46,7 +46,7 @@ def main():
     parser.add_argument('--rgb-checkpoint', type=Path, required=True)
     parser.add_argument('--geometry-checkpoint', type=Path, required=True)
     parser.add_argument('--joint-checkpoints', type=Path, nargs='+', required=True)
-    parser.add_argument('--data-root', type=Path, default=Path('wwtp_semantic_dataset'))
+    parser.add_argument('--data-root', type=Path, default=Path('wwtp_semantic_dataset_1m'))
     parser.add_argument('--images', type=int, default=6)
     parser.add_argument('--crop-size', type=int, default=1024)
     parser.add_argument('--threads', type=int, default=2)

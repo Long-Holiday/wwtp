@@ -1,4 +1,4 @@
-"""Six-class Potsdam adaptation of RPGV v2's compact contour decoder."""
+"""Multiclass aerial adaptation of RPGV v2's compact contour decoder."""
 
 import math
 

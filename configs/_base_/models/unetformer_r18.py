@@ -6,7 +6,7 @@ data_preprocessor = dict(
     bgr_to_rgb=True,
     pad_val=0,
     seg_pad_val=255,
-    size=(512, 512),
+    size=(1024, 1024),
     test_cfg=dict(size_divisor=32))
 
 model = dict(
@@ -53,4 +53,4 @@ model = dict(
             type='CrossEntropyLoss', loss_weight=0.4,
             avg_non_ignore=True)),
     train_cfg=dict(),
-    test_cfg=dict(mode='slide', crop_size=(512, 512), stride=(384, 384)))
+    test_cfg=dict(mode='whole'))

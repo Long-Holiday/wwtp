@@ -48,7 +48,7 @@ def main():
         return
 
     exp_dirs = sorted([p for p in root_path.iterdir() if p.is_dir()])
-    
+
     rows = []
     for ed in exp_dirs:
         name = ed.name
@@ -56,22 +56,22 @@ def main():
         search_dir = str(stage3_dir) if stage3_dir.is_dir() else str(ed)
         val_rec = get_best_val(search_dir)
         test_rec = get_test_eval(search_dir)
-        
+
         row = {
             'Ablation': name,
             'Val_Iter': val_rec.get('step', '-') if val_rec else '-',
             'Val_IoU': f"{val_rec['binary/Foreground_IoU']:.2f}%" if val_rec else '-',
             'Val_Dice': f"{val_rec['binary/Dice']:.2f}%" if val_rec else '-',
-            'Val_HD95_m': f"{val_rec.get('binary/HD95_m', val_rec.get('binary/HD95_px', 0.0) * 0.5):.1f}m" if val_rec else '-',
+            'Val_HD95_m': f"{val_rec.get('binary/HD95_m', val_rec.get('binary/HD95_px', 0.0) * 1.0):.1f}m" if val_rec else '-',
             'Test_IoU': f"{test_rec['binary/Foreground_IoU']:.2f}%" if test_rec else '-',
             'Test_Dice': f"{test_rec['binary/Dice']:.2f}%" if test_rec else '-',
-            'Test_HD95_m': f"{test_rec.get('binary/HD95_m', test_rec.get('binary/HD95_px', 0.0) * 0.5):.1f}m" if test_rec else '-',
+            'Test_HD95_m': f"{test_rec.get('binary/HD95_m', test_rec.get('binary/HD95_px', 0.0) * 1.0):.1f}m" if test_rec else '-',
         }
         rows.append(row)
 
     headers = ['Ablation', 'Val_Iter', 'Val_IoU', 'Val_Dice', 'Val_HD95_m', 'Test_IoU', 'Test_Dice', 'Test_HD95_m']
     col_widths = {h: max(len(h), max(len(str(r[h])) for r in rows)) if rows else len(h) for h in headers}
-    
+
     header_line = "| " + " | ".join(h.ljust(col_widths[h]) for h in headers) + " |"
     sep_line = "| " + " | ".join("-" * col_widths[h] for h in headers) + " |"
     print(header_line)

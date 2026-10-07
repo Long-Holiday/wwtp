@@ -36,4 +36,4 @@ docker compose run --rm wwtp python tools/visualize_rpgv_workflow.py \
 
 > Qualitative visualization of RPGV-Net on a WWTP validation crop. The offline pseudo-depth $D_0$ and reliability $Q_0$ are refined by RGR to produce $\hat D$ and task reliability $Q_d$. The RGB and geometry auxiliary predictions provide branch-level evidence. The channel-averaged Haar boundary and region validation weights ($\bar W_h$, $\bar W_l$) show the spatial pattern of geometry validation; the contribution maps show the mean absolute change to the fused RGB features at strides 4 and 16. The final foreground probability is overlaid with the ground-truth boundary. Error colors denote true positives (green), false positives (orange), and false negatives (blue). Continuous maps share the labeled color scales shown below the panels.
 
-图中的最终预测是**一个局部窗口**的前向结果，并使用整张原图的全局 token。它用于解释该窗口内的计算链路；全图正式评估使用带 Hann 重叠融合的滑窗推理，因此局部结果可能与拼接后的全图结果略有不同。`metadata.json` 里的 IoU 也仅针对这个窗口，不能作为测试集指标。GT 中值为 255 的像素被忽略。
+图中的最终预测是**一个局部窗口**的前向结果，并使用整张原图的全局 token。它用于解释该窗口内的计算链路；当前 WWTP 全图正式评估使用 1024 整图推理；若指定更小的 ROI，局部结果可能与整图结果不同。`metadata.json` 里的 IoU 也仅针对这个窗口，不能作为测试集指标。GT 中值为 255 的像素被忽略。

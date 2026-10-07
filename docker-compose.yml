@@ -3,15 +3,26 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    image: wwtp-mmseg:1.2.2-cu121
+      network: ${BUILD_NETWORK:-default}
+      args:
+        PYTORCH_IMAGE: ${PYTORCH_IMAGE:-pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel}
+        MMCV_FROM_SOURCE: ${MMCV_FROM_SOURCE:-1}
+        TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST:-8.6;8.9+PTX}
+        MAX_JOBS: ${MAX_JOBS:-2}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    image: ${WWTP_IMAGE:-wwtp-mmseg:torch2.5.1-cu124}
     working_dir: /workspace
     volumes:
       - .:/workspace
-      - /home/wz97172726/.cache/torch:/root/.cache/torch
-      - /home/wz97172726/.cache/huggingface:/root/.cache/huggingface
-    shm_size: 16gb
-    ipc: host
+      - torch-cache:/root/.cache/torch
+      - huggingface-cache:/root/.cache/huggingface
+    shm_size: 8gb
     gpus: all
     environment:
-      WWTP_DATA_ROOT: /workspace/wwtp_semantic_dataset
+      PYTHONPATH: /workspace
+      PYTHONDONTWRITEBYTECODE: "1"
+      WWTP_DATA_ROOT: ${WWTP_DATA_ROOT:-/workspace/wwtp_semantic_dataset_1m}
       CUBLAS_WORKSPACE_CONFIG: ":4096:8"
+volumes:
+  torch-cache:
+  huggingface-cache:

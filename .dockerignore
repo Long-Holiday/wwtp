@@ -1,7 +1,13 @@
 .git
+.agents
+.codex
+.aws
+.venv*
+.cache
 .pytest_cache
-__pycache__
+**/__pycache__
 *.pyc
-wwtp_semantic_dataset
-wwtp_semantic_dataset.tar
+wwtp_semantic_dataset*
+data
 work_dirs
+analysis

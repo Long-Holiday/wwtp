@@ -1,15 +1,15 @@
-"""V5: full-scene 1024 / 1m training, 5,000 optimizer updates."""
-import os
-
 _base_ = [
     '../_base_/models/rpgv_net.py',
     '../_base_/schedules/rpgv_iter_40k.py',
     '../_base_/default_runtime.py',
 ]
+"""V5: full-scene 1024 / 1m training, 5,000 optimizer updates."""
+import os
 
-# Deliberately do not inherit WWTP_DATA_ROOT: docker-compose sets the old root.
-data_root = os.getenv('WWTP_V5_DATA_ROOT', 'wwtp_semantic_dataset_1m')
-pseudo_root = os.path.join(data_root, 'pseudo_geometry')
+
+
+data_root = os.getenv('WWTP_V5_DATA_ROOT', os.getenv('WWTP_DATA_ROOT', 'wwtp_semantic_dataset_1m'))
+pseudo_root = os.getenv('WWTP_PSEUDO_ROOT', os.path.join(data_root, 'pseudo_geometry'))
 model = dict(
     _delete_=True, type='RPGVNetV5',
     rgb_encoder={{_base_.model.rgb_encoder}},
@@ -27,6 +27,7 @@ model = dict(
 # Diagonal/horizontal/vertical flips are exact pixel-grid operations.
 train_pipeline = [
     dict(type='LoadImageFromFile'), dict(type='LoadAnnotations'),
+    dict(type='RequireImageShape', size=(1024, 1024)),
     dict(type='PhotoMetricDistortion'),
     dict(type='LoadPseudoGeometry', pseudo_root=pseudo_root, required=True),
     dict(type='RandomFlip', prob=0.75,
@@ -35,6 +36,7 @@ train_pipeline = [
 ]
 test_pipeline = [
     dict(type='LoadImageFromFile'), dict(type='LoadAnnotations'),
+    dict(type='RequireImageShape', size=(1024, 1024)),
     dict(type='LoadPseudoGeometry', pseudo_root=pseudo_root, required=True),
     dict(type='PackSegInputs'),
 ]
