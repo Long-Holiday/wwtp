@@ -46,31 +46,28 @@ git show experiment-logs/2026-10-07:EXPERIMENT_REPORT.md
 
 ## Docker 环境
 
-默认升级到 **PyTorch 2.5.1 / CUDA 12.4 / cuDNN 9 devel**，保留 MMEngine 0.10.7、MMCV 2.1.0、MMDetection 3.3.0、MMSeg 1.2.2。MMSeg 1.2.2 的官方版本约束是 MMCV `<2.2.0`；较新 PyTorch 没有对应的 MMCV 2.1 官方轮子，因此镜像从源码编译真实 CUDA 算子，不放宽版本检查、不用旧 ABI 轮子。镜像不再安装 Mamba CUDA 扩展。源码编译首次耗时较长，后续 Docker 层可复用。
+默认使用适合本项目 OpenMMLab 依赖的成熟组合：**PyTorch 2.1.2 / torchvision 0.16.2 / CUDA 12.1 / cuDNN 8 runtime**，配套 MMEngine 0.10.7、MMCV 2.1.0、MMDetection 3.3.0、MMSeg 1.2.2。选择依据是依赖兼容性和安装便利性：MMSeg 1.2.2 [要求 MMCV `<2.2.0`](https://github.com/open-mmlab/mmsegmentation/blob/v1.2.2/mmseg/__init__.py)，OpenMMLab 提供对应 PyTorch 2.1 / CUDA 12.1 的 [MMCV 2.1 官方预编译包](https://download.openmmlab.com/mmcv/dist/cu121/torch2.1/index.html)。默认直接安装包含 CUDA 算子的 wheel，无需源码编译；使用 runtime 基础镜像，减少 CUDA 编译工具链的体积和维护成本。
 
 ```bash
 docker compose build
 docker compose run --rm wwtp python tests/smoke_test.py --device cuda --backward
 ```
 
-`TORCH_CUDA_ARCH_LIST` 默认 `8.6;8.9+PTX`（RTX 3050／3090／4090 等），其他显卡构建时覆盖；`MAX_JOBS=2` 限制编译内存。Compose 缓存卷替代原来写死的个人 home 路径。
-
-提供已知兼容的旧环境回退，使用官方预编译 MMCV 轮子：
+新镜像构建并通过冒烟测试后，确认旧容器不再使用旧版镜像，再清理本项目原来的镜像：
 
 ```bash
-PYTORCH_IMAGE=pytorch/pytorch:2.1.2-cuda12.1-cudnn8-devel \
-MMCV_FROM_SOURCE=0 WWTP_IMAGE=wwtp-mmseg:torch2.1.2-cu121 docker compose build
-# 运行时仍用同一 WWTP_IMAGE 选择回退镜像
-WWTP_IMAGE=wwtp-mmseg:torch2.1.2-cu121 docker compose run --rm wwtp python tests/smoke_test.py
+docker image rm wwtp-mmseg:torch2.5.1-cu124
 ```
 
-构建使用 Docker Hub、Ubuntu 官方仓库、PyPI 原始源与 OpenMMLab 官方下载站，不使用镜像源。APT／pip 下载缓存保存在 BuildKit 中，不进入最终镜像；基础 Python 依赖、MMCV CUDA 编译、项目依赖与代码分层缓存，修改项目依赖不触发 MMCV 重编译。
+默认镜像名为 `wwtp-mmseg:torch2.1.2-cu121`，可用 `WWTP_IMAGE` 自定义镜像名，构建与运行时保持一致。基础镜像和 MMCV wheel 下载地址固定为同一套兼容组合，移除原来的源码编译开关、显卡架构和编译并行度参数。默认针对 Linux x86_64 NVIDIA GPU 环境，宿主机需配置支持 CUDA 12.1 的 NVIDIA 驱动和 NVIDIA Container Toolkit。Compose 使用命名缓存卷，避免写死个人 home 路径。
+
+构建使用 Docker Hub、Ubuntu 官方仓库、PyPI 原始源与 OpenMMLab 官方下载站，不使用镜像源。APT／pip 下载缓存保存在 BuildKit 中，不进入最终镜像；基础 Python 依赖、MMCV wheel、项目依赖与代码分层缓存。MMCV 强制使用二进制包，找不到匹配的 wheel 时直接报错，避免意外回退到耗时的源码编译。
 
 构建使用 Docker 默认网络，执行 `docker compose build` 即可，无需指定网络模式、代理地址或端口。
 
-公共依赖版本在 `requirements/core.txt` 统一维护，项目依赖在 `requirements/runtime.txt`；构建期间以公共依赖清单约束 MMCV，避免重复下载不同版本或升级 NumPy。镜像构建包含依赖一致性检查、CUDA 扩展导入检查与项目模块导入检查，不启动训练。
+公共依赖版本在 `requirements/core.txt` 统一维护，包含与基础镜像一致的 PyTorch／torchvision 固定版本；项目依赖在 `requirements/runtime.txt`。构建期间以公共依赖清单约束 MMCV，避免依赖解析意外升级 PyTorch 或 NumPy。镜像构建包含依赖一致性检查、CUDA 扩展导入检查与项目模块导入检查，不启动训练。
 
-**验证状态：此前 MMCV CUDA 源码编译已完成并缓存，完整镜像构建停在 `pip check` 的 Ninja 平台兼容性错误，尚未生成可用于测试的新镜像。本次目录整理仅做静态检查，未重启 Docker 构建，也未运行模型或训练测试。** 下文列出后续验证入口；实际吞吐与 24GB 显卡显存占用仍待验证。
+实际吞吐与 24GB 显卡在完整 1024 分辨率训练时的显存占用需在目标机器验证；下文提供无需数据集和预训练权重的小规模验证入口。
 
 ## 数据与训练协议
 

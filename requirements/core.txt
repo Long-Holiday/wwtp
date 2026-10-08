@@ -1,4 +1,7 @@
-# Shared by MMCV compilation and runtime; avoid resolving different versions twice.
+# Shared by MMCV wheel installation and runtime.
+# Keep the base image's PyTorch/torchvision pair when resolving dependencies.
+torch==2.1.2
+torchvision==0.16.2
 numpy==1.26.4
 mmengine==0.10.7
 opencv-python==4.9.0.80

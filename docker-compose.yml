@@ -3,12 +3,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-      args:
-        PYTORCH_IMAGE: ${PYTORCH_IMAGE:-pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel}
-        MMCV_FROM_SOURCE: ${MMCV_FROM_SOURCE:-1}
-        TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST:-8.6;8.9+PTX}
-        MAX_JOBS: ${MAX_JOBS:-2}
-    image: ${WWTP_IMAGE:-wwtp-mmseg:torch2.5.1-cu124}
+    image: ${WWTP_IMAGE:-wwtp-mmseg:torch2.1.2-cu121}
     working_dir: /workspace
     volumes:
       - .:/workspace
