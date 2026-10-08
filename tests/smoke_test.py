@@ -35,6 +35,7 @@ RPGV_CONFIGS = {
     'rpgv_v4': ROOT / 'configs/rpgv/v4/rpgv_v4.py',
     'rpgv_v5': ROOT / 'configs/rpgv/v5/rpgv_v5.py',
     'rpgv_v51': ROOT / 'configs/rpgv/v51/from_scratch.py',
+    'rpgv_v6': ROOT / 'configs/rpgv/v6/rpgv_v6.py',
 }
 
 
