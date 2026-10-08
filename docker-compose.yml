@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-      network: ${BUILD_NETWORK:-default}
       args:
         PYTORCH_IMAGE: ${PYTORCH_IMAGE:-pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel}
         MMCV_FROM_SOURCE: ${MMCV_FROM_SOURCE:-1}

@@ -66,12 +66,7 @@ WWTP_IMAGE=wwtp-mmseg:torch2.1.2-cu121 docker compose run --rm wwtp python tests
 
 构建使用 Docker Hub、Ubuntu 官方仓库、PyPI 原始源与 OpenMMLab 官方下载站，不使用镜像源。APT／pip 下载缓存保存在 BuildKit 中，不进入最终镜像；基础 Python 依赖、MMCV CUDA 编译、项目依赖与代码分层缓存，修改项目依赖不触发 MMCV 重编译。
 
-Linux 上需要主机网络构建时可设置 `BUILD_NETWORK=host`。Docker daemon 的拉取代理与容器内依赖下载代理需分别配置，后者可通过 Docker 预定义的 `HTTP_PROXY`／`HTTPS_PROXY` 构建参数传入。代理地址不写入仓库或镜像环境。
-
-```bash
-# 需要代理时，先在当前终端设置 HTTP_PROXY / HTTPS_PROXY，然后传给构建。
-BUILD_NETWORK=host docker compose build --build-arg HTTP_PROXY --build-arg HTTPS_PROXY
-```
+构建使用 Docker 默认网络，执行 `docker compose build` 即可，无需指定网络模式、代理地址或端口。
 
 公共依赖版本在 `requirements/core.txt` 统一维护，项目依赖在 `requirements/runtime.txt`；构建期间以公共依赖清单约束 MMCV，避免重复下载不同版本或升级 NumPy。镜像构建包含依赖一致性检查、CUDA 扩展导入检查与项目模块导入检查，不启动训练。
 
