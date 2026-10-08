@@ -303,6 +303,8 @@ class AblationsTest(unittest.TestCase):
                         transform.pseudo_root = str(root / 'pseudo_geometry')
                     elif transform.type == 'GenerateGlobalThumbnail':
                         transform.size = (64, 64)
+                    elif transform.type == 'RequireImageShape':
+                        transform.size = (64, 64)
             config = root / 'config.py'
             cfg.dump(config)
             checkpoint = root / 'model.pth'

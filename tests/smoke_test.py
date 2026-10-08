@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from mmengine.config import Config
+from mmengine.config import Config, ConfigDict
 from mmengine.dataset import Compose
 from mmengine.model import revert_sync_batchnorm
 from mmengine.registry import init_default_scope
@@ -205,7 +205,8 @@ def smoke_model(name, config_path, size, backward, device='cpu'):
             raise AssertionError(f'{name}: invalid prediction shape/class IDs')
     if cfg.model.test_cfg.mode == 'slide':
         # Exercise the public UAVid inference path on overlapping tiny crops.
-        model.test_cfg = dict(mode='slide', crop_size=(size, size), stride=(size // 2, size // 2))
+        model.test_cfg = ConfigDict(
+            mode='slide', crop_size=(size, size), stride=(size // 2, size // 2))
         image, sample = _sample(size + size // 2)
         processed_frame = model.data_preprocessor(dict(inputs=[image], data_samples=[sample]), training=False)
         with torch.inference_mode():

@@ -33,5 +33,11 @@ def prepare_runtime(cfg, inference=False, no_pretrained=False):
         disable_pretraining(cfg.model)
     if inference:
         cfg.resume = False
+        # Early stopping belongs to training; its before_run initializes the
+        # training loop and dataset even when Runner only executes test().
+        cfg.custom_hooks = [
+            hook for hook in cfg.get('custom_hooks', [])
+            if hook.get('type') not in ('EarlyStoppingHook', 'RPGVEarlyStoppingHook')
+        ]
     # Preserve MMEngine's native resume and random-state behavior.
     return cfg

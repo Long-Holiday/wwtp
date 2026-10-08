@@ -10,6 +10,7 @@ from mmengine.config import Config
 from mmengine.runner import Runner
 
 from scripts.rpgv.run_rpgv_v2_ablations import atomic_json, file_hash
+from wwtpseg.engine.runtime import prepare_runtime
 
 
 def validate_checkpoint(config_path, checkpoint):
@@ -55,7 +56,14 @@ def main():
     if args.split == 'val':
         cfg.test_dataloader = copy.deepcopy(cfg.val_dataloader)
         cfg.test_evaluator = copy.deepcopy(cfg.val_evaluator)
+    # The shared dataset config already includes topology diagnostics. Replace
+    # that metric so this evaluator's 256-pixel threshold has a unique prefix.
+    cfg.test_evaluator = [
+        metric for metric in cfg.test_evaluator
+        if metric.get('type') != 'BinaryTopologyMetric'
+    ]
     cfg.test_evaluator.append(dict(type='BinaryTopologyMetric', small_area=256))
+    prepare_runtime(cfg, inference=True)
     runner = Runner.from_cfg(cfg)
     metrics = runner.test()
     model = runner.model.module if hasattr(runner.model, 'module') else runner.model
