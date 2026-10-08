@@ -14,5 +14,4 @@ def experiment_config(dataset, model):
     model = ALIASES.get(model, model)
     if dataset not in DATASETS or model not in MAINSTREAM_MODELS:
         raise ValueError(f'Unsupported experiment: {dataset}/{model}')
-    directory = 'experiments' if dataset == 'wwtp' else f'remote_sensing/{dataset}'
-    return ROOT / 'configs' / directory / f'{model}.py'
+    return ROOT / 'configs' / dataset / f'{model}.py'

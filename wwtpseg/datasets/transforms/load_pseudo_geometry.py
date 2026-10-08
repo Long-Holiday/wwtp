@@ -80,7 +80,7 @@ class LoadPseudoGeometry(BaseTransform):
             if self.required:
                 raise FileNotFoundError(
                     f'pseudo geometry not found: {path}. Run '
-                    '`python tools/generate_pseudo_geometry.py` first.')
+                    '`python tools/data/generate_pseudo_geometry.py` first.')
             depth = np.full((height, width), 0.5, dtype=np.float32)
             reliability = np.zeros((height, width), dtype=np.float32)
         else:

@@ -76,7 +76,7 @@ class RPGVNetV2(RPGVNet):
     """V1 upstream state keys stay compatible; prediction heads are new.
 
     Standard training uses joint optimization from initialization (see
-    configs/experiments/rpgv_v2_joint.py). Legacy stage modes remain available
+    configs/rpgv/v2/rpgv_v2_joint.py). Legacy stage modes remain available
     for historical checkpoint diagnostics. Corruption supervision, Q=0 fallback
     and Hann sliding inference are inherited; no staged weights are required.
     """

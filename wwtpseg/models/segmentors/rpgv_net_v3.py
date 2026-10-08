@@ -78,7 +78,7 @@ class RPGVNetV3(RPGVNetV2):
 
     def _run_network(self, inputs, global_images=None, global_token=None):
         if not bool(self.rgb_anchor_initialized):
-            raise RuntimeError('v3 requires a verified RGB anchor; run tools/initialize_rpgv_v3.py first')
+            raise RuntimeError('v3 requires a verified RGB anchor; run tools/rpgv/initialize_rpgv_v3.py first')
         # RGB heads are kept for strict checkpoint compatibility; they are not
         # auxiliary training objectives and never receive geometry gradients.
         with torch.no_grad():

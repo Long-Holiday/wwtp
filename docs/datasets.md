@@ -39,4 +39,4 @@ UAVid 的八类训练 ID 与 [GeoSeg 颜色转换约定](https://github.com/Wang
 
 白色边界与切片补齐区为 255。未知颜色拒绝转换，避免静默误标为背景。全部 val/test 帧保留原尺寸与边缘，推理结果回到原图尺寸。官方测试标签为私有，测试导出不计算本地指标。UAVid 数据集说明见 [官方站点](https://uavid.nl/)，LoveDA 来源见 [官方仓库](https://github.com/Junjue-Wang/LoveDA)。
 
-默认 `WWTP_DATA_ROOT=wwtp_semantic_dataset_1m`、`UAVID_DATA_ROOT=data/remote_sensing/prepared/uavid`、`LOVEDA_DATA_ROOT=data/remote_sensing/prepared/loveda`；Compose 中传入 `/workspace/...` 路径。WWTP 数据保留 `images/<split>`、`annotations/<split>`。WWTP 的旧版尺度转换用 `tools/resample_wwtp_dataset.py`，不在训练管线中偷偷改变地面分辨率。
+默认 `WWTP_DATA_ROOT=wwtp_semantic_dataset_1m`、`UAVID_DATA_ROOT=data/remote_sensing/prepared/uavid`、`LOVEDA_DATA_ROOT=data/remote_sensing/prepared/loveda`；Compose 中传入 `/workspace/...` 路径。WWTP 数据保留 `images/<split>`、`annotations/<split>`。WWTP 的旧版尺度转换用 `tools/data/resample_wwtp_dataset.py`，不在训练管线中偷偷改变地面分辨率。

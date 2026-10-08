@@ -1,0 +1,6 @@
+# Shared by MMCV compilation and runtime; avoid resolving different versions twice.
+numpy==1.26.4
+mmengine==0.10.7
+opencv-python==4.9.0.80
+matplotlib==3.8.4
+Pillow==10.3.0

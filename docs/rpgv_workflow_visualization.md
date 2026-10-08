@@ -1,12 +1,12 @@
 # RPGV-Net 工作流程可视化
 
-脚本：[tools/visualize_rpgv_workflow.py](../tools/visualize_rpgv_workflow.py)。它读取一张验证集或测试集图像、对应的离线伪几何 NPZ、GT，以及一个**已写完**的联合阶段 checkpoint。Depth Anything 不会再次运行。所有源文件仅被读取；结果只写到指定的全新目录。脚本拒绝把输出目录放在数据目录、伪几何目录或 checkpoint 所在目录中，也拒绝覆盖已有结果。
+脚本：[tools/rpgv/visualize_rpgv_workflow.py](../tools/rpgv/visualize_rpgv_workflow.py)。它读取一张验证集或测试集图像、对应的离线伪几何 NPZ、GT，以及一个**已写完**的联合阶段 checkpoint。Depth Anything 不会再次运行。所有源文件仅被读取；结果只写到指定的全新目录。脚本拒绝把输出目录放在数据目录、伪几何目录或 checkpoint 所在目录中，也拒绝覆盖已有结果。
 
 模型训练结束后，可选一张图和一块感兴趣区域执行：
 
 ```bash
-docker compose run --rm wwtp python tools/visualize_rpgv_workflow.py \
-  configs/experiments/rpgv_stage3_joint.py \
+docker compose run --rm wwtp python tools/rpgv/visualize_rpgv_workflow.py \
+  configs/rpgv/v1/rpgv_stage3_joint.py \
   work_dirs/rpgv_staged/stage3_joint/finished-checkpoint.pth \
   --split val --image-id wwtp_000149 \
   --roi 0 0 1024 1024 \

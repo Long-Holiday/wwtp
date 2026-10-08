@@ -9,8 +9,8 @@ __pycache__/
 wwtp_semantic_dataset/
 wwtp_semantic_dataset_1m/
 wwtp_semantic_dataset*.tar*
-data/remote_sensing/
-data/
+/data/remote_sensing/
+/data/
 
 # Model weights & checkpoints (exclude large training weights)
 *.pth

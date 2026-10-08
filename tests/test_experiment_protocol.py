@@ -12,8 +12,8 @@ from mmseg.registry import DATASETS, TRANSFORMS
 from mmseg.utils import register_all_modules
 
 import wwtpseg  # noqa: F401
-from tools.remote_sensing.prepare import OFFICIAL_COUNTS, UAVID_COLORS, inventory, prepare, uavid_label_ids, _save_tiles
-from tools.remote_sensing.predict import submission_mask
+from tools.data.prepare_public import OFFICIAL_COUNTS, UAVID_COLORS, inventory, prepare, uavid_label_ids, _save_tiles
+from tools.evaluation.predict_public import submission_mask
 from wwtpseg.datasets.public_protocol import OFFICIAL_COUNTS as RUNTIME_COUNTS, validate_prepared
 from wwtpseg.experiments import DATASETS as DATASET_NAMES, MAINSTREAM_MODELS, ROOT, experiment_config
 
@@ -58,7 +58,8 @@ class ProtocolTest(unittest.TestCase):
                             self.assertEqual(len(cfg.model.decode_head.loss_cls.class_weight), classes + 1)
 
     def test_every_retained_config_resolves(self):
-        for directory in ('experiments', 'ablations', 'ablations_v2', 'v3', 'v4', 'v5', 'v51', 'edge_baselines', 'remote_sensing'):
+        for directory in ('wwtp', 'uavid', 'loveda', 'rpgv'):
+            self.assertTrue((ROOT / 'configs' / directory).is_dir())
             for path in (ROOT / 'configs' / directory).rglob('*.py'):
                 with self.subTest(config=str(path)):
                     cfg = Config.fromfile(path)

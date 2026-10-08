@@ -2,7 +2,7 @@
 
 基于 v5 增加空间解码精修与边界带监督。零初始化新增残差，迁移后的初始预测与 v5 保持一致。空间／损失独立对照、v5 续训和从头等预算配置完整保留。
 
-入口：configs/v51/；tools/initialize_rpgv_v51.py。
+入口：configs/rpgv/v51/；tools/rpgv/initialize_rpgv_v51.py。
 
 所有版本现在默认使用 1024×1024、1m WWTP 整图与一致的精确翻转增强。512 thumbnail 是部分旧版本的全局上下文输入，不是训练图像裁剪尺度。模型结构、损失开关和权重迁移保留；阶段预算仍按各版本配置。当前使用方式以 [README](../README.md) 和实际配置为准。
 

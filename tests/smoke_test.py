@@ -1,0 +1,469 @@
+#!/usr/bin/env python3
+"""Build every experiment and run a tiny synthetic loss/metric pass."""
+
+from __future__ import annotations
+
+import argparse
+import copy
+import tempfile
+from pathlib import Path
+
+import numpy as np
+import torch
+from mmengine.config import Config
+from mmengine.dataset import Compose
+from mmengine.model import revert_sync_batchnorm
+from mmengine.registry import init_default_scope
+from mmengine.utils import import_modules_from_strings
+from mmseg.registry import DATASETS, METRICS, MODELS, TRANSFORMS
+from mmseg.structures import SegDataSample
+from mmengine.structures import PixelData
+from mmseg.utils import register_all_modules
+
+
+ROOT = Path(__file__).resolve().parents[1]
+from wwtpseg.experiments import MAINSTREAM_MODELS, DATASETS as DATASET_NAMES, experiment_config
+EXPERIMENTS = {
+    p.stem: p
+    for directory in ('wwtp', 'rpgv/v1', 'rpgv/v2')
+    for p in (ROOT / 'configs' / directory).glob('*.py')
+}
+RPGV_CONFIGS = {
+    'rpgv': ROOT / 'configs/rpgv/v1/rpgv_net.py',
+    'rpgv_v2': ROOT / 'configs/rpgv/v2/rpgv_v2_joint.py',
+    'rpgv_v3': ROOT / 'configs/rpgv/v3/rpgv_v3_adapter.py',
+    'rpgv_v4': ROOT / 'configs/rpgv/v4/rpgv_v4.py',
+    'rpgv_v5': ROOT / 'configs/rpgv/v5/rpgv_v5.py',
+    'rpgv_v51': ROOT / 'configs/rpgv/v51/from_scratch.py',
+}
+
+
+def _disable_pretraining(value) -> None:
+    if isinstance(value, dict):
+        if 'init_cfg' in value:
+            value['init_cfg'] = None
+        if 'pretrained' in value:
+            value['pretrained'] = False
+        for child in value.values():
+            _disable_pretraining(child)
+    elif isinstance(value, (list, tuple)):
+        for child in value:
+            _disable_pretraining(child)
+
+
+def _sample(size: int, offset: int = 0) -> tuple[torch.Tensor, SegDataSample]:
+    generator = torch.Generator().manual_seed(42 + offset)
+    image = torch.randint(
+        0, 256, (3, size, size), generator=generator, dtype=torch.float32)
+    mask = torch.zeros((1, size, size), dtype=torch.long)
+    start, end = size // 4 + offset, 3 * size // 4
+    mask[:, start:end, size // 4:3 * size // 4] = 1
+    sample = SegDataSample()
+    sample.set_metainfo(dict(
+        img_shape=(size, size), ori_shape=(size, size),
+        pad_shape=(size, size), scale_factor=(1.0, 1.0)))
+    sample.gt_sem_seg = PixelData(data=mask)
+    return image, sample
+
+
+def _add_pseudo_geometry(image: torch.Tensor) -> torch.Tensor:
+    """Create deterministic, well-scaled geometry for RPGV smoke passes."""
+    depth = image.mean(dim=0, keepdim=True)
+    depth = 255.0 * (depth - depth.amin()) / (
+        depth.amax() - depth.amin() + 1e-6)
+    reliability = torch.full_like(depth, 192.0)
+    return torch.cat([image, depth, reliability], dim=0)
+
+
+def _check_rpgv_stage_freezing(model, stage: str) -> None:
+    rgb_trainable = any(
+        parameter.requires_grad for parameter in model.rgb_encoder.parameters())
+    rectifier_trainable = any(
+        parameter.requires_grad for parameter in model.rectifier.parameters())
+    geometry_trainable = any(
+        parameter.requires_grad
+        for parameter in model.geometry_encoder.parameters())
+    decoder_trainable = any(
+        parameter.requires_grad for parameter in model.decoder.parameters())
+    rectifier_expected = (
+        stage != 'rgb'
+        and (
+            model.component_enabled('depth_rectification')
+            or model.component_enabled('learned_reliability')
+        ))
+    expected = {
+        'rgb': (True, False, False, True),
+        'geometry': (False, rectifier_expected, True, False),
+        'joint': (True, rectifier_expected, True, True),
+    }[stage]
+    actual = (
+        rgb_trainable,
+        rectifier_trainable,
+        geometry_trainable,
+        decoder_trainable,
+    )
+    if actual != expected:
+        raise AssertionError(
+            f'RPGV {stage} trainable groups are {actual}, expected {expected}')
+
+    components = model.component_cfg
+    disabled_modules = []
+    if not components['global_context']:
+        disabled_modules.append(('global context', model.global_film))
+    if not components['boundary_fusion']:
+        disabled_modules.append(('boundary fusion', model.high_fusion))
+    if not components['region_fusion']:
+        disabled_modules.append(('region fusion', model.low_fusion))
+    if not components['detail_refinement']:
+        disabled_modules.append(('detail refinement', model.detail_refiner))
+    for label, module in disabled_modules:
+        if any(parameter.requires_grad for parameter in module.parameters()):
+            raise AssertionError(f'disabled RPGV {label} remains trainable')
+
+
+def _check_rpgv_backward_paths(model, stage: str) -> None:
+    """Ensure every intended RPGV scale is connected to a stage loss."""
+    if stage != 'rgb':
+        geometry_stages = [
+            model.geometry_encoder.stem,
+            *model.geometry_encoder.downsamples,
+        ]
+        for index, module in enumerate(geometry_stages, start=1):
+            gradients = [
+                parameter.grad for parameter in module.parameters()
+                if parameter.requires_grad
+            ]
+            if not gradients or not any(
+                gradient is not None and gradient.abs().sum()
+                for gradient in gradients
+            ):
+                raise AssertionError(
+                    f'RPGV {stage} geometry G{index} received no gradient')
+        deepest_pyramid = list(model.geometry_pyramid.laterals[-1].parameters())
+        if not any(
+            parameter.grad is not None and parameter.grad.abs().sum()
+            for parameter in deepest_pyramid
+        ):
+            raise AssertionError(
+                f'RPGV {stage} deepest geometry pyramid received no gradient')
+    elif hasattr(model.refiner, 'contour'):
+        gradient = model.refiner.contour[-1].weight.grad
+        if gradient is None or not gradient.abs().sum():
+            raise AssertionError('RPGV v2 contour head received no gradient')
+    elif model.component_enabled('detail_refinement'):
+        detail_output = model.detail_refiner.residual[-1].weight.grad
+        if detail_output is None or not detail_output.abs().sum():
+            raise AssertionError('RPGV RGB detail refiner received no gradient')
+
+
+def smoke_model(name, config_path, size, backward, device='cpu'):
+    cfg = Config.fromfile(config_path)
+    import_modules_from_strings(**cfg.custom_imports)
+    model_cfg = copy.deepcopy(cfg.model)
+    _disable_pretraining(model_cfg)
+    model_cfg['data_preprocessor']['size'] = (size, size)
+    # Use whole mode on tiny inputs; production inference settings are checked separately.
+    model_cfg['test_cfg'] = dict(mode='whole')
+    if 'global_thumbnail_size' in model_cfg:
+        model_cfg['global_thumbnail_size'] = size
+    model = revert_sync_batchnorm(MODELS.build(model_cfg)).to(device).train()
+    if model_cfg['type'] == 'RPGVNetV3':
+        # Test the real migration contract with a synthetic v2 RGB anchor.
+        # Production still requires a verified trained initialization.
+        from tools.rpgv.initialize_rpgv_v3 import initialize_from_rgb
+        anchor_cfg = copy.deepcopy(Config.fromfile(EXPERIMENTS['rpgv_v2_stage1_rgb']).model)
+        _disable_pretraining(anchor_cfg)
+        anchor_cfg['global_thumbnail_size'] = size
+        anchor = MODELS.build(anchor_cfg)
+        initialize_from_rgb(model, anchor.state_dict())
+        del anchor
+    num_classes = model_cfg.get('num_classes', model_cfg.get('decode_head', {}).get('num_classes', 2))
+    items = [_sample(size, index) for index in range(2)]
+    for image, sample in items:
+        sample.gt_sem_seg.data = torch.arange(size * size).reshape(1, size, size) % num_classes
+        sample.gt_sem_seg.data[:, :2] = 255
+        sample.global_img = PixelData(data=image.clone())
+    if model_cfg['type'].startswith('RPGV') and model_cfg.get('training_stage') != 'rgb':
+        items = [(_add_pseudo_geometry(image), sample) for image, sample in items]
+    processed = model.data_preprocessor(dict(inputs=[x for x, _ in items],
+                                            data_samples=[s for _, s in items]), training=True)
+    losses = model.loss(**processed)
+    total, _ = model.parse_losses(losses)
+    if not torch.isfinite(total):
+        raise AssertionError(f'{name}: non-finite loss')
+    if backward:
+        total.backward()
+        grads = [p.grad for p in model.parameters() if p.grad is not None]
+        if not grads or not all(torch.isfinite(g).all() for g in grads):
+            raise AssertionError(f'{name}: missing or non-finite gradients')
+    model.eval()
+    with torch.inference_mode():
+        predictions = model.predict(**processed)
+    for result in predictions:
+        ids = result.pred_sem_seg.data
+        if ids.shape[-2:] != (size, size) or ids.min() < 0 or ids.max() >= num_classes:
+            raise AssertionError(f'{name}: invalid prediction shape/class IDs')
+    if cfg.model.test_cfg.mode == 'slide':
+        # Exercise the public UAVid inference path on overlapping tiny crops.
+        model.test_cfg = dict(mode='slide', crop_size=(size, size), stride=(size // 2, size // 2))
+        image, sample = _sample(size + size // 2)
+        processed_frame = model.data_preprocessor(dict(inputs=[image], data_samples=[sample]), training=False)
+        with torch.inference_mode():
+            result = model.predict(**processed_frame)[0]
+        if result.pred_sem_seg.data.shape[-2:] != (size + size // 2, size + size // 2):
+            raise AssertionError(f'{name}: slide inference did not restore frame dimensions')
+        del processed_frame, result
+    print(f'PASS {name}: loss={total.item():.4f}, prediction={size}x{size}, classes={num_classes}', flush=True)
+    del model, processed, losses, predictions, total
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+
+def smoke_metric(size: int) -> None:
+    metric = METRICS.build(dict(
+        type='BinaryBoundaryMetric', boundary_tolerance=1, pixel_size_m=0.5))
+    _, sample = _sample(size)
+    prediction = sample.gt_sem_seg.data.clone()
+    sample.pred_sem_seg = PixelData(data=prediction)
+    metric.process({}, [sample])
+    values = metric.compute_metrics(metric.results)
+    for key in ('Foreground_IoU', 'Dice', 'Boundary_F1'):
+        if abs(values[key] - 100.0) > 1e-6:
+            raise AssertionError(f'perfect prediction has {key}={values[key]}')
+    if values['Hausdorff_px'] != 0.0:
+        raise AssertionError('perfect prediction must have zero Hausdorff distance')
+    print('[OK] binary/boundary metrics (perfect-mask invariant)')
+
+
+def smoke_dataset(config_path: Path, data_root: Path) -> None:
+    cfg = Config.fromfile(config_path)
+    for split, dataloader_cfg in (
+        ('train', cfg.train_dataloader), ('val', cfg.val_dataloader)
+    ):
+        dataset_cfg = copy.deepcopy(dataloader_cfg.dataset)
+        dataset_cfg.data_root = str(data_root)
+        dataset = DATASETS.build(dataset_cfg)
+        if not dataset:
+            raise AssertionError(f'{split} dataset is empty')
+        item = dataset[0]
+        image_shape = tuple(item['inputs'].shape)
+        mask_shape = tuple(item['data_samples'].gt_sem_seg.data.shape)
+        print(
+            f'[OK] {split:5s} dataset len={len(dataset)} '
+            f'image={image_shape} mask={mask_shape}')
+
+
+def smoke_location_augmentation(crop_size: int = 512) -> None:
+    """Verify that a source-centred target moves across the output crop."""
+    transform = TRANSFORMS.build(dict(
+        type='RandomForegroundCrop',
+        crop_size=(crop_size, crop_size),
+        foreground_prob=1.0,
+        edge_margin_ratio=0.15,
+        min_foreground_pixels=64))
+    source_size = crop_size * 2
+    image = np.zeros((source_size, source_size, 3), dtype=np.uint8)
+    mask = np.zeros((source_size, source_size), dtype=np.uint8)
+    half_object = max(crop_size // 16, 4)
+    centre = source_size // 2
+    mask[
+        centre - half_object:centre + half_object,
+        centre - half_object:centre + half_object,
+    ] = 1
+
+    np.random.seed(42)
+    target_centres = []
+    for _ in range(16):
+        output = transform(dict(
+            img=image.copy(),
+            gt_seg_map=mask.copy(),
+            seg_fields=['gt_seg_map']))
+        coordinates = np.argwhere(output['gt_seg_map'] == 1)
+        if not len(coordinates):
+            raise AssertionError('foreground-aware crop discarded the target')
+        target_centres.append(coordinates.mean(axis=0))
+
+    target_centres = np.asarray(target_centres)
+    spread_y, spread_x = np.ptp(target_centres, axis=0)
+    if spread_y < crop_size * 0.3 or spread_x < crop_size * 0.3:
+        raise AssertionError(
+            'foreground target was not moved across enough crop positions: '
+            f'y={spread_y:.1f}, x={spread_x:.1f}')
+    print(
+        '[OK] location augmentation '
+        f'target-centre spread=(y={spread_y:.1f}, x={spread_x:.1f})')
+
+
+def smoke_pseudo_geometry(size: int) -> None:
+    """Check archive loading, five-channel rotation and Haar invertibility."""
+    with tempfile.TemporaryDirectory() as temporary_dir:
+        pseudo_root = Path(temporary_dir)
+        split_dir = pseudo_root / 'train'
+        split_dir.mkdir()
+        depth = np.linspace(0.0, 1.0, size * size, dtype=np.float32).reshape(
+            size, size)
+        reliability = np.full((size, size), 0.75, dtype=np.float32)
+        np.savez_compressed(
+            split_dir / 'example.npz',
+            depth=np.round(depth * 65535.0).astype(np.uint16),
+            reliability=np.round(reliability * 255.0).astype(np.uint8))
+        loader = TRANSFORMS.build(dict(
+            type='LoadPseudoGeometry', pseudo_root=str(pseudo_root)))
+        results = loader(dict(
+            img=np.zeros((size, size, 3), dtype=np.uint8),
+            img_path='/unused/train/example.png'))
+        if results['img'].shape != (size, size, 5):
+            raise AssertionError(
+                'pseudo geometry was not appended as two channels')
+
+        rotation = TRANSFORMS.build(dict(
+            type='RandomRotate', prob=1.0, degree=10,
+            pad_val=0, seg_pad_val=255))
+        results.update(
+            gt_seg_map=np.zeros((size, size), dtype=np.uint8),
+            seg_fields=['gt_seg_map'])
+        rotated = rotation(results)
+        if rotated['img'].shape[-1] != 5:
+            raise AssertionError('spatial augmentation dropped geometry channels')
+        resize = TRANSFORMS.build(dict(
+            type='RandomResize', scale=(2 * size, 2 * size),
+            ratio_range=(1.0, 1.0), keep_ratio=True))
+        crop = TRANSFORMS.build(dict(
+            type='RandomForegroundCrop', crop_size=(size, size),
+            foreground_prob=0.0))
+        flip = TRANSFORMS.build(dict(
+            type='RandomFlip', prob=1.0, direction='horizontal'))
+        augmented = flip(crop(resize(rotated)))
+        if augmented['img'].shape != (size, size, 5):
+            raise AssertionError(
+                'joint geometry augmentation produced '
+                f'{augmented["img"].shape}')
+        corruption = TRANSFORMS.build(dict(
+            type='RandomPseudoGeometryCorruption', prob=1.0,
+            modes=('zero',)))
+        corrupted = corruption(augmented)
+        if np.any(corrupted['img'][..., 3] != 0):
+            raise AssertionError('forced zero-depth corruption did not run')
+        if np.any(corrupted['pseudo_validity'] != 0):
+            raise AssertionError(
+                'zero-depth corruption did not create a zero validity target')
+
+        thumbnail = TRANSFORMS.build(dict(
+            type='GenerateGlobalThumbnail', size=(size // 2, size // 2)))
+        packed_results = thumbnail(dict(
+            img=np.zeros((size, size, 3), dtype=np.uint8),
+            img_path='/unused/train/example.png',
+            gt_seg_map=np.zeros((size, size), dtype=np.uint8),
+            seg_fields=['gt_seg_map'],
+            ori_shape=(size, size),
+            img_shape=(size, size)))
+        packer = TRANSFORMS.build(dict(type='PackRPGVInputs'))
+        packed = packer(packed_results)
+        global_shape = tuple(packed['data_samples'].global_img.data.shape)
+        if global_shape != (3, size // 2, size // 2):
+            raise AssertionError(f'global thumbnail has shape {global_shape}')
+        validity_shape = tuple(
+            packed['data_samples'].pseudo_validity.data.shape)
+        if validity_shape != (1, size, size):
+            raise AssertionError(
+                f'pseudo validity target has shape {validity_shape}')
+
+    from wwtpseg.models.utils import (
+        BoundaryResidualRefiner,
+        HaarWavelet2D,
+        HighResolutionDetailRefiner,
+        ReliabilityWeightedResidualFusion,
+    )
+    from wwtpseg.models.segmentors.rpgv_net import (
+        RPGVNet,
+        _binary_segmentation_loss,
+    )
+    wavelet = HaarWavelet2D()
+    value = torch.randn(2, 3, size + 1, size - 1)
+    low, high = wavelet(value)
+    reconstructed = wavelet.inverse(low, high, value.shape[-2:])
+    torch.testing.assert_close(reconstructed, value, rtol=1e-5, atol=1e-6)
+
+    fusion = ReliabilityWeightedResidualFusion(
+        rgb_channels=8, delta_channels=6)
+    rgb = torch.randn(2, 8, size, size)
+    fused = fusion(
+        rgb,
+        torch.randn(2, 6, size // 2, size // 2),
+        torch.rand(2, 1, size, size))
+    torch.testing.assert_close(fused, rgb, rtol=0.0, atol=0.0)
+    torch.nn.init.normal_(fusion.delta_projection[0].weight, std=0.1)
+    bounded_fused = fusion(
+        rgb,
+        torch.randn(2, 6, size // 2, size // 2),
+        torch.ones(2, 1, size, size))
+    if (bounded_fused - rgb).abs().amax() > 1.0 + 1e-6:
+        raise AssertionError('geometry residual is not bounded by tanh')
+
+    # Check FP16 inputs with explicit FP32 reductions at full resolution.
+    # This CPU check does not replace the CUDA autocast regression suite.
+    large_logits = torch.full((1, 1, 1024, 1024), 20.0, dtype=torch.float16)
+    large_target = torch.ones_like(large_logits)
+    large_valid = torch.ones_like(large_logits, dtype=torch.bool)
+    large_loss = _binary_segmentation_loss(
+        large_logits, large_target, large_valid)
+    if not torch.isfinite(large_loss):
+        raise AssertionError('full-resolution FP16 segmentation loss is NaN')
+    entropy = RPGVNet._entropy(torch.tensor(
+        [[[[20.0, -20.0]]]], dtype=torch.float16))
+    if not torch.isfinite(entropy).all():
+        raise AssertionError('FP16 binary entropy contains NaN')
+
+    refiner = BoundaryResidualRefiner(channels=8)
+    torch.nn.init.normal_(refiner.refinement[-1].weight, std=0.02)
+    decoder_feature = torch.randn(2, 8, size, size)
+    without_geometry = refiner(
+        decoder_feature, torch.zeros(2, 1, size, size))['final']
+    with_geometry = refiner(
+        decoder_feature, torch.rand(2, 1, size, size))['final']
+    torch.testing.assert_close(
+        with_geometry, without_geometry, rtol=0.0, atol=0.0)
+
+    detail_refiner = HighResolutionDetailRefiner(
+        decoder_channels=8, channels=4)
+    detail_rgb = torch.randn(2, 3, 2 * size, 2 * size)
+    detail_base = torch.randn(2, 1, size // 2, size // 2)
+    detail_output = detail_refiner(
+        detail_rgb,
+        torch.randn(2, 8, size // 2, size // 2),
+        detail_base,
+        torch.rand(2, 1, size // 2, size // 2))
+    expected_detail = torch.nn.functional.interpolate(
+        detail_base, size=(size, size), mode='bilinear',
+        align_corners=False)
+    torch.testing.assert_close(
+        detail_output['final'], expected_detail, rtol=0.0, atol=0.0)
+    print(
+        '[OK] pseudo-geometry augmentation, validity target, exact RGB '
+        'initialization, bounded ungated residual, FP16-input full-resolution '
+        'loss, half-resolution detail refinement, global thumbnail and Haar '
+        'DWT invariant')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--models', nargs='+', choices=MAINSTREAM_MODELS, default=MAINSTREAM_MODELS)
+    parser.add_argument('--dataset', choices=DATASET_NAMES, default='wwtp')
+    parser.add_argument('--input-size', type=int, default=64)
+    parser.add_argument('--backward', action='store_true')
+    parser.add_argument('--include-rpgv', action='store_true')
+    parser.add_argument('--device', default='cpu')
+    args = parser.parse_args()
+    if args.input_size < 32 or args.input_size % 32:
+        parser.error('--input-size must be a multiple of 32 and at least 32')
+    torch.set_num_threads(2)
+    register_all_modules(init_default_scope=True)
+    for name in args.models:
+        smoke_model(name, experiment_config(args.dataset, name), args.input_size, args.backward, args.device)
+    if args.include_rpgv:
+        for name, path in RPGV_CONFIGS.items():
+            smoke_model(name, path, args.input_size, args.backward, args.device)
+
+
+if __name__ == '__main__':
+    main()

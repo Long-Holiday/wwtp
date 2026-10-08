@@ -12,7 +12,7 @@ def validate_prepared(dataset, root):
     root = Path(root)
     path = root / 'manifest.json'
     if not path.is_file():
-        raise FileNotFoundError(f'{path}: run tools/remote_sensing/prepare.py on official extracted splits first')
+        raise FileNotFoundError(f'{path}: run tools/data/prepare_public.py on official extracted splits first')
     manifest = json.loads(path.read_text())
     if manifest.get('dataset') != dataset or manifest.get('patch_size') != 1024:
         raise ValueError('Prepared dataset identity or patch size differs from the experiment')

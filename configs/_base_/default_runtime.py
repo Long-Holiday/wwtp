@@ -1,6 +1,6 @@
 default_scope = 'mmseg'
 custom_imports = dict(
-    imports=['wwtpseg', 'wwtpseg.edge_baselines', 'mmdet.models'], allow_failed_imports=False)
+    imports=['wwtpseg', 'wwtpseg.models.segmentors.hdnet', 'mmdet.models'], allow_failed_imports=False)
 
 default_hooks = dict(
     timer=dict(type='IterTimerHook'),

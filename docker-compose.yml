@@ -9,7 +9,6 @@ services:
         MMCV_FROM_SOURCE: ${MMCV_FROM_SOURCE:-1}
         TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST:-8.6;8.9+PTX}
         MAX_JOBS: ${MAX_JOBS:-2}
-        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     image: ${WWTP_IMAGE:-wwtp-mmseg:torch2.5.1-cu124}
     working_dir: /workspace
     volumes:
