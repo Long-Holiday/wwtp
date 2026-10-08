@@ -4,7 +4,7 @@
 
 主流模型固定为 **HRNet-W18、UNetFormer-R18、SegNeXt-S、SegFormer-B2、DeepLabV3+-R50、Mask2Former-Swin-T、HDNet**。`untformer` 指 UNetFormer，`deeplab` 指 DeepLabV3+。训练批处理、测试批处理和合成冒烟测试使用同一份模型清单：`wwtpseg/experiments/__init__.py`。
 
-RPGV v1、v2、v3、v4、v5、v5.1 的实现、阶段配置、消融、初始化与数值测试全部保留。公开数据集另保留已有 RPGV RGB／完整几何／v2 多分类适配；v3–v5.1 原生二分类实现继续用于 WWTP，未把它们改名成多分类实验。
+RPGV v1、v2、v3、v4、v5、v5.1 的实现、阶段配置、消融、初始化与数值测试全部保留，并新增 v6 的可变形深度校正、频域几何和区域级双向对比学习。公开数据集另保留已有 RPGV RGB／完整几何／v2 多分类适配；v3–v6 原生二分类实现继续用于 WWTP，未把它们改名成多分类实验。
 
 ## 项目结构
 
@@ -14,7 +14,7 @@ configs/
   wwtp/               WWTP 七个主流模型
   uavid/              UAVid 同一组七个主流模型及已有 RPGV 多分类配置
   loveda/             LoveDA 同一组七个主流模型及已有 RPGV 多分类配置
-  rpgv/{v1,v2,v3,v4,v5,v51}/  各版本阶段、消融与对照配置
+  rpgv/{v1,v2,v3,v4,v5,v51,v6}/  各版本阶段、消融与对照配置
 wwtpseg/
   models/segmentors/  RPGV 各版本、hdnet/、multiclass/ 多分类适配
   datasets/           数据集与数据变换
@@ -132,6 +132,19 @@ docker compose run --rm wwtp python tests/smoke_test.py --include-rpgv --backwar
 ```
 
 伪几何文件为 `pseudo_geometry/<split>/<image_stem>.npz`，与准备后的 1024 图像逐像素对齐。所有 RPGV 模型仍在 `wwtpseg/models/segmentors/`，消融和数值测试入口仍可直接调用。
+
+### RPGV v6
+
+v6 将伪深度经过几何独立的可变形卷积校正后，做 FP32 互补频带分解；高频空间聚类原型与对应区域的 RGB 外观原型进行双向 InfoNCE，低频与 RGB 进行受限 token 的交叉注意力，最终经可靠度门控融入 RGB 特征。无深度或 Q=0 时精确回退到 RGB 路径，不需要 CLIP 权重或文本编码器。
+
+```bash
+docker compose run --rm wwtp bash scripts/rpgv/train_rpgv_v6.sh
+docker compose run --rm wwtp python -m unittest tests.rpgv.test_rpgv_v6 -v
+docker compose run --rm wwtp python tests/smoke_runner.py \
+  --config configs/rpgv/v6/rpgv_v6.py --device cpu
+```
+
+默认从 ImageNet RGB 骨干初始化联合训练，不直接续用 v5.1 完整权重。提供 `configs/rpgv/v6/no_contrastive.py` 和 `rgb_only.py` 两个消融，训练预算与 v5 相同。架构、损失、可靠度过滤、使用方式及已知限制见 [v6 设计说明](docs/rpgv_v6_design.md)。
 
 ## 小规模验证
 
