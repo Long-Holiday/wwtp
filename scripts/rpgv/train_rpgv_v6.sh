@@ -17,4 +17,35 @@ if [[ -e "$work_root" ]] && [[ "$resume" == false ]]; then
   echo "Refusing to overwrite $work_root. Use a new RPGV_V6_WORK_ROOT or --resume." >&2
   exit 1
 fi
+data_root="${WWTP_V5_DATA_ROOT:-${WWTP_DATA_ROOT:-wwtp_semantic_dataset_1m}}"
+export WWTP_DATA_ROOT="$data_root"
+export WWTP_V5_DATA_ROOT="$data_root"
+export WWTP_PSEUDO_ROOT="$data_root/pseudo_geometry"
+
+shopt -s nullglob
+missing_geometry=false
+for split in train val test; do
+  images=("$data_root/images/$split/"*.png)
+  if [[ ${#images[@]} -eq 0 ]]; then
+    echo "No PNG images found in $data_root/images/$split" >&2
+    exit 1
+  fi
+  for image in "${images[@]}"; do
+    image_name="${image##*/}"
+    if [[ ! -f "$WWTP_PSEUDO_ROOT/$split/${image_name%.png}.npz" ]]; then
+      missing_geometry=true
+      break
+    fi
+  done
+done
+shopt -u nullglob
+
+if [[ "$missing_geometry" == true ]]; then
+  echo "Generating missing pseudo geometry in $WWTP_PSEUDO_ROOT"
+  python tools/data/generate_pseudo_geometry.py "$data_root" \
+    --output-root "$WWTP_PSEUDO_ROOT" --splits train val test
+else
+  echo "Pseudo geometry is complete in $WWTP_PSEUDO_ROOT; skipping generation."
+fi
+
 python tools/train.py "$config" --work-dir "$work_root" --disable-early-stopping "$@"
