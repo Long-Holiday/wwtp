@@ -1,6 +1,7 @@
 from .shape import RequireImageShape
 from .foreground_crop import RandomForegroundCrop
 from .load_pseudo_geometry import LoadPseudoGeometry
+from .rpgv_v6_transforms import PackRPGVContourInputs
 from .rpgv_transforms import (
     GenerateGlobalThumbnail,
     PackRPGVInputs,
@@ -13,4 +14,5 @@ __all__ = [
     'GenerateGlobalThumbnail',
     'RandomPseudoGeometryCorruption',
     'PackRPGVInputs',
+    'PackRPGVContourInputs',
 ]

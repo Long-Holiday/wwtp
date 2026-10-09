@@ -12,7 +12,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from .rpgv_modules import BoundedModulatedDeformConv2d, spatial_derivatives
+from .rpgv_modules import BoundedModulatedDeformConv2d
 
 
 def _resize(x: torch.Tensor, size: tuple[int, int]) -> torch.Tensor:
@@ -33,15 +33,26 @@ def _coordinates(height: int, width: int, reference: torch.Tensor) -> torch.Tens
     return torch.stack((xx, yy), dim=0).unsqueeze(0)
 
 
-def _conv_block(in_channels: int, out_channels: int) -> nn.Sequential:
+def _conv_block(in_channels: int, out_channels: int, kernel_size: int = 3) -> nn.Sequential:
     groups = min(8, max(1, out_channels // 2))
     while out_channels % groups:
         groups -= 1
     return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, 3, padding=1, bias=False),
+        nn.Conv2d(in_channels, out_channels, kernel_size, padding=kernel_size // 2, bias=False),
         nn.GroupNorm(groups, out_channels),
         nn.GELU(approximate='tanh'),
     )
+
+
+def _supported_derivatives(depth: torch.Tensor, quality: torch.Tensor):
+    """Missing neighbours do not create a depth jump into a zero-filled hole."""
+    padded = F.pad(depth, (1, 1, 1, 1), mode='replicate')
+    observed = F.pad((quality > 0).to(depth.dtype), (1, 1, 1, 1), mode='replicate')
+    dx = 0.5 * ((padded[..., 1:-1, 2:] - depth) * observed[..., 1:-1, 2:]
+                + (depth - padded[..., 1:-1, :-2]) * observed[..., 1:-1, :-2])
+    dy = 0.5 * ((padded[..., 2:, 1:-1] - depth) * observed[..., 2:, 1:-1]
+                + (depth - padded[..., :-2, 1:-1]) * observed[..., :-2, 1:-1])
+    return dx * (quality > 0), dy * (quality > 0)
 
 
 class DeformableDepthRectifierV6(nn.Module):
@@ -72,21 +83,28 @@ class DeformableDepthRectifierV6(nn.Module):
             quality = F.adaptive_avg_pool2d(reliability, size)
             # Remove untrusted values before pooling, derivatives, or deformable sampling.
             masked = torch.where(reliability > 0, depth.float(), 0.0) * reliability
-            base = F.adaptive_avg_pool2d(masked, size) / quality.clamp_min(1e-6)
-            dx, dy, _, _ = spatial_derivatives(base)
+            base = F.adaptive_avg_pool2d(masked, size) / torch.where(
+                quality > 0, quality, torch.ones_like(quality))
+            dx, dy = _supported_derivatives(base, quality)
             feature = self.encoder(torch.cat((base, quality, dx, dy), dim=1))
             offset_mask = self.offset_mask(feature)
             offsets = self.max_offset * offset_mask[:, :18].tanh()
             modulation = offset_mask[:, 18:].sigmoid()
             deformed = self.deform(feature, offsets, modulation)
-            correction = self.max_correction * self.residual(deformed).tanh() * quality
-            corrected = (base + correction).clamp(0, 1) * quality
-        return dict(corrected_depth=corrected, base_depth=base,
+            correction = self.max_correction * self.residual(deformed).tanh()
+            corrected = (base + correction).clamp(0, 1)
+            trusted = corrected * quality
+        return dict(corrected_depth=corrected, trusted_depth=trusted, base_depth=base,
                     reliability=quality, offsets=offsets, correction=correction)
 
 
 class SmoothFrequencySplitV6(nn.Module):
-    """Complementary real FFT bands with a smooth, fixed radial cutoff."""
+    """Confidence-normalized Gaussian low-pass and complementary trusted detail.
+
+    ``sigma = 1 / (2*pi*cutoff)`` in feature pixels. A positive spatial kernel
+    is essential: the former super-Gaussian FFT kernel can have negative
+    sidelobes and is not suitable for dividing by filtered confidence.
+    """
 
     def __init__(self, cutoff: float = 0.15, padding: int = 8) -> None:
         super().__init__()
@@ -96,23 +114,39 @@ class SmoothFrequencySplitV6(nn.Module):
             raise ValueError('frequency padding must be a nonnegative integer')
         self.cutoff = float(cutoff)
         self.padding = padding
+        coordinate = torch.arange(-padding, padding + 1, dtype=torch.float64)
+        sigma = 1.0 / (2.0 * math.pi * cutoff)
+        kernel = torch.exp(-0.5 * (coordinate / sigma).square())
+        self.register_buffer('kernel', (kernel / kernel.sum()).float(), persistent=False)
 
-    def forward(self, depth: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        height, width = depth.shape[-2:]
-        # Half-precision FFT does not support arbitrary spatial sizes on CUDA.
+    def _filter(self, value: torch.Tensor) -> torch.Tensor:
+        height, width = value.shape[-2:]
+        pad_h, pad_w = min(self.padding, height - 1), min(self.padding, width - 1)
+        channels = value.shape[1]
+        if pad_w:
+            kernel = self.kernel[self.padding - pad_w:self.padding + pad_w + 1]
+            kernel = (kernel / kernel.sum()).view(1, 1, 1, -1).expand(channels, 1, 1, -1)
+            value = F.conv2d(F.pad(value, (pad_w, pad_w, 0, 0), mode='reflect'),
+                             kernel, groups=channels)
+        if pad_h:
+            kernel = self.kernel[self.padding - pad_h:self.padding + pad_h + 1]
+            kernel = (kernel / kernel.sum()).view(1, 1, -1, 1).expand(channels, 1, -1, 1)
+            value = F.conv2d(F.pad(value, (0, 0, pad_h, pad_h), mode='reflect'),
+                             kernel, groups=channels)
+        return value
+
+    def forward(self, depth: torch.Tensor, reliability: torch.Tensor | None = None
+                ) -> tuple[torch.Tensor, torch.Tensor]:
         with torch.autocast(device_type=depth.device.type, enabled=False):
-            value = depth.float()
-            pad_h, pad_w = min(self.padding, height - 1), min(self.padding, width - 1)
-            padded = F.pad(value, (pad_w, pad_w, pad_h, pad_h), mode='reflect')
-            fft_h, fft_w = padded.shape[-2:]
-            fy = torch.fft.fftfreq(fft_h, device=depth.device)[:, None]
-            fx = torch.fft.rfftfreq(fft_w, device=depth.device)[None, :]
-            radius_squared = fy.square() + fx.square()
-            mask = torch.exp(-0.5 * (radius_squared / self.cutoff**2).square())
-            spectrum = torch.fft.rfft2(padded, norm='ortho')
-            low = torch.fft.irfft2(spectrum * mask, s=(fft_h, fft_w), norm='ortho')
-            low = low[..., pad_h:pad_h + height, pad_w:pad_w + width]
-            high = value - low
+            quality = (torch.ones_like(depth, dtype=torch.float32) if reliability is None
+                       else reliability.detach().float().clamp(0, 1))
+            value = torch.where(quality > 0, depth.float(), 0.0)
+            trusted = value * quality
+            filtered = self._filter(torch.cat((trusted, quality), dim=1))
+            numerator, support = filtered.chunk(2, dim=1)
+            mean = numerator / torch.where(support > 0, support, torch.ones_like(support))
+            low = quality * mean
+            high = trusted - low
         return low.to(depth.dtype), high.to(depth.dtype)
 
 
@@ -123,7 +157,7 @@ class SpatialGeometryClusteringV6(nn.Module):
         self,
         channels: int,
         grid_size: int = 4,
-        max_cluster_size: int = 32,
+        max_cluster_size: int = 64,
         iterations: int = 2,
         temperature: float = 0.2,
         spatial_weight: float = 2.0,
@@ -199,15 +233,11 @@ class SpatialGeometryClusteringV6(nn.Module):
                      & (region_quality >= self.min_reliability)
                      & (mass >= self.min_region_mass)
                      & (region_energy >= self.min_region_energy)).detach()
-            selected = assignments * valid.unsqueeze(-1)
-            selected = selected / selected.sum(1, keepdim=True).clamp_min(1e-6)
-            dense = torch.bmm(centers, selected).reshape(geo.shape)
-            support = (assignments * valid.unsqueeze(-1)).sum(1, keepdim=True)
-            support = support.reshape(geo.shape[0], 1, *size)
+            # Contrastive eligibility never switches off segmentation detail.
+            dense = torch.bmm(centers, assignments).reshape(geo.shape)
 
         dense = _resize(dense.to(geometry.dtype), geometry.shape[-2:])
-        support = _resize(support.to(geometry.dtype), geometry.shape[-2:])
-        detail = self.context(torch.cat((geometry, dense), dim=1)) * support
+        detail = geometry + self.context(torch.cat((geometry, dense), dim=1))
         return dict(
             detail=detail,
             geometry_prototypes=geometry_prototypes,
@@ -243,23 +273,28 @@ class RegionContrastiveLossV6(nn.Module):
         valid: torch.Tensor,
     ) -> torch.Tensor:
         with torch.autocast(device_type=geometry.device.type, enabled=False):
+            observed = valid.detach().bool().unsqueeze(-1)
             geometry_embeddings = F.normalize(
-                self.geometry_projection(geometry.float()), dim=-1, eps=1e-6)
+                self.geometry_projection(torch.where(observed, geometry.float(), 0.0)),
+                dim=-1, eps=1e-6)
             rgb_embeddings = F.normalize(
-                self.rgb_projection(rgb.float()), dim=-1, eps=1e-6)
+                self.rgb_projection(torch.where(observed, rgb.float(), 0.0)), dim=-1, eps=1e-6)
             geometry_embeddings = geometry_embeddings.flatten(0, 1)
             rgb_embeddings = rgb_embeddings.flatten(0, 1)
             selected = valid.detach().flatten().bool()
-            if selected.sum() < 2:
-                return (geometry_embeddings.sum() + rgb_embeddings.sum()
-                        + self.logit_scale) * 0.0
-            geometry_embeddings = geometry_embeddings[selected]
-            rgb_embeddings = rgb_embeddings[selected]
             scale = self.logit_scale.clamp(0.0, math.log(100.0)).exp()
             logits = scale * geometry_embeddings @ rgb_embeddings.transpose(0, 1)
             targets = torch.arange(logits.shape[0], device=logits.device)
-            return 0.5 * (F.cross_entropy(logits, targets)
-                          + F.cross_entropy(logits.transpose(0, 1), targets))
+            # Finite masking also defines the all-invalid case without a CPU
+            # count branch or a dynamically sized boolean-indexed tensor.
+            forward = F.cross_entropy(
+                logits.masked_fill(~selected.unsqueeze(0), -1e4), targets, reduction='none')
+            backward = F.cross_entropy(
+                logits.transpose(0, 1).masked_fill(~selected.unsqueeze(0), -1e4),
+                targets, reduction='none')
+            count = selected.float().sum()
+            loss = 0.5 * ((forward + backward) * selected.float()).sum() / count.clamp_min(1)
+            return loss * (count >= 2).float()
 
 
 class LowFrequencyCrossAttentionV6(nn.Module):
@@ -324,24 +359,25 @@ class GatedGeometryFusionV6(nn.Module):
         super().__init__()
         if not math.isfinite(residual_scale) or residual_scale < 0:
             raise ValueError('residual_scale must be finite and nonnegative')
-        self.residual_scale = float(residual_scale)
+        self.branch_gains = nn.Parameter(torch.full((2,), float(residual_scale)))
         self.gates = nn.Sequential(
             nn.Conv2d(channels * 3 + 1, channels, 1), nn.GELU(approximate='tanh'),
             nn.Conv2d(channels, 2, 1),
         )
-        nn.init.zeros_(self.gates[-1].weight)
-        nn.init.constant_(self.gates[-1].bias, -2.0)
+        nn.init.normal_(self.gates[-1].weight, std=1e-3)
+        nn.init.zeros_(self.gates[-1].bias)
 
     def forward(self, rgb: torch.Tensor, high: torch.Tensor, low: torch.Tensor,
                 reliability: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        reliability = reliability.detach().to(rgb.dtype).clamp(0, 1)
-        gates = self.gates(torch.cat((rgb, high, low, reliability), dim=1)).sigmoid()
-        update = gates[:, :1] * high + gates[:, 1:] * low
-        return rgb + self.residual_scale * reliability * update, gates
+        reliability = reliability.detach().float().clamp(0, 1)
+        gates = self.gates(torch.cat((rgb, high, low, reliability.to(rgb.dtype)), dim=1)).sigmoid()
+        update = (self.branch_gains[0] * gates[:, :1].float() * high.float()
+                  + self.branch_gains[1] * gates[:, 1:].float() * low.float())
+        return reliability * update, gates
 
 
 class FrequencyGeometryStageV6(nn.Module):
-    """A geometry stage operating at one RGB backbone resolution."""
+    """A geometry stage with independent appearance references and delta output."""
 
     def __init__(self, channels: int, cluster_cfg: dict | None = None,
                  attention_cfg: dict | None = None, residual_scale: float = 0.1) -> None:
@@ -353,13 +389,15 @@ class FrequencyGeometryStageV6(nn.Module):
         self.fusion = GatedGeometryFusionV6(channels, residual_scale)
 
     def forward(self, rgb: torch.Tensor, low_depth: torch.Tensor,
-                high_depth: torch.Tensor, reliability: torch.Tensor) -> dict[str, torch.Tensor]:
+                high_depth: torch.Tensor, reliability: torch.Tensor,
+                rgb_reference: torch.Tensor | None = None) -> dict[str, torch.Tensor]:
         size = rgb.shape[-2:]
         low = _resize(low_depth, size)
         high = _resize(high_depth, size)
         reliability = _resize(reliability, size).detach().clamp(0, 1)
-        regions = self.clustering(self.high_encoder(high), rgb, reliability,
+        appearance = rgb if rgb_reference is None else rgb_reference
+        regions = self.clustering(self.high_encoder(high), appearance, reliability,
                                   _resize(high_depth.abs(), size))
         low_context = self.low_attention(rgb, self.low_encoder(low), reliability)
-        fused, gates = self.fusion(rgb, regions['detail'], low_context, reliability)
-        return dict(regions, fused=fused, gates=gates)
+        delta, gates = self.fusion(rgb, regions['detail'], low_context, reliability)
+        return dict(regions, delta=delta, gates=gates)

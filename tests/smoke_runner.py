@@ -77,7 +77,11 @@ def main():
             if needs_geometry:
                 pipeline.append(dict(type='LoadPseudoGeometry',
                                      pseudo_root=str(root / 'data/pseudo_geometry'), required=True))
-            loader.dataset.pipeline = pipeline + [dict(type='PackSegInputs')]
+            packer = dict(type='PackSegInputs')
+            if cfg.model.type == 'RPGVNetV6' and split == 'train':
+                packer = next(dict(step) for step in loader.dataset.pipeline
+                              if step['type'] == 'PackRPGVContourInputs')
+            loader.dataset.pipeline = pipeline + [packer]
         path = root / 'config.py'
         cfg.dump(path)
         subprocess.run([sys.executable, 'tools/train.py', str(path)], check=True, env=process_env)

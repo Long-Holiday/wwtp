@@ -5,6 +5,8 @@ from __future__ import annotations
 import copy
 import unittest
 
+from unittest.mock import patch
+
 import torch
 from mmengine.config import Config
 from mmengine.structures import PixelData
@@ -15,8 +17,10 @@ from torch import nn
 from torch.nn import functional as F
 
 import wwtpseg  # noqa: F401
+from wwtpseg.models.utils.rpgv_v6_decoder import ResidualContourHeadV6, SpatialGeometryDecoderV6
 from wwtpseg.models.utils.rpgv_v6_modules import (
     DeformableDepthRectifierV6,
+    FrequencyGeometryStageV6,
     GatedGeometryFusionV6,
     LowFrequencyCrossAttentionV6,
     RegionContrastiveLossV6,
@@ -29,7 +33,7 @@ def tiny_model(**overrides):
     config = dict(
         type='RPGVNetV6',
         rgb_encoder=dict(
-            type='MixVisionTransformer', in_channels=3, embed_dims=8,
+            type='MixVisionTransformerSDPA', in_channels=3, embed_dims=8,
             num_stages=4, num_layers=[1, 1, 1, 1], num_heads=[1, 2, 4, 8],
             patch_sizes=[7, 3, 3, 3], sr_ratios=[8, 4, 2, 1],
             out_indices=(0, 1, 2, 3), drop_path_rate=0.0),
@@ -121,8 +125,11 @@ class V6ModuleTests(unittest.TestCase):
         depth = torch.rand(1, 1, 33, 35)
         quality = torch.full_like(depth, 1e-4)
         outputs = module(depth, quality, (9, 9))
-        self.assertLessEqual(outputs['corrected_depth'].abs().max().item(), 1.01e-4)
-        _, high = SmoothFrequencySplitV6()(outputs['corrected_depth'])
+        self.assertLessEqual(outputs['trusted_depth'].abs().max().item(), 1.01e-4)
+        torch.testing.assert_close(outputs['trusted_depth'],
+                                   outputs['corrected_depth'] * outputs['reliability'])
+        low, high = SmoothFrequencySplitV6()(outputs['corrected_depth'], outputs['reliability'])
+        torch.testing.assert_close(low + high, outputs['trusted_depth'])
         self.assertLess(high.abs().max().item(), 1e-4)
 
     def test_contrastive_pooling_cannot_move_assignments(self):
@@ -156,7 +163,8 @@ class V6ModuleTests(unittest.TestCase):
                                     (quality * 0, quality)):
             outputs = module(features, features, reliability, energy)
             self.assertFalse(outputs['valid_regions'].any())
-            self.assertEqual(outputs['detail'].abs().max().item(), 0)
+            self.assertEqual(outputs['detail'].shape, features.shape)
+            self.assertTrue(torch.isfinite(outputs['detail']).all())
             self.assertTrue(torch.isfinite(outputs['geometry_prototypes']).all())
 
     def test_empty_regions_stay_invalid_with_zero_thresholds(self):
@@ -220,6 +228,24 @@ class V6ModuleTests(unittest.TestCase):
         rgb[~valid] = -1e4
         torch.testing.assert_close(module(geometry, rgb, valid), original)
 
+    def test_invalid_nonfinite_contrastive_inputs_are_not_used(self):
+        module = RegionContrastiveLossV6(8)
+        valid = torch.tensor([[True, False, True, False]])
+        geometry = torch.randn(1, 4, 8)
+        rgb = torch.randn(1, 4, 8)
+        reference = module(geometry, rgb, valid)
+        geometry[~valid] = float('nan')
+        rgb[~valid] = float('inf')
+        geometry.requires_grad_(True)
+        rgb.requires_grad_(True)
+        loss = module(geometry, rgb, valid)
+        torch.testing.assert_close(loss, reference)
+        loss.backward()
+        for parameter in list(module.parameters()) + [geometry, rgb]:
+            self.assertTrue(torch.isfinite(parameter.grad).all())
+        self.assertEqual(geometry.grad[~valid].abs().sum().item(), 0)
+        self.assertEqual(rgb.grad[~valid].abs().sum().item(), 0)
+
     def test_cross_attention_empty_keys_is_finite_zero(self):
         module = LowFrequencyCrossAttentionV6(8, query_size=8, kv_size=4)
         rgb = torch.randn(1, 8, 13, 15, requires_grad=True)
@@ -246,10 +272,94 @@ class V6ModuleTests(unittest.TestCase):
     def test_gate_zero_reliability_is_exact_identity(self):
         module = GatedGeometryFusionV6(8)
         rgb = torch.randn(2, 8, 7, 9)
-        fused, gates = module(rgb, torch.randn_like(rgb), torch.randn_like(rgb),
+        delta, gates = module(rgb, torch.randn_like(rgb), torch.randn_like(rgb),
                               torch.zeros(2, 1, 7, 9))
-        self.assertTrue(torch.equal(fused, rgb))
+        self.assertEqual(delta.abs().max().item(), 0)
+        self.assertTrue(torch.equal(rgb + delta, rgb))
         self.assertTrue(((gates > 0) & (gates < 1)).all())
+
+    def test_frequency_holes_soft_confidence_and_small_support(self):
+        split = SmoothFrequencySplitV6()
+        for size in ((17, 19), (1, 7), (5, 1), (1, 1)):
+            depth = torch.full((1, 1, *size), 0.5, requires_grad=True)
+            quality = torch.ones_like(depth)
+            if size[0] > 1 and size[1] > 1:
+                quality[..., 4:11, 5:13] = 0
+                quality[..., :3, :4] = 0.4
+            for scale in (1.0, 1e-9):
+                q = quality * scale
+                low, high = split(depth, q)
+                torch.testing.assert_close(low + high, depth * q)
+                self.assertLess(high.abs().max().item(), 2e-7 * scale)
+                corrupted = torch.where(q > 0, depth, torch.full_like(depth, 1e6))
+                other = split(corrupted, q)
+                torch.testing.assert_close(low, other[0], rtol=0, atol=0)
+                torch.testing.assert_close(high, other[1], rtol=0, atol=0)
+            (low.square().sum() + high.square().sum()).backward()
+            self.assertTrue(torch.isfinite(depth.grad).all())
+
+    def test_rectifier_derivatives_do_not_see_missing_neighbour_edges(self):
+        module = DeformableDepthRectifierV6(channels=8)
+        depth = torch.full((1, 1, 17, 19), 0.5)
+        quality = torch.ones_like(depth)
+        quality[..., 5:12, 6:14] = 0
+        captured = []
+        handle = module.encoder.register_forward_pre_hook(lambda m, args: captured.append(args[0]))
+        module(depth, quality, depth.shape[-2:])
+        handle.remove()
+        self.assertEqual(captured[0][:, 2:].abs().max().item(), 0)
+
+    def test_gain_and_gate_layers_learn_on_first_step(self):
+        module = GatedGeometryFusionV6(8)
+        rgb = torch.randn(2, 8, 7, 9)
+        delta, gates = module(rgb, torch.randn_like(rgb), torch.randn_like(rgb),
+                              torch.full((2, 1, 7, 9), 0.34))
+        self.assertAlmostEqual(gates.mean().item(), 0.5, places=2)
+        delta.square().mean().backward()
+        for parameter in module.parameters():
+            self.assertTrue(torch.isfinite(parameter.grad).all())
+            self.assertGreater(parameter.grad.abs().sum().item(), 0)
+
+    def test_contour_residual_can_correct_confident_wrong_base(self):
+        head = ResidualContourHeadV6(16, 8)
+        with torch.no_grad():
+            head.coarse_head.weight.zero_()
+            head.coarse_head.bias.fill_(8)
+            head.correction_head.weight.zero_()
+            head.correction_head.bias.fill_(-12)
+        rgb, feature = torch.randn(1, 3, 32, 34), torch.randn(1, 16, 8, 9)
+        output = head(rgb, feature)
+        self.assertTrue((output['coarse_logits'] > 0).all())
+        self.assertTrue((output['final_logits'] < 0).all())
+        self.assertGreater(output['contour_correction'].abs().min().item(), 2)
+        with torch.no_grad():
+            head.sdf_head.bias.add_(50)
+        torch.testing.assert_close(head(rgb, feature)['final_logits'], output['final_logits'])
+
+    def test_contour_shared_trunk_gets_immediate_segmentation_gradient(self):
+        head = ResidualContourHeadV6(16, 8)
+        output = head(torch.randn(2, 3, 32, 34), torch.randn(2, 16, 8, 9))
+        output['final_logits'].square().mean().backward()
+        for parameter in (head.rgb_stem[0][0].weight, head.contour[0][0].weight,
+                          head.correction_head.weight):
+            self.assertGreater(parameter.grad.abs().sum().item(), 0)
+        self.assertIsNone(head.sdf_head.weight.grad)
+
+    def test_decoder_callback_uses_pure_lateral_features(self):
+        decoder = SpatialGeometryDecoderV6((8, 16, 32, 64), 16, use_context=False)
+        features = (torch.randn(1, 8, 16, 16), torch.randn(1, 16, 8, 8),
+                    torch.randn(1, 32, 4, 4), torch.randn(1, 64, 2, 2))
+        references = [decoder.projections[i](features[i]) for i in range(2)]
+        seen = []
+
+        def fusion(index, value, reference):
+            seen.append(index)
+            torch.testing.assert_close(reference, references[index])
+            return value + 10
+
+        output = decoder(features, fusion_callback=fusion)
+        self.assertEqual(seen, [1, 0])
+        self.assertEqual(tuple(output.shape), (1, 16, 16, 16))
 
     def test_configuration_validation(self):
         for cutoff in (0, -1, 0.6, float('nan')):
@@ -270,7 +380,8 @@ class V6ConfigTests(unittest.TestCase):
         register_all_modules(init_default_scope=True)
 
     def test_production_and_ablation_configs(self):
-        for variant in ('rpgv_v6', 'no_contrastive', 'rgb_only'):
+        for variant in ('rpgv_v6', 'no_contrastive', 'rgb_only', 'encoder_fusion',
+                        'legacy_contour', 'cluster32'):
             config = Config.fromfile(f'configs/rpgv/v6/{variant}.py')
             self.assertEqual(config.model.type, 'RPGVNetV6')
             self.assertEqual(tuple(config.model.data_preprocessor.size), (1024, 1024))
@@ -291,7 +402,13 @@ class V6ConfigTests(unittest.TestCase):
             config.model.rgb_encoder.init_cfg = None
             model = MODELS.build(config.model)
             self.assertEqual(model.use_geometry, variant != 'rgb_only')
-            self.assertEqual(hasattr(model, 'region_contrastive'), variant == 'rpgv_v6')
+            self.assertEqual(hasattr(model, 'region_contrastive'),
+                             variant not in {'rgb_only', 'no_contrastive'})
+            self.assertEqual(config.model.geometry_dropout_prob, 0)
+            self.assertEqual(config.model.rgb_encoder.type, 'MixVisionTransformerSDPA')
+            self.assertTrue(config.model.rgb_encoder.with_cp)
+            self.assertEqual(config.train_dataloader.dataset.pipeline[-1]['type'],
+                             'PackRPGVContourInputs')
 
 
 class V6SegmentorTests(unittest.TestCase):
@@ -433,6 +550,53 @@ class V6SegmentorTests(unittest.TestCase):
             for name, parameter in model.named_parameters():
                 self.assertIsNotNone(parameter.grad, name)
                 self.assertTrue(torch.isfinite(parameter.grad).all(), name)
+
+    def test_low_quality_still_trains_high_frequency_segmentation(self):
+        for quality in (0.2, 0.34):
+            model = tiny_model()
+            inputs, _ = batch()
+            inputs[:, 4] = quality * 255
+            output = model._run_network(inputs)
+            self.assertFalse(any(r['valid_regions'].any() for r in output['geometry_v6']['regions']))
+            output['final_logits'].square().mean().backward()
+            for stage in model.geometry_stages:
+                gradient = stage.high_encoder[0].weight.grad
+                self.assertTrue(torch.isfinite(gradient).all())
+                self.assertGreater(gradient.abs().sum().item(), 0)
+
+    def test_prototypes_keep_modalities_independent(self):
+        model = tiny_model()
+        inputs, _ = batch()
+        inputs.requires_grad_(True)
+        output = model._run_network(inputs)
+        regions = output['geometry_v6']['regions']
+        geometry = sum(r['geometry_prototypes'].square().sum() for r in regions)
+        appearance = sum(r['rgb_prototypes'].square().sum() for r in regions)
+        geo_gradient = torch.autograd.grad(geometry, inputs, retain_graph=True)[0]
+        rgb_gradient = torch.autograd.grad(appearance, inputs)[0]
+        self.assertEqual(geo_gradient[:, :3].abs().sum().item(), 0)
+        self.assertGreater(geo_gradient[:, 3:4].abs().sum().item(), 0)
+        self.assertEqual(rgb_gradient[:, 3:4].abs().sum().item(), 0)
+        self.assertGreater(rgb_gradient[:, :3].abs().sum().item(), 0)
+
+    def test_disabled_legacy_pair_losses_are_not_computed(self):
+        inputs, samples = batch()
+        with patch('wwtpseg.models.segmentors.rpgv_net_v6.region_and_boundary_loss',
+                   side_effect=AssertionError('disabled loss evaluated')):
+            losses = tiny_model().loss(inputs, samples)
+        self.assertTrue(torch.isfinite(objective(losses)))
+
+    def test_architecture_and_head_ablations_have_no_unused_parameters(self):
+        inputs, samples = batch()
+        for overrides in (dict(fusion_location='encoder'), dict(contour_mode='legacy'),
+                          dict(sdf_loss_weight=0), dict(use_contour=False),
+                          dict(use_contour=False, sdf_loss_weight=0)):
+            model = tiny_model(**overrides)
+            losses = model.loss(inputs, samples)
+            objective(losses).backward()
+            for name, parameter in model.named_parameters():
+                self.assertIsNotNone(parameter.grad, (overrides, name))
+                self.assertTrue(torch.isfinite(parameter.grad).all(), (overrides, name))
 
     def test_cpu_bfloat16_autocast_training(self):
         model = tiny_model()

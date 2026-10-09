@@ -197,6 +197,11 @@ def smoke_model(name, config_path, size, backward, device='cpu'):
         grads = [p.grad for p in model.parameters() if p.grad is not None]
         if not grads or not all(torch.isfinite(g).all() for g in grads):
             raise AssertionError(f'{name}: missing or non-finite gradients')
+        if model_cfg['type'] == 'RPGVNetV6':
+            missing = [key for key, parameter in model.named_parameters()
+                       if parameter.requires_grad and parameter.grad is None]
+            if missing:
+                raise AssertionError(f'{name}: unused v6 parameters: {missing}')
     model.eval()
     with torch.inference_mode():
         predictions = model.predict(**processed)

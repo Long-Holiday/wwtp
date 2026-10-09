@@ -135,16 +135,19 @@ docker compose run --rm wwtp python tests/smoke_test.py --include-rpgv --backwar
 
 ### RPGV v6
 
-v6 将伪深度经过几何独立的可变形卷积校正后，做 FP32 互补频带分解；高频空间聚类原型与对应区域的 RGB 外观原型进行双向 InfoNCE，低频与 RGB 进行受限 token 的交叉注意力，最终经可靠度门控融入 RGB 特征。无深度或 Q=0 时精确回退到 RGB 路径，不需要 CLIP 权重或文本编码器。
+优化版 v6 使用 SDPA MiT-B2，在 decoder F8/F4 注入几何残差；高频局部/区域细节不再被对比有效性阈值关闭，低频进行受限 token 交叉注意力。可靠度归一化 Gaussian 分解减少 Q 孔洞伪边缘，独立的 SDF 辅助头和无固定幅度限制的 logit 残差头负责轮廓细化。默认不关闭几何样本、不冻结骨干；无深度或 Q=0 时精确回退到 RGB 路径，不需要 CLIP 权重或文本编码器。
 
 ```bash
 docker compose run --rm wwtp bash scripts/rpgv/train_rpgv_v6.sh
-docker compose run --rm wwtp python -m unittest tests.rpgv.test_rpgv_v6 -v
+docker compose run --rm wwtp python -m unittest tests.rpgv.test_rpgv_v6 \
+  tests.rpgv.test_mit_sdpa tests.rpgv.test_contour_targets -v
 docker compose run --rm wwtp python tests/smoke_runner.py \
   --config configs/rpgv/v6/rpgv_v6.py --device cpu
+docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v6.py \
+  --output work_dirs/profiles/v6_train.json
 ```
 
-默认从 ImageNet RGB 骨干初始化联合训练，不直接续用 v5.1 完整权重。提供 `configs/rpgv/v6/no_contrastive.py` 和 `rgb_only.py` 两个消融，训练预算与 v5 相同。架构、损失、可靠度过滤、使用方式及已知限制见 [v6 设计说明](docs/rpgv_v6_design.md)。
+默认从 ImageNet RGB 骨干初始化联合训练，仍为1024整图、batch2×累积4、5,000次优化器更新；启用激活重计算，SDF目标在训练数据worker生成。新目录为 `work_dirs/rpgv_v6_optimized_1m`。**旧 v6/v5.1 完整权重不能直接 resume 新架构**，只恢复本版相同配置的checkpoint。除 `no_contrastive.py` / `rgb_only.py` 外，还提供 `encoder_fusion.py`、`legacy_contour.py`、`cluster32.py` 单因素消融。训练方式、WSL GPU启动替代命令、性能实测及已知限制见 [v6 设计说明](docs/rpgv_v6_design.md)。
 
 ## 小规模验证
 

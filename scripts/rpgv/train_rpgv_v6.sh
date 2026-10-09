@@ -3,9 +3,9 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 config="${RPGV_V6_CONFIG:-configs/rpgv/v6/rpgv_v6.py}"
 variant="$(basename "$config" .py)"
-work_root="${RPGV_V6_WORK_ROOT:-work_dirs/rpgv_v6_${variant}_1m}"
+work_root="${RPGV_V6_WORK_ROOT:-work_dirs/rpgv_v6_optimized_${variant}_1m}"
 if [[ "$variant" == "rpgv_v6" ]] && [[ -z "${RPGV_V6_WORK_ROOT:-}" ]]; then
-  work_root="work_dirs/rpgv_v6_1m"
+  work_root="work_dirs/rpgv_v6_optimized_1m"
 fi
 resume=false
 for arg in "$@"; do
