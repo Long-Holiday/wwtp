@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# AutoDL: PyTorch 2.1.0 / Python 3.10 / CUDA 12.1，复用镜像而非重装 PyTorch。
+# AutoDL: PyTorch 2.1.0–2.1.2 / Python 3.10 / CUDA 12.1，复用镜像而非重装 PyTorch。
 set -euo pipefail
 
 usage() {
   printf '%s\n' \
     '用法：bash scripts/setup_autodl.sh [选项]' \
     '' \
-    '适用镜像：Linux x86_64，Python 3.10，PyTorch 2.1.0，CUDA 12.1。' \
+    '适用镜像：Linux x86_64，Python 3.10，PyTorch 2.1.0–2.1.2，CUDA 12.1。' \
     '默认克隆镜像 base 环境，只补项目依赖，不修改原环境或重装 PyTorch。' \
     '' \
     '  --env-name NAME    目标 conda 环境，默认 wwtp-v6；存在则继续安装' \
@@ -79,9 +79,9 @@ if sys.version_info[:2] != (3, 10) or platform.system() != 'Linux' or platform.m
     raise SystemExit('需要 Linux x86_64 / Python 3.10，请选择对应的 AutoDL 基础镜像。')
 import torch
 
-if (torch.__version__.split('+')[0], torch.version.cuda) != ('2.1.0', '12.1'):
+if torch.__version__.split('+')[0] not in ('2.1.0', '2.1.1', '2.1.2') or torch.version.cuda != '12.1':
     raise SystemExit(f'镜像不匹配：torch={torch.__version__}, CUDA={torch.version.cuda}；'
-                     '需要 2.1.0 / 12.1，不自动重装基础框架。')
+                     '需要 PyTorch 2.1.0–2.1.2 / CUDA 12.1，不自动重装基础框架。')
 print(f'基础环境：Python {platform.python_version()}, torch {torch.__version__}, '
       f'CUDA {torch.version.cuda}', flush=True)
 PY
@@ -108,9 +108,11 @@ if Path(sys.prefix).resolve() == Path(sys.argv[1]).resolve():
 PY
 
 # 有些镜像只预装 torch；在目标环境补配套 torchvision，不拉取 torch 依赖。
-if ! run_python "$env_name" -c "import torchvision; assert torchvision.__version__.split('+')[0] == '0.16.0'"; then
+torchvision_version="$(run_python "$env_name" -c \
+  "import torch; print({'2.1.0': '0.16.0', '2.1.1': '0.16.1', '2.1.2': '0.16.2'}[torch.__version__.split('+')[0]])")"
+if ! run_python "$env_name" -c "import torchvision; assert torchvision.__version__.split('+')[0] == '$torchvision_version'"; then
   run_python "$env_name" -m pip install --index-url https://download.pytorch.org/whl/cu121 \
-    --no-deps torchvision==0.16.0+cu121
+    --no-deps "torchvision==$torchvision_version+cu121"
 fi
 
 tmp_dir="$(mktemp -d)"
@@ -195,7 +197,10 @@ from mmcv.ops.multi_scale_deform_attn import MultiScaleDeformableAttnFunction
 from mmseg.registry import MODELS
 import wwtpseg
 
-assert (torch.__version__.split('+')[0], torch.version.cuda, torchvision.__version__.split('+')[0]) == ('2.1.0', '12.1', '0.16.0'), '基础框架版本被改变'
+torch_version = torch.__version__.split('+')[0]
+expected_torchvision = {'2.1.0': '0.16.0', '2.1.1': '0.16.1', '2.1.2': '0.16.2'}.get(torch_version)
+assert expected_torchvision is not None and torch.version.cuda == '12.1', '基础框架版本不匹配'
+assert torchvision.__version__.split('+')[0] == expected_torchvision, 'torchvision 与 PyTorch 不配套'
 assert (mmcv.__version__, mmengine.__version__, mmseg.__version__, mmdet.__version__) == ('2.1.0', '0.10.7', '1.2.2', '3.3.0'), 'OpenMMLab 版本不匹配'
 assert get_compiling_cuda_version().startswith('12.1'), 'MMCV 不是 CUDA 12.1 扩展'
 assert Path(wwtpseg.__file__).resolve() == Path(sys.argv[1]).resolve() / 'wwtpseg/__init__.py', '导入了其他目录中的 wwtpseg'
