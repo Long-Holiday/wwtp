@@ -77,8 +77,9 @@ class ProtocolTest(unittest.TestCase):
         paths = [experiment_config(dataset, name)
                  for dataset in DATASET_NAMES for name in MAINSTREAM_MODELS]
         paths += list((ROOT / 'configs/rpgv/v6').glob('*.py'))
+        paths += list((ROOT / 'configs/rpgv/v7').glob('*.py'))
         paths += [ROOT / 'configs' / dataset / f'rpgv_{variant}.py'
-                  for dataset in ('uavid', 'loveda') for variant in ('rgb', 'full', 'v2', 'v6')]
+                  for dataset in ('uavid', 'loveda') for variant in ('rgb', 'full', 'v2', 'v6', 'v7')]
         self.assertEqual(reference.randomness, dict(seed=42, deterministic=False))
         shared_fields = ('optim_wrapper', 'param_scheduler', 'train_cfg',
                          'auto_scale_lr', 'randomness', 'env_cfg')
@@ -105,7 +106,7 @@ class ProtocolTest(unittest.TestCase):
                 self.assertFalse(checkpoint.by_epoch)
                 self.assertEqual(checkpoint.max_keep_ckpts, 3)
                 self.assertEqual(checkpoint.rule, 'greater')
-                dataset = 'wwtp' if 'rpgv/v6' in str(path) else Path(path).parent.name
+                dataset = 'wwtp' if 'configs/rpgv/' in str(path) else Path(path).parent.name
                 self.assertEqual(checkpoint.save_best, 'binary/Foreground_IoU' if dataset == 'wwtp' else 'mIoU')
 
     def test_optimizer_parameter_groups(self):

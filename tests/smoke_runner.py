@@ -78,7 +78,7 @@ def main():
                 pipeline.append(dict(type='LoadPseudoGeometry',
                                      pseudo_root=str(root / 'data/pseudo_geometry'), required=True))
             packer = dict(type='PackSegInputs')
-            if cfg.model.type == 'RPGVNetV6' and split == 'train':
+            if cfg.model.type in ('RPGVNetV6', 'RPGVNetV7') and split == 'train':
                 packer = next(dict(step) for step in loader.dataset.pipeline
                               if step['type'] == 'PackRPGVContourInputs')
             loader.dataset.pipeline = pipeline + [packer]

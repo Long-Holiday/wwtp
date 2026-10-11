@@ -23,7 +23,8 @@ class ExperimentRunnerTest(unittest.TestCase):
 
     def test_roster_and_configs(self):
         self.assertEqual({key: len(value) for key, value in runner.EXPERIMENT_SUITES.items()},
-                         {'baselines': 7, 'v6': 1, 'v6-ablations': 5, 'all': 13})
+                         {'baselines': 7, 'v6': 1, 'v6-ablations': 5, 'all': 13,
+                          'v7': 1, 'v7-ablations': 8, 'v7-all': 17})
         self.assertEqual(len(set(runner.EXPERIMENT_SUITES['all'])), 13)
         for name in runner.EXPERIMENT_SUITES['all']:
             self.assertTrue(runner.experiment_config('wwtp', name).is_file())
@@ -42,6 +43,22 @@ class ExperimentRunnerTest(unittest.TestCase):
             self.assertEqual(result.stdout.count('tools/test.py'), 13)
             self.assertEqual(result.stdout.count('tools/data/generate_pseudo_geometry.py'), 1)
             self.assertEqual(list(Path(directory).iterdir()), [])
+
+    def test_v7_roster_and_dependency_free_dry_run(self):
+        for name in runner.EXPERIMENT_SUITES['v7-all']:
+            self.assertTrue(runner.experiment_config('wwtp', name).is_file())
+        for dataset in ('loveda', 'uavid'):
+            self.assertTrue(runner.experiment_config(dataset, 'rpgv_v7').is_file())
+            with self.assertRaises(ValueError):
+                runner.experiment_config(dataset, 'rpgv_v7_fixed_grid')
+        result = subprocess.run([sys.executable, '-S', str(runner.ROOT / 'scripts/run_experiments.py'),
+                                 'train-test', '--suite', 'v7-all', '--dry-run'],
+                                capture_output=True, text=True, check=True)
+        self.assertEqual(result.stdout.count('tools/train.py'), 17)
+        self.assertEqual(result.stdout.count('tools/test.py'), 17)
+        self.assertEqual(result.stdout.count('tools/data/generate_pseudo_geometry.py'), 1)
+        self.assertIn('configs/rpgv/v7/rpgv_v7.py', result.stdout)
+        self.assertNotIn('rpgv_v7', runner.EXPERIMENT_SUITES['all'])
 
     def test_train_then_validation_selected_test(self):
         with tempfile.TemporaryDirectory() as directory:

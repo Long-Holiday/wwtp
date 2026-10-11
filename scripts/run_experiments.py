@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plan, train and evaluate baseline, RPGV v6 and v6 ablation suites."""
+"""Plan, train and evaluate baseline, RPGV v6/v7 and ablation suites."""
 import argparse
 import os
 from pathlib import Path
