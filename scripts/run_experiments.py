@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Plan, train and evaluate baseline, RPGV v6/v7 and ablation suites."""
 import argparse
+import json
 import os
 from pathlib import Path
 import runpy
@@ -24,6 +25,51 @@ def run_command(command, dry_run):
         env = dict(os.environ)
         env['PYTHONPATH'] = os.pathsep.join(filter(None, (str(ROOT), env.get('PYTHONPATH'))))
         subprocess.run(command, cwd=ROOT, env=env, check=True)
+
+
+def extract_primary_metric(metrics_dict, dataset='wwtp'):
+    if not isinstance(metrics_dict, dict):
+        return None
+    keys = ('binary/Foreground_IoU', 'binary_Foreground_IoU', 'Foreground_IoU') if dataset == 'wwtp' else ('mIoU',)
+    for key in keys:
+        if key in metrics_dict:
+            return float(metrics_dict[key])
+    return None
+
+
+def check_v7_superiority(work_root, dataset='wwtp'):
+    """Compare RPGV v7 test metric against all mainstream baselines.
+
+    Returns (is_superior, v7_score, best_baseline_name, best_baseline_score, baseline_scores)
+    """
+    v7_eval = work_root / dataset / 'rpgv_v7' / 'eval' / 'metrics.json'
+    if not v7_eval.is_file():
+        return None, None, None, None, {}
+    try:
+        v7_metrics = json.loads(v7_eval.read_text())
+    except Exception:
+        return None, None, None, None, {}
+    v7_score = extract_primary_metric(v7_metrics, dataset)
+    if v7_score is None:
+        return None, None, None, None, {}
+
+    baseline_scores = {}
+    for name in MAINSTREAM_MODELS:
+        eval_path = work_root / dataset / name / 'eval' / 'metrics.json'
+        if eval_path.is_file():
+            try:
+                b_metrics = json.loads(eval_path.read_text())
+                score = extract_primary_metric(b_metrics, dataset)
+                if score is not None:
+                    baseline_scores[name] = score
+            except Exception:
+                pass
+    if not baseline_scores:
+        return None, v7_score, None, None, {}
+    best_baseline = max(baseline_scores, key=baseline_scores.get)
+    best_baseline_score = baseline_scores[best_baseline]
+    is_superior = v7_score > best_baseline_score
+    return is_superior, v7_score, best_baseline, best_baseline_score, baseline_scores
 
 
 def best_checkpoint(output, dataset, dry_run):
@@ -108,11 +154,26 @@ def main(argv=None):
     parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument('--split', choices=('val', 'test'), help='Evaluation split; public datasets always use val')
     parser.add_argument('--cfg-options', nargs='+', default=[], help='Shared train/evaluation config overrides')
+    parser.add_argument('--gate-v7-superiority', action='store_true',
+                        default=os.getenv('GATE_V7_SUPERIORITY', '1') in ('1', 'true', 'True'),
+                        help='Skip ablation suite if v7 test metric is not strictly higher than all baselines')
     args, extra = parser.parse_known_args(argv)
     if args.gpus < 1:
         parser.error('--gpus must be positive')
     if args.dataset != 'wwtp' and args.split == 'test':
         parser.error('Public test labels are private; use --split val')
+    if args.suite in ('v7-ablations', 'v6-ablations') and args.gate_v7_superiority and not args.dry_run:
+        work_root_resolved = args.work_root if args.work_root.is_absolute() else ROOT / args.work_root
+        is_superior, v7_score, best_baseline, best_score, baseline_scores = check_v7_superiority(
+            work_root_resolved, args.dataset)
+        if is_superior is False and best_baseline is not None:
+            print(f"[GATE] RPGV v7 test metric ({v7_score:.4f}) is NOT higher than best baseline "
+                  f"{best_baseline} ({best_score:.4f}). "
+                  f"Skipping ablation experiments as requested.", flush=True)
+            return
+        elif is_superior is True:
+            print(f"[GATE] RPGV v7 test metric ({v7_score:.4f}) is higher than best baseline "
+                  f"{best_baseline} ({best_score:.4f}). Proceeding with ablations.", flush=True)
     models = args.models or EXPERIMENT_SUITES[args.suite or 'baselines']
     try:
         configs = [experiment_config(args.dataset, name) for name in models]

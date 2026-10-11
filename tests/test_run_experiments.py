@@ -217,6 +217,46 @@ class ExperimentRunnerTest(unittest.TestCase):
             self.assertEqual(runner.geometry_jobs([], 'uavid', ['train', 'val'], [], True),
                              {('/public/data', '/public/cache', 'img_dir'): {'train', 'val'}})
 
+    def test_gate_v7_superiority_aborts_ablations_when_inferior(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work_root = Path(directory)
+            v7_eval = work_root / 'wwtp' / 'rpgv_v7' / 'eval'
+            v7_eval.mkdir(parents=True)
+            (v7_eval / 'metrics.json').write_text('{"binary/Foreground_IoU": 75.0}')
+
+            baseline_eval = work_root / 'wwtp' / 'hrnet' / 'eval'
+            baseline_eval.mkdir(parents=True)
+            (baseline_eval / 'metrics.json').write_text('{"binary/Foreground_IoU": 76.5}')
+
+            with contextlib.redirect_stdout(io.StringIO()) as stdout, patch.object(
+                    runner.subprocess, 'run') as execute:
+                runner.main(['train-test', '--suite', 'v7-ablations', '--work-root', directory])
+            self.assertEqual(execute.call_count, 0)
+            self.assertIn('[GATE] RPGV v7 test metric (75.0000) is NOT higher than best baseline hrnet (76.5000)',
+                          stdout.getvalue())
+
+    def test_gate_v7_superiority_proceeds_when_superior(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work_root = Path(directory)
+            v7_eval = work_root / 'wwtp' / 'rpgv_v7' / 'eval'
+            v7_eval.mkdir(parents=True)
+            (v7_eval / 'metrics.json').write_text('{"binary/Foreground_IoU": 79.0}')
+
+            baseline_eval = work_root / 'wwtp' / 'hrnet' / 'eval'
+            baseline_eval.mkdir(parents=True)
+            (baseline_eval / 'metrics.json').write_text('{"binary/Foreground_IoU": 76.5}')
+
+            def train(command, **kwargs):
+                if 'tools/train.py' in command:
+                    output = Path(command[command.index('--work-dir') + 1])
+                    output.mkdir(parents=True)
+                    (output / 'best_binary_Foreground_IoU_iter_1000.pth').touch()
+
+            with patch.object(runner, 'prepare_geometry'):
+                calls = self.run_main(['train-test', '--suite', 'v7-ablations',
+                                       '--work-root', directory], train).call_args_list
+            self.assertEqual(len(calls), 16)
+
 
 if __name__ == '__main__':
     unittest.main()
