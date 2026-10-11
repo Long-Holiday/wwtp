@@ -4,7 +4,7 @@
 
 主流模型固定为 **HRNet-W18、UNetFormer-R18、SegNeXt-S、SegFormer-B2、DeepLabV3+-R50、Mask2Former-Swin-T、HDNet**。`untformer` 指 UNetFormer，`deeplab` 指 DeepLabV3+。训练批处理、测试批处理和合成冒烟测试使用同一份模型清单：`wwtpseg/experiments/__init__.py`。
 
-RPGV v1、v2、v3、v4、v5、v5.1 的实现、阶段配置、消融、初始化与数值测试全部保留，并新增 v6 的可变形深度校正、频域几何和区域级双向对比学习。公开数据集另保留已有 RPGV RGB／完整几何／v2 多分类适配；v3–v6 原生二分类实现继续用于 WWTP，未把它们改名成多分类实验。
+RPGV v1、v2、v3、v4、v5、v5.1 的实现、阶段配置、消融、初始化与数值测试全部保留，并新增 v6 的可变形深度校正、频域几何和区域级双向对比学习。公开数据集另保留已有 RPGV RGB／完整几何／v2 多分类适配，并提供独立的 v6 多分类适配；v3–v5.1 原生二分类实现继续用于 WWTP，未把它们改名成多分类实验。
 
 ## 项目结构
 
@@ -96,7 +96,27 @@ docker compose run --rm wwtp python tools/train.py configs/wwtp/hrnet.py
 docker compose run --rm wwtp python tools/train.py configs/uavid/hrnet.py
 docker compose run --rm wwtp python tools/train.py configs/loveda/hrnet.py
 
-# 批处理：先查看所有七个模型的计划
+# 一键训练并评估：每个模型训练成功后，自动评估验证集选出的最佳权重
+# 七基线：HRNet、UNetFormer、SegNeXt、SegFormer、DeepLabV3+、Mask2Former、HDNet
+python scripts/run_experiments.py train-test --dataset wwtp --suite baselines
+# RPGV v6 完整模型
+python scripts/run_experiments.py train-test --dataset wwtp --suite v6
+# 五个 v6 消融：RGB-only、无对比学习、encoder fusion、legacy contour、cluster32
+python scripts/run_experiments.py train-test --dataset wwtp --suite v6-ablations
+# 全套 13 个实验（上述三个命令的合集，不要在同一输出目录重复运行）
+python scripts/run_experiments.py train-test --dataset wwtp --suite all
+# 只查看计划，无需安装训练依赖，也不会生成数据或启动训练
+python scripts/run_experiments.py train-test --dataset wwtp --suite all --dry-run
+# 断点恢复全套实验；仅恢复同一版本、同一配置、同一训练协议的 checkpoint
+python scripts/run_experiments.py train-test --dataset wwtp --suite all --resume
+
+# Docker 中将上述 python 命令前加 docker compose run --rm wwtp
+# 公开集支持七基线和完整 v6；v6 消融与 all 组目前仅适用于 WWTP
+# 公开集自动评估官方 val，不报告无标签 test 的指标
+python scripts/run_experiments.py train-test --dataset loveda --suite baselines
+python scripts/run_experiments.py train-test --dataset uavid --suite v6
+
+# 原有分开训练/评估入口继续支持：先查看所有七个模型的计划
 docker compose run --rm wwtp python scripts/run_experiments.py train --dataset wwtp --dry-run
 docker compose run --rm wwtp python scripts/run_experiments.py train --dataset loveda
 docker compose run --rm wwtp python scripts/run_experiments.py test --dataset loveda
@@ -109,7 +129,9 @@ docker compose run --rm wwtp python tools/test.py configs/wwtp/hrnet.py \
   work_dirs/wwtp/hrnet/iter_20000.pth --split val
 ```
 
-默认输出为 `work_dirs/<dataset>/<model>/`。`--cfg-options` 仍可覆盖配置，但公平比较必须对整组实验应用相同策略，并使用相同GPU数；N卡默认全局有效batch为8N，不能与单卡结果混为等预算。变更batch时同步调整累积和迭代预算，保持全局有效batch、图像曝光与更新数。多卡批处理用 `--gpus N`。新协议必须重新训练并使用新的 `--work-dir`，旧策略的checkpoint/optimizer状态不能直接resume或混入正式结果。
+一键入口复用现有配置与正式训练策略，不更改预算或超参数；串行执行，任何训练、选权重或评估失败都会停止，不会静默跳过。默认输出为 `work_dirs/<dataset>/<model>/`，评估指标保存到该目录的 `eval/metrics.json`；消融目录名为 `rpgv_v6_<消融名>`。用 `--work-root` 指定新的整组输出根目录；非空训练目录需显式 `--resume`。`--models` 可选择子集，与 `--suite` 互斥；不指定时仍默认七基线。`train-test` 中额外训练参数（如 `--no-pretrained`）只传给训练，显式 `--cfg-options` 同时传给训练和评估；WWTP 默认评估 test，也可指定 `--split val`。一键 v6/消融会检查并补齐所需的伪几何，已有完整缓存则不加载深度模型；首次生成需要生成工具的依赖与 Depth Anything 权重。数据根目录用 `WWTP_DATA_ROOT`（兼容 `WWTP_V5_DATA_ROOT`）、`UAVID_DATA_ROOT`、`LOVEDA_DATA_ROOT` 指定，伪几何目录用 `WWTP_PSEUDO_ROOT` / `PUBLIC_PSEUDO_ROOT` 指定；真实运行会按配置覆盖后的 pipeline 解析生成路径，dry-run 的几何路径仅展示环境变量默认值。即使 RGB-only 消融，其现有 pipeline 也要求伪几何。此批处理入口的 v6 目录与旧 shell 入口的 `work_dirs/rpgv_v6_siglip_1m` 独立，不会自动复用旧权重。
+
+`--cfg-options` 仍可覆盖配置，但公平比较必须对整组实验应用相同策略，并使用相同GPU数；N卡默认全局有效batch为8N，不能与单卡结果混为等预算。变更batch时同步调整累积和迭代预算，保持全局有效batch、图像曝光与更新数。多卡批处理用 `--gpus N`。新协议必须重新训练并使用新的 `--work-dir`，旧策略的checkpoint/optimizer状态不能直接resume或混入正式结果。
 
 训练入口统一启用TF32，数据加载使用persistent workers与pin memory；FP32 wrapper并不代表禁用TF32的严格FP32矩阵运算。删除训练循环与确定性设置的全局monkey patch，使用MMEngine原生断点续训语义。`--amp-dtype`仅适用于历史或显式AMP配置，正式FP32配置不接受该选项。测试/恢复从完整checkpoint加载时关闭骨干预训练下载。
 
