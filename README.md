@@ -65,7 +65,7 @@ docker image rm wwtp-mmseg:torch2.5.1-cu124
 
 构建使用 Docker 默认网络，执行 `docker compose build` 即可，无需指定网络模式、代理地址或端口。
 
-公共依赖版本在 `requirements/core.txt` 统一维护，包含与基础镜像一致的 PyTorch／torchvision 固定版本；项目依赖在 `requirements/runtime.txt`。构建期间以公共依赖清单约束 MMCV，避免依赖解析意外升级 PyTorch 或 NumPy。镜像构建包含依赖一致性检查、CUDA 扩展导入检查与项目模块导入检查，不启动训练。
+公共依赖版本在 `requirements/core.txt` 统一维护，包含与基础镜像一致的 PyTorch／torchvision 固定版本；项目依赖在 `requirements/runtime.txt`，其中 `tensorboard` 供 `TensorboardVisBackend` 写事件文件和提供查看曲线用的 `tensorboard` 命令。构建期间以公共依赖清单约束 MMCV，避免依赖解析意外升级 PyTorch 或 NumPy。镜像构建包含依赖一致性检查、CUDA 扩展导入检查与项目模块导入检查，不启动训练。
 
 实际吞吐与 24GB 显卡在完整 1024 分辨率训练时的显存占用需在目标机器验证；下文提供无需数据集和预训练权重的小规模验证入口。
 
@@ -145,6 +145,43 @@ docker compose run --rm wwtp python tools/evaluation/predict_public.py \
 
 LoveDA 提交沿用官方预测脚本：导出 **0–6 ID**，以原图片编号直接保存到输出目录；原始真值的 1–7 编号只用于读取训练标签。UAVid 导出与官方颜色匹配的 RGB mask，目录为 `seq*/Labels/<原帧名>.png`。
 
+### 训练可视化（TensorBoard）
+
+所有实验配置都继承 `configs/_base_/default_runtime.py`，其中 `vis_backends` 同时启用 `LocalVisBackend`（原有文本日志）和 `TensorboardVisBackend`；`tools/train.py`、`tools/test.py` 和 `scripts/run_experiments.py` 都无需额外参数。事件文件写入每次运行自己的目录：
+
+```text
+work_dirs/<dataset>/<model>/<时间戳>/vis_data/events.out.tfevents.*
+```
+
+两个 backend 共用运行目录下的同一个 `vis_data/`：`LocalVisBackend` 写 `scalars.json`、`vis_image/` 与配置快照，TensorBoard 的 `events.out.tfevents.*` 直接落在这一层，没有 `TensorboardVisBackend/` 之类的子目录（backend 的 `name` 只是 visualizer 内部的注册键，不参与路径拼接）。
+
+时间戳来自 MMEngine 的运行目录：重新训练的 run 各自独立。`--resume` 也**不会**复用原时间戳目录，MMEngine 通过 `work_dir/last_checkpoint` 找到上次权重继续训练，但新的日志目录仍带新时间戳，所以恢复后的曲线会作为第二个 run 出现在 TensorBoard 里，与前半段互补。
+
+训练会自动启动 TensorBoard 服务：`tools/train.py`（以及 `scripts/run_experiments.py`、`scripts/rpgv/*.sh` 里的每一次训练）在 rank 0 上拉起一个 detached 的 tensorboard 进程，logdir 默认取 work_dir 的根目录（即 `work_dirs`），URL 直接写进训练日志：
+
+```text
+TensorBoard: http://localhost:6006/ (logdir: /workspace/work_dirs)
+```
+
+服务在训练结束后继续运行，后续训练发现端口已被占用就直接复用，所以一次训练拉起的页面能连续看到整批实验的曲线。`--no-tensorboard` 关闭自动启动，`--tensorboard-port`（默认 6006）和 `--tensorboard-logdir` 覆盖端口与目录（例如只看 WWTP：`--tensorboard-logdir work_dirs/wwtp`）；`scripts/run_experiments.py` 在 train-test 模式下会把这些参数透传给 `tools/train.py`。端口被别的服务占用时只会在日志里提示跳过，不影响训练。
+
+- **Docker**：自动启动的服务监听容器内的 `0.0.0.0:6006`，训练命令要写成 `docker compose run --rm -p 6006:6006 wwtp ...` 才能在宿主机打开。不想改训练命令时，也可以用独立容器查看曲线（它有自己的网络命名空间，与训练容器不冲突）：
+
+```bash
+docker compose run --rm -p 6006:6006 wwtp \
+  tensorboard --logdir work_dirs --host 0.0.0.0 --port 6006
+```
+
+- **AutoDL / conda**：conda 环境不在镜像里，依赖要装进环境本身——`bash scripts/setup_autodl.sh` 会按 `requirements/runtime.txt` 装上 `tensorboard==2.14.1`，已有环境补一条 `pip install tensorboard==2.14.1`（缺它训练会在启动时直接报 `ImportError`）。面板自带的 tensorboard 默认占用 6006 且只看 `/root/tf-logs`，先按 AutoDL 官方做法停掉它（`ps -ef | grep tensorboard | awk '{print $2}' | xargs kill -9`）再启动训练，自动拉起的服务就接管 6006 并 watch `work_dirs`，面板链接会直接显示这批曲线；不想动面板进程时用 `--tensorboard-port 6007` 另起一个。
+
+远程服务器上先用 `ssh -L 6006:localhost:6006 <host>` 建立本地转发，再访问同一端口。曲线内容：
+
+- **Scalars**：训练 `loss`、`lr`、`data_time`、`time`，每 50 迭代记录，数值与文本日志一致；验证指标每 `val_interval`（正式协议为 1000 迭代）记录一次。WWTP 为前景 IoU、边界与拓扑指标，公开集为 mIoU/mDice/mFscore，与 `save_best` 选择依据一致，因此最优 checkpoint 就是曲线峰值处。
+- **Images**：默认关闭。mmseg 1.x 的 `SegVisualizationHook` 默认 `draw=False`，只打一条 warning 就返回，验证期不绘图、也不生成 `vis_image/`。需要时显式打开：`tools/train.py <config> --cfg-options default_hooks.visualization.draw=True`（`scripts/run_experiments.py` 同样透传 `--cfg-options`），打开后每 `interval`（默认 50）个验证样本画一张叠加了预测与真值的 1024 原分辨率图，同时写入 TensorBoard 与 `vis_data/vis_image/`。
+- **Text**：本次运行的完整配置，便于核对训练协议。
+
+`--logdir work_dirs` 按目录递归分组，run 名就是相对路径（含末尾的 `vis_data`），可直接叠加多个模型或消融曲线；`tools/test.py` 的评估目录（`<work_dir>/eval/<时间戳>/vis_data`）同样会写事件文件，但只含配置文本、没有曲线。TensorBoard 只读取已记录的数值，不参与训练，不改变优化器、调度器、数据增强或评测协议。首次使用要先装上 tensorboard——镜像重新 `docker compose build`，conda 环境 `pip install tensorboard==2.14.1`——否则 `TensorboardVisBackend` 会在运行时初始化失败，训练和测试启动时直接抛 `ImportError`，不会退化成只写本地日志。
+
 ## RPGV
 
 RPGV的结构开关、损失和初始化规则继续保留。v1/v2阶段配置使用相同1024 WWTP根目录与整图增强；v3锚点初始化和v5.1权重迁移仍需原初始化工具。**v1–v5.1保留历史阶段/迁移协议，不纳入当前七基线+v6的统一策略正式对比**；`configs/rpgv/v5/controls/` 仅是历史等预算对照，不能把“等预算”当成“相同训练策略”。v6及其五个消融直接复用公共正式协议，不需要额外阶段训练。
@@ -172,6 +209,28 @@ docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v6.py \
 ```
 
 默认从 ImageNet RGB 骨干初始化联合训练，仍为1024整图、batch2×累积4、5,000次优化器更新；启用激活重计算，SDF目标在训练数据worker生成。新目录为 `work_dirs/rpgv_v6_siglip_1m`。**旧 InfoNCE v6、历史 v6/v5.1 完整权重不能直接 resume 本版 SigLIP 目标**，新增 `logit_bias` 参数且优化器参数集合改变，只恢复本版相同配置的checkpoint。除 `no_contrastive.py` / `rgb_only.py` 外，还提供 `encoder_fusion.py`、`legacy_contour.py`、`cluster32.py` 单因素消融。训练方式、WSL GPU启动替代命令、性能实测及已知限制见 [v6 设计说明](docs/rpgv_v6_design.md)。
+
+### RPGV v7
+
+v7 沿用统一外部训练策略，添加独立的“几何基元—空间关系—局部组合”结构路径：固定 64 个几何软节点（不平坦节点被筛掉），两层 128 维、4 头关系注意力，三层对比监督（区域、关系、组合）与结构扰动排序损失，结构图残差在 F16/F8 反馈到分割解码；F4 仍由 v6 几何与轮廓残差负责细节。GT 不参与构图或扰动；v6 checkpoint 不能 resume 完整 v7。保留辅助 SDF、边界带、校正正则；新损失按有效节点/边/组合归一化，并在日志记录有效样本数、负例数与组合分差，不进入总损失。
+
+v7 消融（仅 WWTP）：`rgb_only.py`、`no_contrastive.py`、`no_relational_supervision.py`、`no_edges.py`、`no_perturbation.py`、`no_feedback.py`、`fixed_grid.py`、`rgb_capacity.py`。统一协议与基线相同；其中 `rgb_only` 与 `rgb_capacity` 不加载伪几何。公开集支持七基线和完整 v7。
+
+```bash
+python scripts/run_experiments.py train-test --dataset wwtp --suite v7-all --dry-run
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset wwtp --suite v7
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset wwtp --suite v7-ablations
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset loveda --suite v7
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset uavid --suite v7
+docker compose run --rm wwtp bash scripts/rpgv/train_rpgv_v7.sh
+docker compose run --rm wwtp python -m unittest tests.rpgv.test_rpgv_v7 \
+  tests.rpgv.test_rpgv_v6 tests.test_run_experiments tests.test_experiment_protocol -v
+docker compose run --rm wwtp python tests/smoke_runner.py --config configs/rpgv/v7/rpgv_v7.py --device cpu
+docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v7.py \
+  --output work_dirs/profiles/v7_train.json
+```
+
+结构路径使用的相对伪深度由现有 `Depth Anything` 离线生成，本身含额外预训练先验；不把它当作真实三维信息。设计、损失公式、扰动判据、消融含义、合成诊断与已知限制见 [v7 设计说明](docs/rpgv_v7_design.md)。
 
 ## 小规模验证
 

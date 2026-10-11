@@ -12,6 +12,7 @@ import torch
 from PIL import Image
 from mmengine.config import Config
 from mmengine.optim import build_optim_wrapper
+from mmengine.visualization import Visualizer
 from mmseg.registry import DATASETS, MODELS, TRANSFORMS
 from mmseg.utils import register_all_modules
 
@@ -167,6 +168,27 @@ class ProtocolTest(unittest.TestCase):
                     cfg = Config.fromfile(path)
                     self.assertEqual(cfg.model.data_preprocessor.size, (1024, 1024))
                     self.assertNotIn('Potsdam', cfg.train_dataloader.dataset.type)
+
+    def test_every_retained_config_enables_both_vis_backends(self):
+        for directory in ('wwtp', 'uavid', 'loveda', 'rpgv'):
+            for path in (ROOT / 'configs' / directory).rglob('*.py'):
+                with self.subTest(config=str(path)):
+                    backends = {backend['type'] for backend in Config.fromfile(path).vis_backends}
+                    self.assertIn('TensorboardVisBackend', backends)
+                    self.assertIn('LocalVisBackend', backends)
+
+    def test_tensorboard_backend_writes_an_event_file(self):
+        """Declaring the backend is not enough: it must build a writer and write."""
+        cfg = Config.fromfile(ROOT / 'configs' / '_base_/default_runtime.py')
+        with tempfile.TemporaryDirectory() as directory:
+            visualizer = Visualizer(
+                name='tensorboard-probe', save_dir=directory, vis_backends=cfg.vis_backends)
+            visualizer.add_scalars({'loss': 1.0}, step=1)
+            visualizer.close()
+            events = list(Path(directory).rglob('events.out.tfevents.*'))
+        self.assertTrue(
+            events,
+            'TensorboardVisBackend wrote no event file; tensorboard is missing from the image.')
 
     def test_binary_and_multiclass_pipeline_label_ids(self):
         with tempfile.TemporaryDirectory() as directory:

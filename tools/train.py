@@ -7,6 +7,7 @@ import torch
 from mmengine.config import Config, DictAction
 from mmengine.runner import Runner
 from wwtpseg.engine.runtime import prepare_runtime
+from wwtpseg.engine.tensorboard_service import start_tensorboard_service
 
 
 def main():
@@ -19,6 +20,12 @@ def main():
     parser.add_argument('--disable-early-stopping', action='store_true')
     parser.add_argument('--no-pretrained', action='store_true', help='offline/debug initialization')
     parser.add_argument('--amp-dtype', choices=('float16', 'bfloat16'), help='dtype of an existing AMP wrapper')
+    parser.add_argument('--no-tensorboard', action='store_true',
+                        help='do not start the TensorBoard service for this run')
+    parser.add_argument('--tensorboard-port', type=int, default=6006,
+                        help='port of the auto-started TensorBoard service')
+    parser.add_argument('--tensorboard-logdir',
+                        help='directory the auto-started TensorBoard watches (default: work-dir root)')
     parser.add_argument('--cfg-options', nargs='+', action=DictAction)
     args = parser.parse_args()
     os.environ.setdefault('LOCAL_RANK', str(args.local_rank))
@@ -47,7 +54,11 @@ def main():
         if args.amp_dtype == 'bfloat16':
             cfg.optim_wrapper.loss_scale = 1.0
     prepare_runtime(cfg, no_pretrained=args.no_pretrained)
-    Runner.from_cfg(cfg).train()
+    runner = Runner.from_cfg(cfg)
+    if not args.no_tensorboard:
+        start_tensorboard_service(cfg.work_dir, port=args.tensorboard_port,
+                                  logdir=args.tensorboard_logdir)
+    runner.train()
 
 
 if __name__ == '__main__':

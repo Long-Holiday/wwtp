@@ -1,4 +1,6 @@
 -r core.txt
+# Serves the event files written by MMEngine's TensorboardVisBackend.
+tensorboard==2.14.1
 mmsegmentation==1.2.2
 mmdet==3.3.0
 scipy==1.11.4
