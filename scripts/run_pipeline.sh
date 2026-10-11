@@ -19,6 +19,8 @@ fi
 
 export WWTP_DATA_ROOT="${WWTP_DATA_ROOT:-/root/autodl-fs/wwtp_semantic_dataset_1024}"
 export WWTP_PSEUDO_ROOT="${WWTP_PSEUDO_ROOT:-$WWTP_DATA_ROOT/pseudo_geometry}"
+export WWTP_NUM_WORKERS="${WWTP_NUM_WORKERS:-8}"
+export WWTP_VAL_NUM_WORKERS="${WWTP_VAL_NUM_WORKERS:-4}"
 export PYTHONUNBUFFERED=1
 
 mkdir -p logs
