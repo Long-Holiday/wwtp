@@ -5,12 +5,4 @@ _base_ = [
     '../_base_/default_runtime.py',
 ]
 
-optim_wrapper = dict(
-    paramwise_cfg=dict(
-        custom_keys=dict(
-            norm=dict(decay_mult=0.0),
-            pos_block=dict(decay_mult=0.0),
-            head=dict(lr_mult=10.0)),
-        norm_decay_mult=0.0))
-
 work_dir = 'work_dirs/wwtp/segformer'

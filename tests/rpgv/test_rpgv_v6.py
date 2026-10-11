@@ -17,6 +17,7 @@ from torch import nn
 from torch.nn import functional as F
 
 import wwtpseg  # noqa: F401
+from wwtpseg.models.segmentors.multiclass import RPGVRemoteSensingV6
 from wwtpseg.models.utils.rpgv_v6_decoder import ResidualContourHeadV6, SpatialGeometryDecoderV6
 from wwtpseg.models.utils.rpgv_v6_modules import (
     DeformableDepthRectifierV6,
@@ -175,8 +176,8 @@ class V6ModuleTests(unittest.TestCase):
         outputs = module(features, features, quality, quality)
         self.assertFalse(outputs['valid_regions'].any())
 
-    def test_bidirectional_infonce_matches_reference(self):
-        module = RegionContrastiveLossV6(4, 4, temperature=0.2)
+    def test_siglip_matches_reference(self):
+        module = RegionContrastiveLossV6(4, 4, temperature=0.2, logit_bias=-1.5)
         module.geometry_projection = nn.Identity()
         module.rgb_projection = nn.Identity()
         geometry = torch.randn(2, 3, 4, requires_grad=True)
@@ -184,13 +185,13 @@ class V6ModuleTests(unittest.TestCase):
         valid = torch.tensor([[True, False, True], [True, True, False]])
         geo = F.normalize(geometry[valid], dim=-1)
         appearance = F.normalize(rgb[valid], dim=-1)
-        logits = geo @ appearance.T / 0.2
-        labels = torch.arange(4)
-        expected = 0.5 * (F.cross_entropy(logits, labels) + F.cross_entropy(logits.T, labels))
+        logits = geo @ appearance.T / 0.2 - 1.5
+        labels = torch.eye(4)
+        expected = F.binary_cross_entropy_with_logits(logits, labels, reduction='sum') / 4
         actual = module(geometry, rgb, valid)
         torch.testing.assert_close(actual, expected)
         actual.backward()
-        for grad in (geometry.grad, rgb.grad, module.logit_scale.grad):
+        for grad in (geometry.grad, rgb.grad, module.logit_scale.grad, module.logit_bias.grad):
             self.assertTrue(torch.isfinite(grad).all())
             self.assertGreater(grad.abs().sum().item(), 0)
         self.assertEqual(geometry.grad[~valid].abs().sum().item(), 0)
@@ -206,18 +207,83 @@ class V6ModuleTests(unittest.TestCase):
         shuffled = module(features, features.roll(1, dims=1), valid)
         self.assertLess(paired.item(), shuffled.item())
 
-    def test_insufficient_pairs_return_attached_zero(self):
-        for count in (0, 1):
-            module = RegionContrastiveLossV6(8)
-            geometry = torch.randn(1, 4, 8, requires_grad=True)
-            rgb = torch.randn(1, 4, 8, requires_grad=True)
-            valid = torch.arange(4).unsqueeze(0) < count
-            loss = module(geometry, rgb, valid)
-            self.assertEqual(loss.item(), 0)
+    def test_no_pairs_return_attached_zero(self):
+        module = RegionContrastiveLossV6(8)
+        geometry = torch.randn(1, 4, 8, requires_grad=True)
+        rgb = torch.randn(1, 4, 8, requires_grad=True)
+        valid = torch.zeros(1, 4, dtype=torch.bool)
+        loss = module(geometry, rgb, valid)
+        self.assertEqual(loss.item(), 0)
+        loss.backward()
+        for parameter in list(module.parameters()) + [geometry, rgb]:
+            self.assertIsNotNone(parameter.grad)
+            self.assertTrue(torch.isfinite(parameter.grad).all())
+            self.assertEqual(parameter.grad.abs().sum().item(), 0)
+
+    def test_single_pair_has_positive_loss_and_gradients(self):
+        torch.manual_seed(13)
+        module = RegionContrastiveLossV6(8)
+        geometry = torch.randn(1, 4, 8, requires_grad=True)
+        rgb = torch.randn(1, 4, 8, requires_grad=True)
+        valid = torch.tensor([[False, False, True, False]])
+        geo = F.normalize(module.geometry_projection(geometry[valid]), dim=-1)
+        appearance = F.normalize(module.rgb_projection(rgb[valid]), dim=-1)
+        logit = (geo * appearance).sum() * module.logit_scale.exp() + module.logit_bias
+        expected = F.binary_cross_entropy_with_logits(logit, torch.ones_like(logit))
+        loss = module(geometry, rgb, valid)
+        torch.testing.assert_close(loss, expected)
+        self.assertGreater(loss.item(), 0)
+        loss.backward()
+        for parameter in list(module.parameters()) + [geometry, rgb]:
+            self.assertIsNotNone(parameter.grad)
+            self.assertTrue(torch.isfinite(parameter.grad).all())
+            self.assertGreater(parameter.grad.abs().sum().item(), 0)
+        self.assertEqual(geometry.grad[~valid].abs().sum().item(), 0)
+        self.assertEqual(rgb.grad[~valid].abs().sum().item(), 0)
+
+    def test_siglip_initialization_and_finite_bias(self):
+        module = RegionContrastiveLossV6(8)
+        torch.testing.assert_close(module.logit_scale.exp(), torch.tensor(10.0))
+        self.assertEqual(module.logit_bias.item(), -10)
+        for bias in (float('nan'), float('inf'), -float('inf')):
+            with self.assertRaises(ValueError):
+                RegionContrastiveLossV6(8, logit_bias=bias)
+
+    def test_siglip_large_bias_is_stable(self):
+        for bias in (-1000.0, 1000.0):
+            module = RegionContrastiveLossV6(8, logit_bias=bias)
+            geometry = torch.randn(1, 3, 8, requires_grad=True)
+            rgb = torch.randn(1, 3, 8, requires_grad=True)
+            loss = module(geometry, rgb, torch.ones(1, 3, dtype=torch.bool))
+            self.assertTrue(torch.isfinite(loss))
             loss.backward()
             for parameter in list(module.parameters()) + [geometry, rgb]:
                 self.assertIsNotNone(parameter.grad)
                 self.assertTrue(torch.isfinite(parameter.grad).all())
+
+    def test_siglip_cpu_autocast_matches_fp32(self):
+        module = RegionContrastiveLossV6(8)
+        geometry, rgb = torch.randn(2, 4, 8), torch.randn(2, 4, 8)
+        valid = torch.tensor([[True, False, True, False], [True, True, False, False]])
+        reference = module(geometry, rgb, valid)
+        with torch.autocast('cpu', dtype=torch.bfloat16):
+            loss = module(geometry, rgb, valid)
+        self.assertEqual(loss.dtype, torch.float32)
+        torch.testing.assert_close(loss, reference)
+
+    def test_siglip_scale_preserves_existing_bounds(self):
+        module = RegionContrastiveLossV6(4, 4, logit_bias=0.0)
+        module.geometry_projection = nn.Identity()
+        module.rgb_projection = nn.Identity()
+        features = torch.eye(4).unsqueeze(0)
+        valid = torch.ones(1, 4, dtype=torch.bool)
+        for raw_scale, expected_scale in ((-2.0, 1.0), (10.0, 100.0)):
+            with torch.no_grad():
+                module.logit_scale.fill_(raw_scale)
+            logits = torch.eye(4) * expected_scale
+            expected = F.binary_cross_entropy_with_logits(
+                logits, torch.eye(4), reduction='sum') / 4
+            torch.testing.assert_close(module(features, features, valid), expected)
 
     def test_contrastive_ignores_invalid_regions(self):
         module = RegionContrastiveLossV6(8)
@@ -390,8 +456,12 @@ class V6ConfigTests(unittest.TestCase):
             self.assertEqual(config.train_cfg.max_iters, 20000)
             self.assertIsNone(config.load_from)
             self.assertFalse(config.resume)
+            expected_dir = ('work_dirs/rpgv_v6_siglip_1m' if variant == 'rpgv_v6'
+                            else f'work_dirs/rpgv_v6_siglip_{variant}_1m')
+            self.assertEqual(config.work_dir, expected_dir)
             self.assertNotIn('required_previous_stage', config)
-            self.assertEqual(config.optim_wrapper.paramwise_cfg.custom_keys.logit_scale.decay_mult, 0)
+            self.assertEqual(config.optim_wrapper.type, 'OptimWrapper')
+            self.assertEqual(config.optim_wrapper.paramwise_cfg, dict(norm_decay_mult=0.0))
             for split in ('train', 'val', 'test'):
                 steps = config[f'{split}_dataloader'].dataset.pipeline
                 names = [step['type'] for step in steps]
@@ -404,6 +474,12 @@ class V6ConfigTests(unittest.TestCase):
             self.assertEqual(model.use_geometry, variant != 'rgb_only')
             self.assertEqual(hasattr(model, 'region_contrastive'),
                              variant not in {'rgb_only', 'no_contrastive'})
+            self.assertEqual(config.model.contrastive_temperature, 0.1)
+            self.assertEqual(config.model.contrastive_logit_bias, -10)
+            if hasattr(model, 'region_contrastive'):
+                for head in model.region_contrastive:
+                    torch.testing.assert_close(head.logit_scale.exp(), torch.tensor(10.0))
+                    self.assertEqual(head.logit_bias.item(), -10)
             self.assertEqual(config.model.geometry_dropout_prob, 0)
             self.assertEqual(config.model.rgb_encoder.type, 'MixVisionTransformerSDPA')
             self.assertTrue(config.model.rgb_encoder.with_cp)
@@ -438,7 +514,14 @@ class V6SegmentorTests(unittest.TestCase):
                     self.assertTrue(torch.isfinite(parameter.grad).all(), name)
             optimizer.step()
         replica = tiny_model()
-        replica.load_state_dict(copy.deepcopy(model.state_dict()), strict=True)
+        state = copy.deepcopy(model.state_dict())
+        old_state = {name: value for name, value in state.items()
+                     if not name.endswith('.logit_bias')}
+        with self.assertRaisesRegex(RuntimeError, 'logit_bias'):
+            replica.load_state_dict(old_state, strict=True)
+        replica.load_state_dict(state, strict=True)
+        for head, restored in zip(model.region_contrastive, replica.region_contrastive):
+            torch.testing.assert_close(restored.logit_bias, head.logit_bias)
         model.eval()
         replica.eval()
         with torch.no_grad():
@@ -609,6 +692,109 @@ class V6SegmentorTests(unittest.TestCase):
         for name, parameter in model.named_parameters():
             self.assertIsNotNone(parameter.grad, name)
             self.assertTrue(torch.isfinite(parameter.grad).all(), name)
+
+
+class V6MulticlassTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        torch.set_num_threads(2)
+        register_all_modules(init_default_scope=True)
+
+    def test_public_configs(self):
+        reference = Config.fromfile('configs/rpgv/v6/rpgv_v6.py')
+        for dataset, classes in (('uavid', 8), ('loveda', 7)):
+            cfg = Config.fromfile(f'configs/{dataset}/rpgv_v6.py')
+            self.assertEqual(cfg.model.type, 'RPGVRemoteSensingV6')
+            self.assertEqual(cfg.model.num_classes, classes)
+            for field in ('geometry_channels', 'cluster_cfg', 'attention_cfg',
+                          'fusion_location', 'contour_mode', 'fusion_scale',
+                          'contrastive_loss_weight', 'rectification_loss_weight'):
+                self.assertEqual(cfg.model[field], reference.model[field])
+            self.assertEqual(cfg.default_hooks.checkpoint.save_best, 'mIoU')
+            self.assertEqual(cfg.test_dataloader, cfg.val_dataloader)
+            self.assertEqual(cfg.predict_dataset.pipeline, cfg.predict_pipeline)
+            self.assertNotIn('LoadAnnotations', [s.type for s in cfg.predict_pipeline])
+            for pipeline in (cfg.train_pipeline, cfg.test_pipeline, cfg.predict_pipeline):
+                self.assertIn('LoadPseudoGeometry', [s.type for s in pipeline])
+                self.assertEqual(pipeline[-1].type, 'PackSegInputs')
+            cfg.model.rgb_encoder.init_cfg = None
+            model = MODELS.build(cfg.model)
+            self.assertIsInstance(model, RPGVRemoteSensingV6)
+            self.assertEqual(model.refiner.sdf_head.out_channels, classes)
+
+    def test_classes_losses_backward_and_reload(self):
+        for classes in (7, 8):
+            model = tiny_model(type='RPGVRemoteSensingV6', num_classes=classes)
+            inputs, samples = batch()
+            for sample in samples:
+                sample.gt_sem_seg.data[:, :, :32] = 0
+                sample.gt_sem_seg.data[:, :, 32:] = classes - 1
+                sample.gt_sem_seg.data[:, :4] = 255
+            target, valid = model._targets(samples, (64, 64), inputs.device)
+            self.assertEqual(target.max().item(), classes - 1)
+            self.assertFalse(valid[:, :, :4].any())
+            outputs = model._run_network(inputs)
+            for field in ('final_logits', 'coarse_logits', 'sdf', 'seg_logits'):
+                self.assertEqual(outputs[field].shape[1], classes)
+            losses = model.loss(inputs, samples)
+            self.assertTrue({'loss_final', 'loss_coarse', 'loss_sdf', 'loss_boundary_band',
+                             'loss_region_contrastive', 'loss_depth_rectification'} <= losses.keys())
+            self.assertGreater(losses['loss_boundary_band'].item(), 0)
+            self.assertTrue(torch.isfinite(objective(losses)))
+            objective(losses).backward()
+            for name, parameter in model.named_parameters():
+                self.assertIsNotNone(parameter.grad, name)
+                self.assertTrue(torch.isfinite(parameter.grad).all(), name)
+            replica = tiny_model(type='RPGVRemoteSensingV6', num_classes=classes)
+            replica.load_state_dict(model.state_dict(), strict=True)
+            model.eval()
+            replica.eval()
+            with torch.no_grad():
+                torch.testing.assert_close(model.encode_decode(inputs), replica.encode_decode(inputs))
+
+    def test_high_class_id_semantic_supervision(self):
+        model = tiny_model(type='RPGVRemoteSensingV6', num_classes=8)
+        target = torch.full((1, 1, 8, 8), 7, dtype=torch.long)
+        valid = torch.ones_like(target, dtype=torch.bool)
+        correct = torch.zeros(1, 8, 8, 8)
+        correct[:, 7] = 10
+        incorrect = torch.zeros_like(correct)
+        incorrect[:, 1] = 10
+        self.assertLess(model._cross_entropy(correct, target, valid).item(), 0.001)
+        self.assertGreater(model._cross_entropy(incorrect, target, valid).item(), 9)
+        self.assertEqual(model._boundary_band_loss(correct, target, valid).item(), 0)
+
+    def test_multiclass_ignore_and_uniform_labels(self):
+        for label in (255, 0, 6):
+            model = tiny_model(type='RPGVRemoteSensingV6', num_classes=7)
+            inputs, samples = batch(label=label)
+            losses = model.loss(inputs, samples)
+            self.assertTrue(torch.isfinite(objective(losses)))
+            self.assertEqual(losses['loss_boundary_band'].item(), 0)
+            if label == 255:
+                self.assertEqual(objective(losses).item(), 0)
+            objective(losses).backward()
+            for name, parameter in model.named_parameters():
+                self.assertIsNotNone(parameter.grad, name)
+                self.assertTrue(torch.isfinite(parameter.grad).all(), name)
+
+    def test_multiclass_fallback_whole_and_slide(self):
+        for classes in (7, 8):
+            model = tiny_model(type='RPGVRemoteSensingV6', num_classes=classes).eval()
+            inputs, samples = batch((80, 83), batch_size=1)
+            inputs[:, 4] = 0
+            with torch.no_grad():
+                expected = model._run_rgb_branch(inputs)['seg_logits']
+                for value in (inputs, inputs[:, :3]):
+                    self.assertTrue(torch.equal(model._run_network(value)['seg_logits'], expected))
+                self.assertEqual(tuple(model.encode_decode(inputs).shape), (1, classes, 80, 83))
+                model.test_cfg = dict(mode='slide', crop_size=(64, 64), stride=(48, 48))
+                logits = model.inference(inputs, [s.metainfo for s in samples])
+                self.assertEqual(tuple(logits.shape), (1, classes, 80, 83))
+                self.assertTrue(torch.isfinite(logits).all())
+                result = model.predict(inputs, samples)[0]
+                self.assertEqual(tuple(result.pred_sem_seg.data.shape), (1, 80, 83))
+                self.assertLess(result.pred_sem_seg.data.max().item(), classes)
 
 
 if __name__ == '__main__':

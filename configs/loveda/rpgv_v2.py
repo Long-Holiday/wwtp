@@ -13,7 +13,6 @@ model = dict(
     data_preprocessor={{_base_.model.data_preprocessor}},
     decoder_channels=64, detail_channels=24, use_global_context=False,
     test_cfg=dict(mode='whole'))
-optim_wrapper = dict(paramwise_cfg=dict(custom_keys=dict(rgb_encoder=dict(lr_mult=0.1))))
 work_dir = 'work_dirs/loveda/rpgv_v2'
 pseudo_root = os.getenv('PUBLIC_PSEUDO_ROOT', os.path.join(_base_.data_root, 'pseudo_geometry'))
 train_pipeline = [

@@ -82,22 +82,24 @@ class _DepthwiseResidualV6(nn.Module):
 class ResidualContourHeadV6(nn.Module):
     """SDF is auxiliary; an unrestricted learned logit residual refines the mask."""
 
-    def __init__(self, decoder_channels=64, channels=24, use_contour=True, use_sdf=True):
+    def __init__(self, decoder_channels=64, channels=24, use_contour=True, use_sdf=True,
+                 num_classes=1):
         super().__init__()
         self.use_contour = bool(use_contour)
         self.use_sdf = bool(use_sdf)
-        self.coarse_head = nn.Conv2d(decoder_channels, 1, 1)
+        self.num_classes = num_classes
+        self.coarse_head = nn.Conv2d(decoder_channels, num_classes, 1)
         if self.use_contour or self.use_sdf:
             self.rgb_stem = nn.Sequential(_conv_block(3, channels), _DepthwiseResidualV6(channels))
             self.semantic_projection = _conv_block(decoder_channels, channels, kernel_size=1)
             self.contour = nn.Sequential(
-                _conv_block(2 * channels + 1, channels, kernel_size=1), _DepthwiseResidualV6(channels))
+                _conv_block(2 * channels + num_classes, channels, kernel_size=1), _DepthwiseResidualV6(channels))
         if self.use_sdf:
-            self.sdf_head = nn.Conv2d(channels, 1, 1)
+            self.sdf_head = nn.Conv2d(channels, num_classes, 1)
             nn.init.normal_(self.sdf_head.weight, std=1e-3)
             nn.init.zeros_(self.sdf_head.bias)
         if self.use_contour:
-            self.correction_head = nn.Conv2d(channels, 1, 1)
+            self.correction_head = nn.Conv2d(channels, num_classes, 1)
             nn.init.normal_(self.correction_head.weight, std=1e-3)
             nn.init.zeros_(self.correction_head.bias)
 
@@ -109,7 +111,8 @@ class ResidualContourHeadV6(nn.Module):
             detail = self.rgb_stem(F.avg_pool2d(rgb, 2, stride=2, ceil_mode=True))
             semantic = F.interpolate(self.semantic_projection(feature), size=size,
                                      mode='bilinear', align_corners=False)
-            hidden = self.contour(torch.cat((detail, semantic, base.sigmoid()), dim=1).contiguous())
+            probability = base.sigmoid() if self.num_classes == 1 else base.softmax(dim=1)
+            hidden = self.contour(torch.cat((detail, semantic, probability), dim=1).contiguous())
         sdf = (self.sdf_head(hidden) if self.use_sdf else torch.zeros_like(base))
         correction = (self.correction_head(hidden).float() if self.use_contour
                       else torch.zeros_like(base, dtype=torch.float32))

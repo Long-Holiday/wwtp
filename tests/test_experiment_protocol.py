@@ -1,20 +1,25 @@
 """Configuration, label semantics, and official split leakage regression tests."""
 import copy
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
+import torch
 from PIL import Image
 from mmengine.config import Config
-from mmseg.registry import DATASETS, TRANSFORMS
+from mmengine.optim import build_optim_wrapper
+from mmseg.registry import DATASETS, MODELS, TRANSFORMS
 from mmseg.utils import register_all_modules
 
 import wwtpseg  # noqa: F401
 from tools.data.prepare_public import OFFICIAL_COUNTS, UAVID_COLORS, inventory, prepare, uavid_label_ids, _save_tiles
 from tools.evaluation.predict_public import submission_mask
 from wwtpseg.datasets.public_protocol import OFFICIAL_COUNTS as RUNTIME_COUNTS, validate_prepared
+from wwtpseg.engine.runtime import disable_pretraining
 from wwtpseg.experiments import DATASETS as DATASET_NAMES, MAINSTREAM_MODELS, ROOT, experiment_config
 
 
@@ -56,6 +61,102 @@ class ProtocolTest(unittest.TestCase):
                             self.assertEqual(cfg.model.auxiliary_head.num_classes, classes)
                         if name == 'mask2former':
                             self.assertEqual(len(cfg.model.decode_head.loss_cls.class_weight), classes + 1)
+
+    def test_shared_training_strategy(self):
+        reference = Config.fromfile(experiment_config('wwtp', 'hrnet'))
+        self.assertEqual(reference.optim_wrapper, dict(
+            type='OptimWrapper', accumulative_counts=4,
+            optimizer=dict(type='AdamW', lr=6e-4, betas=(0.9, 0.999),
+                           eps=1e-8, weight_decay=0.01),
+            clip_grad=dict(max_norm=10.0, norm_type=2),
+            paramwise_cfg=dict(norm_decay_mult=0.0)))
+        self.assertEqual(reference.param_scheduler, [
+            dict(type='LinearLR', start_factor=1e-6, by_epoch=False, begin=0, end=1000),
+            dict(type='PolyLR', eta_min=0.0, power=0.9, by_epoch=False, begin=1000, end=20000),
+        ])
+        paths = [experiment_config(dataset, name)
+                 for dataset in DATASET_NAMES for name in MAINSTREAM_MODELS]
+        paths += list((ROOT / 'configs/rpgv/v6').glob('*.py'))
+        paths += [ROOT / 'configs' / dataset / f'rpgv_{variant}.py'
+                  for dataset in ('uavid', 'loveda') for variant in ('rgb', 'full', 'v2', 'v6')]
+        self.assertEqual(reference.randomness, dict(seed=42, deterministic=False))
+        shared_fields = ('optim_wrapper', 'param_scheduler', 'train_cfg',
+                         'auto_scale_lr', 'randomness', 'env_cfg')
+        for path in paths:
+            with self.subTest(config=str(path)):
+                cfg = Config.fromfile(path)
+                self.assertTrue(cfg.pretty_text)
+                for field in shared_fields:
+                    self.assertEqual(cfg[field], reference[field], field)
+                self.assertEqual(cfg.auto_scale_lr, dict(enable=False, base_batch_size=8))
+                self.assertFalse(cfg.enable_early_stopping)
+                self.assertFalse(any(hook['type'] in ('EarlyStoppingHook', 'RPGVEarlyStoppingHook')
+                                     for hook in cfg.get('custom_hooks', [])))
+                self.assertIsNone(cfg.load_from)
+                self.assertFalse(cfg.resume)
+                self.assertNotIn('required_previous_stage', cfg)
+                for field in ('batch_size', 'num_workers', 'persistent_workers', 'pin_memory', 'sampler'):
+                    self.assertEqual(cfg.train_dataloader[field], reference.train_dataloader[field], field)
+                rgb_steps = [step for step in cfg.train_dataloader.dataset.pipeline
+                             if step['type'] not in ('LoadPseudoGeometry', 'PackSegInputs', 'PackRPGVContourInputs')]
+                self.assertEqual(rgb_steps, reference.train_dataloader.dataset.pipeline[:-1])
+                checkpoint = cfg.default_hooks.checkpoint
+                self.assertEqual(checkpoint.interval, 1000)
+                self.assertFalse(checkpoint.by_epoch)
+                self.assertEqual(checkpoint.max_keep_ckpts, 3)
+                self.assertEqual(checkpoint.rule, 'greater')
+                dataset = 'wwtp' if 'rpgv/v6' in str(path) else Path(path).parent.name
+                self.assertEqual(checkpoint.save_best, 'binary/Foreground_IoU' if dataset == 'wwtp' else 'mIoU')
+
+    def test_optimizer_parameter_groups(self):
+        paths = [experiment_config('wwtp', name) for name in MAINSTREAM_MODELS]
+        paths.append(ROOT / 'configs/rpgv/v6/rpgv_v6.py')
+        norm_types = (torch.nn.modules.batchnorm._BatchNorm,
+                      torch.nn.modules.instancenorm._InstanceNorm,
+                      torch.nn.GroupNorm, torch.nn.LayerNorm)
+        for path in paths:
+            with self.subTest(config=str(path)):
+                cfg = Config.fromfile(path)
+                disable_pretraining(cfg.model)
+                model = MODELS.build(cfg.model)
+                norms = {id(param) for module in model.modules() if isinstance(module, norm_types)
+                         for param in module.parameters(recurse=False)}
+                wrapper = build_optim_wrapper(model, cfg.optim_wrapper)
+                self.assertEqual(wrapper.__class__.__name__, 'OptimWrapper')
+                covered = set()
+                for group in wrapper.optimizer.param_groups:
+                    self.assertEqual(group['lr'], 6e-4)
+                    for param in group['params']:
+                        covered.add(id(param))
+                        self.assertEqual(group['weight_decay'], 0.0 if id(param) in norms else 0.01)
+                self.assertEqual(covered, {id(param) for param in model.parameters()})
+                del wrapper, model
+
+    def test_four_microsteps_per_update(self):
+        cfg = Config.fromfile(experiment_config('wwtp', 'hrnet'))
+        model = torch.nn.Linear(2, 1)
+        wrapper = build_optim_wrapper(model, cfg.optim_wrapper)
+        wrapper.initialize_count_status(model, 0, 4)
+        initial = [param.detach().clone() for param in model.parameters()]
+        for step in range(4):
+            loss = (model(torch.ones(2, 2)) - 10).square().mean()
+            wrapper.update_params(loss)
+            changed = [not torch.equal(param.detach(), before)
+                       for param, before in zip(model.parameters(), initial)]
+            self.assertEqual(any(changed), step == 3)
+
+    def test_wwtp_data_root_precedence(self):
+        with patch.dict(os.environ, {'WWTP_DATA_ROOT': '/shared/wwtp',
+                                     'WWTP_V5_DATA_ROOT': '/legacy/wwtp'}):
+            os.environ.pop('WWTP_PSEUDO_ROOT', None)
+            for path in (experiment_config('wwtp', 'hrnet'), ROOT / 'configs/rpgv/v6/rpgv_v6.py'):
+                cfg = Config.fromfile(path)
+                self.assertEqual(cfg.data_root, '/shared/wwtp')
+                for split in ('train', 'val', 'test'):
+                    self.assertEqual(cfg[f'{split}_dataloader'].dataset.data_root, cfg.data_root)
+                    for step in cfg[f'{split}_dataloader'].dataset.pipeline:
+                        if step['type'] == 'LoadPseudoGeometry':
+                            self.assertEqual(step['pseudo_root'], '/shared/wwtp/pseudo_geometry')
 
     def test_every_retained_config_resolves(self):
         for directory in ('wwtp', 'uavid', 'loveda', 'rpgv'):

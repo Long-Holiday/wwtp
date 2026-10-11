@@ -13,10 +13,11 @@
 - 轮廓头分别预测辅助 SDF 和**无固定幅度限制的 logit 残差**。
 - 高低频融合增益可学习，默认不随机关闭几何样本。
 - SDF 目标在训练数据 worker 中生成，正常固定尺寸训练不再每步同步到 CPU 做 EDT。
+- 区域对齐由 CLIP-style 对称 InfoNCE 改为 SigLIP-style sigmoid 配对损失。
 
-这是 WWTP 二分类模型，不是 UAVid/LoveDA 的原生多分类实现；不加载 CLIP 权重或文本编码器。
+这是 WWTP 二分类模型，不是 UAVid/LoveDA 的原生多分类实现；不加载 CLIP/SigLIP 权重或文本编码器。
 
-**旧 v6、v5/v5.1 的完整 checkpoint 不能直接作为本版 resume。** 投影、轮廓头和部分参数定义已改变；默认从 ImageNet MiT-B2 初始化新的联合训练。`--resume` 仅用于本版相同配置的 checkpoint，不做隐藏权重转换。SDPA 骨干保留原 MiT 参数键和形状，ImageNet 初始化路径不变。
+**旧 InfoNCE v6、历史 v6、v5/v5.1 的完整 checkpoint 不能直接作为本版 resume。** SigLIP 目标新增 `region_contrastive.{0,1}.logit_bias` 参数，优化器参数集合也改变；历史投影、轮廓头和部分参数定义已有变化。默认从 ImageNet MiT-B2 初始化新的联合训练。`--resume` 仅用于本版相同配置的 checkpoint，不做隐藏权重转换。SDPA 骨干保留原 MiT 参数键和形状，ImageNet 初始化路径不变。
 
 关键文件：
 
@@ -106,7 +107,7 @@ high = T - low
 - 初始原型为 4×4，小输入自动缩小。
 - 用 `assignment × Q` 聚合原型。
 - 分割细节保留局部特征，并融合所有有 Q 支持的区域上下文。
-- **不使用 InfoNCE 的有效性 mask 关闭分割 detail。** Q=.2/.34 即使没有有效对比区域，分割损失仍能训练高频编码器。
+- **不使用 SigLIP 对比的有效性 mask 关闭分割 detail。** Q=.2/.34 即使没有有效对比区域，分割损失仍能训练高频编码器。
 
 对比有效性判定仍用于选择有意义的配对，不控制分割支路：
 
@@ -149,11 +150,13 @@ delta 不受熵门控、SDF tanh 或固定 `max_logit_correction` 限制，因�
 | `loss_coarse` | 0.3 × coarse BCE/Dice |
 | `loss_sdf` | 0.1 × contour-weighted Smooth L1 |
 | `loss_boundary_band` | 0.05 × GT边界带平衡BCE |
-| `loss_region_contrastive` | 0.05 × 两尺度对称InfoNCE均值 |
+| `loss_region_contrastive` | 0.05 × 两尺度SigLIP sigmoid均值 |
 | `loss_depth_rectification` | 0.01 × Q加权归一化校正/偏移平方 |
 | `region_valid_count` | 日志指标，不加入总损失 |
 
-区域 InfoNCE 的两个投影头是 `Linear → LayerNorm → tanh-GELU → Linear`，64维、L2归一化、初始温度0.07。可学习相似度尺度保留既有 `[1,100]` 数值范围。使用固定候选数的掩码对称CE，不再按 GPU count 走 Python 分支；不足2对时返回连接两侧头与参数的零损失。
+区域对齐采用 SigLIP-style sigmoid 目标，不加载 SigLIP 权重或文本塔。两个投影头保持 `Linear → LayerNorm → tanh-GELU → Linear`，64维、L2归一化；初始温度0.1（相似度尺度10）、可学习偏置 `logit_bias=-10`。尺度沿用既有 `[1,100]` 数值范围，偏置不做截断。
+
+令 `s_ij = scale × cosine(g_i, r_j) + bias`，同区域对角项 `y_ij=+1`，其他有效区域配对 `y_ij=-1`。损失为有效配对的 `-logsigmoid(y_ij × s_ij)` 之和除以有效区域数 N（不是 N²），不使用双向softmax或额外平均。固定候选矩阵同时屏蔽无效行与列，FP32计算，投影前清除无效输入；没有有效区域时返回连接两侧头、尺度和偏置的零损失，单对有效区域仍通过正项学习。两尺度取均值后乘0.05；新旧目标量级不保证相等，本次不调整损失权重。
 
 负样本只来自当前 rank 的当前 microbatch。batch2、每图16区域时每尺度最多32对；累积4次不会扩大为128对。语义假负样本问题仍需真实数据验证，没有以增加负样本池作为默认“优化”。
 
@@ -169,10 +172,10 @@ delta 不受熵门控、SDF tanh 或固定 `max_logit_correction` 限制，因�
 
 - 1024整图、1m/px、既有正负样本比例；不新增crop/resize。
 - MiT-B2 ImageNet初始化，所有分支联合训练，不冻结RGB。
-- RGB骨干LR为0.1倍；batch2 × 累积4。
-- 20,000 microsteps = 5,000 optimizer updates，原warmup/poly调度不变。
+- 全模型共用 AdamW：LR=6e-4、weight decay=0.01、norm参数不衰减，不设置骨干/头部倍率；batch2 × 累积4。
+- 20,000 microsteps = 5,000 optimizer updates；前1000步 LinearLR 从1e-6倍升至基础LR，之后 PolyLR（power=0.9）。
 - `geometry_dropout_prob=0`；dropout仍可显式启用实验，不默认压制几何样本。
-- `branch_gains` 和 `logit_scale` 不做 weight decay。
+- 统一 FP32 OptimWrapper、L2梯度裁剪 max_norm=10，TF32设置与基线一致；`branch_gains`、`logit_scale` 和 `logit_bias` 按统一规则衰减。
 - `rgb_encoder.with_cp=True`，通过激活重计算适配低显存；大显存GPU可关闭，不改变训练目标。
 
 ## 6. 启动、消融与评估
@@ -193,10 +196,10 @@ docker compose run --rm wwtp bash scripts/rpgv/train_rpgv_v6.sh --resume
 
 # 使用训练时的同一份配置
 docker compose run --rm wwtp python tools/test.py configs/rpgv/v6/rpgv_v6.py \
-  work_dirs/rpgv_v6_optimized_1m/iter_20000.pth --split val
+  work_dirs/rpgv_v6_siglip_1m/iter_20000.pth --split val
 ```
 
-启动脚本支持 `RPGV_V6_CONFIG`、`RPGV_V6_WORK_ROOT`，仍不覆盖已有非resume目录。默认目录改为 `work_dirs/rpgv_v6_optimized_1m`。
+启动脚本支持 `RPGV_V6_CONFIG`、`RPGV_V6_WORK_ROOT`，仍不覆盖已有非resume目录。默认目录改为 `work_dirs/rpgv_v6_siglip_1m`。
 
 | 配置 | 单因素含义 |
 |---|---|
@@ -255,7 +258,9 @@ docker run --rm --device /dev/dxg -v /usr/lib/wsl:/usr/lib/wsl:ro \
 
 ## 8. 本次验证结果与局限
 
-在RTX3050 Laptop 4GB / WSL / PyTorch2.1.2上，随机初始化、合成数据、FP16、2步预热后3步测量：
+本版 SigLIP 目标已在 `wwtp-mmseg:torch2.1.2-cu121` 镜像中通过69项回归，包括通过WSL `/dev/dxg` 挂载执行的两项CUDA/FP16测试；合成数据的CPU生产训练、保存、评估和恢复通过。尚未进行真实数据集训练，不能据此判断精度提升。
+
+以下为旧 InfoNCE 目标在RTX3050 Laptop 4GB / WSL / PyTorch2.1.2上的历史性能记录：旧AMP训练协议下随机初始化、合成数据、FP16、2步预热后3步测量（不代表当前SigLIP目标与统一FP32协议的性能）：
 
 | 项目 | 平均耗时 | CUDA allocated峰值 |
 |---|---:|---:|

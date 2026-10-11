@@ -195,7 +195,7 @@ class SpatialGeometryClusteringV6(nn.Module):
     ) -> dict[str, torch.Tensor]:
         size = _bounded_size(geometry, self.max_cluster_size)
         grid = (min(self.grid_size, size[0]), min(self.grid_size, size[1]))
-        # Region selection is a measurement, not a trainable way to evade InfoNCE.
+        # Region selection is a measurement, not a trainable way to evade the contrastive objective.
         with torch.autocast(device_type=geometry.device.type, enabled=False):
             geo = F.adaptive_avg_pool2d(geometry.float(), size)
             appearance = F.adaptive_avg_pool2d(rgb.float(), size).flatten(2)
@@ -223,7 +223,7 @@ class SpatialGeometryClusteringV6(nn.Module):
                 centers = torch.bmm(features, pooling.transpose(1, 2))
                 positions = torch.bmm(coords, pooling.transpose(1, 2))
 
-            # InfoNCE aligns descriptors, rather than moving its own region assignments.
+            # The contrastive objective aligns descriptors, rather than moving its own region assignments.
             contrastive_pooling = pooling.detach().transpose(1, 2)
             geometry_prototypes = torch.bmm(features, contrastive_pooling).transpose(1, 2)
             rgb_prototypes = torch.bmm(appearance, contrastive_pooling).transpose(1, 2)
@@ -250,12 +250,15 @@ class SpatialGeometryClusteringV6(nn.Module):
 
 
 class RegionContrastiveLossV6(nn.Module):
-    """CLIP-style symmetric InfoNCE over reliable paired geometry/RGB regions."""
+    """SigLIP-style sigmoid alignment over reliable paired geometry/RGB regions."""
 
-    def __init__(self, channels: int, embed_dim: int = 64, temperature: float = 0.07):
+    def __init__(self, channels: int, embed_dim: int = 64, temperature: float = 0.1,
+                 logit_bias: float = -10.0):
         super().__init__()
         if channels < 1 or embed_dim < 1 or not 0.01 <= temperature <= 1:
             raise ValueError('invalid contrastive dimensions or temperature')
+        if not math.isfinite(logit_bias):
+            raise ValueError('logit_bias must be finite')
         self.geometry_projection = nn.Sequential(
             nn.Linear(channels, channels), nn.LayerNorm(channels), nn.GELU(approximate='tanh'),
             nn.Linear(channels, embed_dim),
@@ -265,6 +268,7 @@ class RegionContrastiveLossV6(nn.Module):
             nn.Linear(channels, embed_dim),
         )
         self.logit_scale = nn.Parameter(torch.tensor(math.log(1.0 / temperature)))
+        self.logit_bias = nn.Parameter(torch.tensor(float(logit_bias)))
 
     def forward(
         self,
@@ -283,18 +287,13 @@ class RegionContrastiveLossV6(nn.Module):
             rgb_embeddings = rgb_embeddings.flatten(0, 1)
             selected = valid.detach().flatten().bool()
             scale = self.logit_scale.clamp(0.0, math.log(100.0)).exp()
-            logits = scale * geometry_embeddings @ rgb_embeddings.transpose(0, 1)
-            targets = torch.arange(logits.shape[0], device=logits.device)
-            # Finite masking also defines the all-invalid case without a CPU
-            # count branch or a dynamically sized boolean-indexed tensor.
-            forward = F.cross_entropy(
-                logits.masked_fill(~selected.unsqueeze(0), -1e4), targets, reduction='none')
-            backward = F.cross_entropy(
-                logits.transpose(0, 1).masked_fill(~selected.unsqueeze(0), -1e4),
-                targets, reduction='none')
+            logits = scale * geometry_embeddings @ rgb_embeddings.transpose(0, 1) + self.logit_bias
+            positive = torch.eye(logits.shape[0], device=logits.device, dtype=torch.bool)
+            signed_logits = torch.where(positive, logits, -logits)
+            pair_valid = selected.unsqueeze(1) & selected.unsqueeze(0)
+            pair_loss = -F.logsigmoid(signed_logits)
             count = selected.float().sum()
-            loss = 0.5 * ((forward + backward) * selected.float()).sum() / count.clamp_min(1)
-            return loss * (count >= 2).float()
+            return (pair_loss * pair_valid).sum() / count.clamp_min(1)
 
 
 class LowFrequencyCrossAttentionV6(nn.Module):

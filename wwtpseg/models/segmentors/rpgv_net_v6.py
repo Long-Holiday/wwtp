@@ -38,7 +38,8 @@ class RPGVNetV6(RPGVNetV51):
                  frequency_cutoff=0.15, frequency_padding=8,
                  cluster_cfg=None, attention_cfg=None,
                  fusion_scale=0.1, contrastive_embed_dim=64,
-                 contrastive_temperature=0.07, contrastive_loss_weight=0.05,
+                 contrastive_temperature=0.1, contrastive_logit_bias=-10.0,
+                 contrastive_loss_weight=0.05,
                  rectification_loss_weight=0.01, fusion_location='decoder',
                  contour_mode='residual', **kwargs):
         if not 0 <= geometry_dropout_prob <= 1:
@@ -98,7 +99,8 @@ class RPGVNetV6(RPGVNetV51):
                     for r, g in zip(source_channels, self.geometry_channels)
                 ])
                 self.region_contrastive = nn.ModuleList([
-                    RegionContrastiveLossV6(g, contrastive_embed_dim, contrastive_temperature)
+                    RegionContrastiveLossV6(
+                        g, contrastive_embed_dim, contrastive_temperature, contrastive_logit_bias)
                     for g in self.geometry_channels
                 ])
 
@@ -139,10 +141,13 @@ class RPGVNetV6(RPGVNetV51):
         else:
             decoded = self.decoder(features)
         outputs = self.refiner(rgb, decoded)
-        outputs.update(seg_logits=self._two_class_logits(outputs['final_logits']),
+        outputs.update(seg_logits=self._segmentation_logits(outputs['final_logits']),
                        boundary_logits=None, lowres_boundary_logits=None,
                        geometry_v6=geometry_outputs)
         return outputs
+
+    def _segmentation_logits(self, logits):
+        return self._two_class_logits(logits)
 
     def loss(self, inputs, data_samples):
         target, valid = self._targets(data_samples, inputs.shape[-2:], inputs.device)
@@ -187,6 +192,11 @@ class RPGVNetV6(RPGVNetV51):
                                   mode='bilinear', align_corners=False)
             losses['loss_boundary_band'] = self.boundary_band_loss_weight * self._boundary_band_loss(
                 final, target, valid)
+        losses.update(self._v6_geometry_losses(outputs))
+        return losses
+
+    def _v6_geometry_losses(self, outputs):
+        losses = {}
         geometry = outputs.get('geometry_v6')
         if geometry is None:
             return losses

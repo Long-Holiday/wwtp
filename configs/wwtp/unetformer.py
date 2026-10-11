@@ -5,9 +5,4 @@ _base_ = [
     '../_base_/default_runtime.py',
 ]
 
-optim_wrapper = dict(
-    paramwise_cfg=dict(
-        custom_keys={'backbone.encoder': dict(lr_mult=0.1)},
-        norm_decay_mult=0.0))
-
 work_dir = 'work_dirs/wwtp/unetformer'

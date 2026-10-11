@@ -7,10 +7,4 @@ _base_ = [
 
 train_dataloader = dict(batch_size=2)
 
-optim_wrapper = dict(
-    paramwise_cfg=dict(
-        custom_keys={'backbone': dict(lr_mult=0.1)},
-        norm_decay_mult=0.0))
-
-
 work_dir = 'work_dirs/wwtp/deeplabv3plus'

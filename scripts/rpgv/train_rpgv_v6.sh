@@ -3,9 +3,9 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 config="${RPGV_V6_CONFIG:-configs/rpgv/v6/rpgv_v6.py}"
 variant="$(basename "$config" .py)"
-work_root="${RPGV_V6_WORK_ROOT:-work_dirs/rpgv_v6_optimized_${variant}_1m}"
+work_root="${RPGV_V6_WORK_ROOT:-work_dirs/rpgv_v6_siglip_${variant}_1m}"
 if [[ "$variant" == "rpgv_v6" ]] && [[ -z "${RPGV_V6_WORK_ROOT:-}" ]]; then
-  work_root="work_dirs/rpgv_v6_optimized_1m"
+  work_root="work_dirs/rpgv_v6_siglip_1m"
 fi
 resume=false
 for arg in "$@"; do
@@ -17,7 +17,7 @@ if [[ -e "$work_root" ]] && [[ "$resume" == false ]]; then
   echo "Refusing to overwrite $work_root. Use a new RPGV_V6_WORK_ROOT or --resume." >&2
   exit 1
 fi
-data_root="${WWTP_V5_DATA_ROOT:-${WWTP_DATA_ROOT:-wwtp_semantic_dataset_1m}}"
+data_root="${WWTP_DATA_ROOT:-${WWTP_V5_DATA_ROOT:-wwtp_semantic_dataset_1m}}"
 export WWTP_DATA_ROOT="$data_root"
 export WWTP_V5_DATA_ROOT="$data_root"
 export WWTP_PSEUDO_ROOT="$data_root/pseudo_geometry"

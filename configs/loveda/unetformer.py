@@ -7,9 +7,4 @@ _base_ = [
 
 model = dict(decode_head=dict(num_classes=7), auxiliary_head=dict(num_classes=7))
 
-optim_wrapper = dict(
-    paramwise_cfg=dict(
-        custom_keys={'backbone.encoder': dict(lr_mult=0.1)},
-        norm_decay_mult=0.0))
-
 work_dir = 'work_dirs/loveda/unetformer'

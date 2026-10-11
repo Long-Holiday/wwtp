@@ -5,14 +5,15 @@ from pathlib import Path
 import subprocess
 import sys
 
-from wwtpseg.experiments import DATASETS, MAINSTREAM_MODELS, ROOT, experiment_config
+from wwtpseg.experiments import DATASETS, MAINSTREAM_MODELS, OPTIONAL_MODELS, ROOT, experiment_config
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=('train', 'test'))
     parser.add_argument('--dataset', choices=DATASETS, default='wwtp')
-    parser.add_argument('--models', nargs='+', choices=MAINSTREAM_MODELS, default=MAINSTREAM_MODELS)
+    parser.add_argument('--models', nargs='+', choices=MAINSTREAM_MODELS + OPTIONAL_MODELS,
+                        default=MAINSTREAM_MODELS)
     parser.add_argument('--work-root', type=Path, default=Path('work_dirs'))
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--resume', action='store_true')

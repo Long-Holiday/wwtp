@@ -1,0 +1,367 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2380" viewBox="0 0 1800 2380" role="img" aria-labelledby="title desc">
+<title id="title">RPGV v6 模型结构：默认解码器几何融合与残差轮廓头</title>
+<desc id="desc">1024输入。RGB MiT-B2主干输出四尺度特征，64通道解码器在F8与F4注入几何。伪深度与可靠度经可变形校正及频带分解，高频空间聚类，低频跨模态注意力。几何与未融合RGB区域原型参与训练时对比学习。最终由粗分割加残差logit输出，SDF仅作辅助监督。</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="context-stroke"/></marker>
+</defs>
+<style>
+svg { background:#fcfcfb; }
+text { font-family:"Microsoft YaHei","Noto Sans CJK SC",sans-serif; fill:#0b0b0b; }
+.title { font-size:32px; font-weight:700; }
+.section { font-size:23px; font-weight:700; }
+.label { font-size:20px; font-weight:600; }
+.body { font-size:18px; }
+.small { font-size:16px; fill:#52514e; }
+.edge { fill:none; stroke-width:2; stroke-linejoin:round; marker-end:url(#arrow); }
+</style>
+<rect width="1800" height="2380" fill="#fcfcfb"/>
+<text x="60" y="55" class="title" text-anchor="start">RPGV v6 · 完整模型结构</text>
+<text x="60" y="89" class="body" text-anchor="start">默认配置：decoder 几何融合 / residual 轮廓头；以 1024×1024 输入为例，省略 batch 维度。</text>
+<rect x="65" y="111" width="18" height="7" rx="2" fill="#2a78d6"/>
+<text x="94" y="121" class="small" text-anchor="start">RGB 语义 / 解码路径</text>
+<rect x="425" y="111" width="18" height="7" rx="2" fill="#eb6834"/>
+<text x="454" y="121" class="small" text-anchor="start">深度几何路径</text>
+<rect x="760" y="111" width="18" height="7" rx="2" fill="#1baf7a"/>
+<text x="789" y="121" class="small" text-anchor="start">预测头 / 输出</text>
+<path d="M1100,115 L1150,115" class="edge" stroke="#52514e" stroke-dasharray="7 5"/>
+<polygon points="1150,115 1140,110 1140,120" fill="#52514e"/>
+<text x="1165" y="121" class="small" text-anchor="start">虚线：训练辅助支路 / 损失；实线：前向特征流</text>
+<rect x="60" y="145" width="460" height="950" rx="18" fill="#f9f9f7" stroke="#e1e0d9"/>
+<text x="84" y="181" class="section" text-anchor="start">01  RGB 主干与 lateral 特征</text>
+<rect x="600" y="145" width="480" height="950" rx="18" fill="#f9f9f7" stroke="#e1e0d9"/>
+<text x="624" y="181" class="section" text-anchor="start">02  自顶向下解码与最终预测</text>
+<rect x="1190" y="145" width="550" height="950" rx="18" fill="#f9f9f7" stroke="#e1e0d9"/>
+<text x="1214" y="181" class="section" text-anchor="start">03  深度几何预处理</text>
+<g tabindex="0"><title>RGB · 3×1024×1024；仅 RGB 进入主干，模型内部归一化</title>
+<rect x="80" y="205" width="420" height="64" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="81" y="219" width="4" height="36" rx="2" fill="#2a78d6"/>
+<text x="290.0" y="232.0" class="label" text-anchor="middle">RGB · 3×1024×1024</text>
+<text x="290.0" y="256.0" class="small" text-anchor="middle">仅 RGB 进入主干，模型内部归一化</text>
+</g>
+<g tabindex="0"><title>MixVisionTransformerSDPA · MiT-B2；四阶段层数 3 / 4 / 6 / 3</title>
+<rect x="80" y="310" width="420" height="78" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="81" y="324" width="4" height="50" rx="2" fill="#2a78d6"/>
+<text x="290.0" y="344.0" class="label" text-anchor="middle">MixVisionTransformerSDPA · MiT-B2</text>
+<text x="290.0" y="368.0" class="small" text-anchor="middle">四阶段层数 3 / 4 / 6 / 3</text>
+</g>
+<path d="M290,269 L290,310" class="edge" stroke="#2a78d6"/>
+<polygon points="290,310 285,300 295,300" fill="#2a78d6"/>
+<text x="84" y="421" class="small" text-anchor="start">四尺度 C 特征 → 通道投影 → 64 通道 P 特征</text>
+<g tabindex="0"><title>C32: 512×32×32 → P32: 64×32×32</title>
+<rect x="80" y="445" width="420" height="58" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="81" y="459" width="4" height="30" rx="2" fill="#2a78d6"/>
+<text x="290.0" y="481.0" class="label" text-anchor="middle">C32: 512×32×32 → P32: 64×32×32</text>
+</g>
+<g tabindex="0"><title>C16: 320×64×64 → P16: 64×64×64</title>
+<rect x="80" y="525" width="420" height="58" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="81" y="539" width="4" height="30" rx="2" fill="#2a78d6"/>
+<text x="290.0" y="561.0" class="label" text-anchor="middle">C16: 320×64×64 → P16: 64×64×64</text>
+</g>
+<g tabindex="0"><title>C8: 128×128×128 → P8: 64×128×128</title>
+<rect x="80" y="605" width="420" height="58" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="81" y="619" width="4" height="30" rx="2" fill="#2a78d6"/>
+<text x="290.0" y="641.0" class="label" text-anchor="middle">C8: 128×128×128 → P8: 64×128×128</text>
+</g>
+<g tabindex="0"><title>C4: 64×256×256 → P4: 64×256×256</title>
+<rect x="80" y="685" width="420" height="58" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="81" y="699" width="4" height="30" rx="2" fill="#2a78d6"/>
+<text x="290.0" y="721.0" class="label" text-anchor="middle">C4: 64×256×256 → P4: 64×256×256</text>
+</g>
+<path d="M290,388 L290,432" class="edge" stroke="#2a78d6"/>
+<polygon points="290,432 285,422 295,422" fill="#2a78d6"/>
+<g tabindex="0"><title>阅读说明；P4 / P8 是未注入几何的 RGB lateral 特征。；F8 先融合几何，再上采样传递给 F4。；F4 再融合一次几何；两尺度模块独立。；RGB 原图另一路送入轮廓头提取细节。；Q=0 时当前几何融合增量严格为 0。；默认不启用 geometry dropout。</title>
+<rect x="80" y="795" width="420" height="255" rx="12" fill="#fcfcfb" stroke="#52514e" stroke-width="2"/>
+<rect x="81" y="809" width="4" height="227" rx="2" fill="#52514e"/>
+<text x="290.0" y="857.5" class="label" text-anchor="middle">阅读说明</text>
+<text x="290.0" y="881.5" class="small" text-anchor="middle">P4 / P8 是未注入几何的 RGB lateral 特征。</text>
+<text x="290.0" y="905.5" class="small" text-anchor="middle">F8 先融合几何，再上采样传递给 F4。</text>
+<text x="290.0" y="929.5" class="small" text-anchor="middle">F4 再融合一次几何；两尺度模块独立。</text>
+<text x="290.0" y="953.5" class="small" text-anchor="middle">RGB 原图另一路送入轮廓头提取细节。</text>
+<text x="290.0" y="977.5" class="small" text-anchor="middle">Q=0 时当前几何融合增量严格为 0。</text>
+<text x="290.0" y="1001.5" class="small" text-anchor="middle">默认不启用 geometry dropout。</text>
+</g>
+<g tabindex="0"><title>P32 + 多尺度上下文；C32 池化网格 1 / 2 / 4 → 投影、上采样；与 P32 平均融合；输出 64×32×32</title>
+<rect x="620" y="205" width="440" height="78" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="621" y="219" width="4" height="50" rx="2" fill="#2a78d6"/>
+<text x="840.0" y="227.0" class="label" text-anchor="middle">P32 + 多尺度上下文</text>
+<text x="840.0" y="251.0" class="small" text-anchor="middle">C32 池化网格 1 / 2 / 4 → 投影、上采样</text>
+<text x="840.0" y="275.0" class="small" text-anchor="middle">与 P32 平均融合；输出 64×32×32</text>
+</g>
+<g tabindex="0"><title>F16 = P16 + Up(P32)；64×64×64</title>
+<rect x="620" y="320" width="440" height="64" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="621" y="334" width="4" height="36" rx="2" fill="#2a78d6"/>
+<text x="840.0" y="347.0" class="label" text-anchor="middle">F16 = P16 + Up(P32)</text>
+<text x="840.0" y="371.0" class="small" text-anchor="middle">64×64×64</text>
+</g>
+<g tabindex="0"><title>F8 = P8 + Up(F16) → 几何融合 ⑧；输入 / 输出 64×128×128；模块内部 C=64</title>
+<rect x="620" y="430" width="440" height="70" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="621" y="444" width="4" height="42" rx="2" fill="#eb6834"/>
+<text x="840.0" y="460.0" class="label" text-anchor="middle">F8 = P8 + Up(F16) → 几何融合 ⑧</text>
+<text x="840.0" y="484.0" class="small" text-anchor="middle">输入 / 输出 64×128×128；模块内部 C=64</text>
+</g>
+<g tabindex="0"><title>F8 多尺度空间残差细化；5×5 + 7×7 条带 + 11×11 条带</title>
+<rect x="620" y="540" width="440" height="64" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="621" y="554" width="4" height="36" rx="2" fill="#2a78d6"/>
+<text x="840.0" y="567.0" class="label" text-anchor="middle">F8 多尺度空间残差细化</text>
+<text x="840.0" y="591.0" class="small" text-anchor="middle">5×5 + 7×7 条带 + 11×11 条带</text>
+</g>
+<g tabindex="0"><title>F4 = P4 + Up(F8) → 几何融合 ④；输入 / 输出 64×256×256；模块内部 C=32</title>
+<rect x="620" y="650" width="440" height="70" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="621" y="664" width="4" height="42" rx="2" fill="#eb6834"/>
+<text x="840.0" y="680.0" class="label" text-anchor="middle">F4 = P4 + Up(F8) → 几何融合 ④</text>
+<text x="840.0" y="704.0" class="small" text-anchor="middle">输入 / 输出 64×256×256；模块内部 C=32</text>
+</g>
+<g tabindex="0"><title>F4 空间细化 → 两个深度可分离残差块；最终 decoded：64×256×256</title>
+<rect x="620" y="760" width="440" height="76" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="621" y="774" width="4" height="48" rx="2" fill="#2a78d6"/>
+<text x="840.0" y="793.0" class="label" text-anchor="middle">F4 空间细化 → 两个深度可分离残差块</text>
+<text x="840.0" y="817.0" class="small" text-anchor="middle">最终 decoded：64×256×256</text>
+</g>
+<g tabindex="0"><title>残差轮廓头（详见 05）；粗分割 + RGB 细节 + 解码语义；输出 final logit：1×512×512</title>
+<rect x="620" y="880" width="440" height="76" rx="12" fill="#fcfcfb" stroke="#1baf7a" stroke-width="2"/>
+<rect x="621" y="894" width="4" height="48" rx="2" fill="#1baf7a"/>
+<text x="840.0" y="901.0" class="label" text-anchor="middle">残差轮廓头（详见 05）</text>
+<text x="840.0" y="925.0" class="small" text-anchor="middle">粗分割 + RGB 细节 + 解码语义</text>
+<text x="840.0" y="949.0" class="small" text-anchor="middle">输出 final logit：1×512×512</text>
+</g>
+<g tabindex="0"><title>恢复至输入尺寸 → 二分类分割；输出 mask：1024×1024</title>
+<rect x="620" y="995" width="440" height="64" rx="12" fill="#fcfcfb" stroke="#1baf7a" stroke-width="2"/>
+<rect x="621" y="1009" width="4" height="36" rx="2" fill="#1baf7a"/>
+<text x="840.0" y="1022.0" class="label" text-anchor="middle">恢复至输入尺寸 → 二分类分割</text>
+<text x="840.0" y="1046.0" class="small" text-anchor="middle">输出 mask：1024×1024</text>
+</g>
+<path d="M840,283 L840,320" class="edge" stroke="#2a78d6"/>
+<polygon points="840,320 835,310 845,310" fill="#2a78d6"/>
+<path d="M840,384 L840,430" class="edge" stroke="#2a78d6"/>
+<polygon points="840,430 835,420 845,420" fill="#2a78d6"/>
+<path d="M840,500 L840,540" class="edge" stroke="#2a78d6"/>
+<polygon points="840,540 835,530 845,530" fill="#2a78d6"/>
+<path d="M840,604 L840,650" class="edge" stroke="#2a78d6"/>
+<polygon points="840,650 835,640 845,640" fill="#2a78d6"/>
+<path d="M840,720 L840,760" class="edge" stroke="#2a78d6"/>
+<polygon points="840,760 835,750 845,750" fill="#2a78d6"/>
+<path d="M840,836 L840,880" class="edge" stroke="#2a78d6"/>
+<polygon points="840,880 835,870 845,870" fill="#2a78d6"/>
+<path d="M840,956 L840,995" class="edge" stroke="#1baf7a"/>
+<polygon points="840,995 835,985 845,985" fill="#1baf7a"/>
+<path d="M500,474 L545,474 L545,244 L620,244" class="edge" stroke="#2a78d6"/>
+<polygon points="620,244 610,239 610,249" fill="#2a78d6"/>
+<path d="M500,554 L560,554 L560,352 L620,352" class="edge" stroke="#2a78d6"/>
+<polygon points="620,352 610,347 610,357" fill="#2a78d6"/>
+<path d="M500,634 L575,634 L575,465 L620,465" class="edge" stroke="#2a78d6"/>
+<polygon points="620,465 610,460 610,470" fill="#2a78d6"/>
+<path d="M500,714 L590,714 L590,685 L620,685" class="edge" stroke="#2a78d6"/>
+<polygon points="620,685 610,680 610,690" fill="#2a78d6"/>
+<g tabindex="0"><title>伪深度 D + 可靠度 Q；各 1×1024×1024；由数据管线加载</title>
+<rect x="1210" y="205" width="510" height="64" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="1211" y="219" width="4" height="36" rx="2" fill="#eb6834"/>
+<text x="1465.0" y="232.0" class="label" text-anchor="middle">伪深度 D + 可靠度 Q</text>
+<text x="1465.0" y="256.0" class="small" text-anchor="middle">各 1×1024×1024；由数据管线加载</text>
+</g>
+<g tabindex="0"><title>可变形深度校正 · channels=16；可靠度加权池化 → 深度 / Q / dx / dy 编码；偏移 ±2；深度修正 ±0.1；校正深度与 Q：各 1×256×256</title>
+<rect x="1210" y="310" width="510" height="100" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="1211" y="324" width="4" height="72" rx="2" fill="#eb6834"/>
+<text x="1465.0" y="331.0" class="label" text-anchor="middle">可变形深度校正 · channels=16</text>
+<text x="1465.0" y="355.0" class="small" text-anchor="middle">可靠度加权池化 → 深度 / Q / dx / dy 编码</text>
+<text x="1465.0" y="379.0" class="small" text-anchor="middle">偏移 ±2；深度修正 ±0.1</text>
+<text x="1465.0" y="403.0" class="small" text-anchor="middle">校正深度与 Q：各 1×256×256</text>
+</g>
+<g tabindex="0"><title>置信度归一化 Gaussian 频带分解；cutoff=0.15；padding=8；L + H = 校正深度 × Q</title>
+<rect x="1210" y="455" width="510" height="84" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="1211" y="469" width="4" height="56" rx="2" fill="#eb6834"/>
+<text x="1465.0" y="480.0" class="label" text-anchor="middle">置信度归一化 Gaussian 频带分解</text>
+<text x="1465.0" y="504.0" class="small" text-anchor="middle">cutoff=0.15；padding=8</text>
+<text x="1465.0" y="528.0" class="small" text-anchor="middle">L + H = 校正深度 × Q</text>
+</g>
+<g tabindex="0"><title>共享输入：低频 L / 高频 H / 可靠度 Q；各 1×256×256；到当前尺度时再 resize；F8 与 F4 使用相同频带，但独立编码 / 聚类</title>
+<rect x="1210" y="580" width="510" height="95" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="1211" y="594" width="4" height="67" rx="2" fill="#eb6834"/>
+<text x="1465.0" y="610.5" class="label" text-anchor="middle">共享输入：低频 L / 高频 H / 可靠度 Q</text>
+<text x="1465.0" y="634.5" class="small" text-anchor="middle">各 1×256×256；到当前尺度时再 resize</text>
+<text x="1465.0" y="658.5" class="small" text-anchor="middle">F8 与 F4 使用相同频带，但独立编码 / 聚类</text>
+</g>
+<path d="M1465,269 L1465,310" class="edge" stroke="#eb6834"/>
+<polygon points="1465,310 1460,300 1470,300" fill="#eb6834"/>
+<path d="M1465,410 L1465,455" class="edge" stroke="#eb6834"/>
+<polygon points="1465,455 1460,445 1470,445" fill="#eb6834"/>
+<path d="M1465,539 L1465,580" class="edge" stroke="#eb6834"/>
+<polygon points="1465,580 1460,570 1470,570" fill="#eb6834"/>
+<path d="M1210,612 L1145,612 L1145,465 L1060,465" class="edge" stroke="#eb6834"/>
+<polygon points="1060,465 1070,460 1070,470" fill="#eb6834"/>
+<path d="M1210,642 L1165,642 L1165,685 L1060,685" class="edge" stroke="#eb6834"/>
+<polygon points="1060,685 1070,680 1070,690" fill="#eb6834"/>
+<text x="1209" y="735" class="body" text-anchor="start">两个几何融合模块的公共结构见 04。</text>
+<g tabindex="0"><title>训练辅助监督；两尺度区域原型 → SigLIP sigmoid（见 04）；校正量 / 偏移 → 深度校正正则；原型有效性阈值只筛选对比样本，；不会硬关闭分割 detail。；对比损失不直接生成分割 mask。；推理保留聚类与融合，不计算辅助损失。</title>
+<rect x="1210" y="780" width="510" height="269" rx="12" fill="#fcfcfb" stroke="#52514e" stroke-width="2" stroke-dasharray="7 5"/>
+<rect x="1211" y="794" width="4" height="241" rx="2" fill="#52514e"/>
+<text x="1465.0" y="849.5" class="label" text-anchor="middle">训练辅助监督</text>
+<text x="1465.0" y="873.5" class="small" text-anchor="middle">两尺度区域原型 → SigLIP sigmoid（见 04）</text>
+<text x="1465.0" y="897.5" class="small" text-anchor="middle">校正量 / 偏移 → 深度校正正则</text>
+<text x="1465.0" y="921.5" class="small" text-anchor="middle">原型有效性阈值只筛选对比样本，</text>
+<text x="1465.0" y="945.5" class="small" text-anchor="middle">不会硬关闭分割 detail。</text>
+<text x="1465.0" y="969.5" class="small" text-anchor="middle">对比损失不直接生成分割 mask。</text>
+<text x="1465.0" y="993.5" class="small" text-anchor="middle">推理保留聚类与融合，不计算辅助损失。</text>
+</g>
+<rect x="60" y="1130" width="1680" height="610" rx="18" fill="#f9f9f7" stroke="#e1e0d9"/>
+<text x="84" y="1166" class="section" text-anchor="start">04  单个几何融合模块展开 · F8：C=64；F4：C=32</text>
+<text x="84" y="1199" class="body" text-anchor="start">输入：当前解码特征 F、未融合几何的 RGB lateral P、低频 L、高频 H、可靠度 Q。两个尺度各有一套独立参数。</text>
+<g tabindex="0"><title>高频 H → 卷积编码；得到 C 通道几何特征 G</title>
+<rect x="85" y="1240" width="250" height="75" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="86" y="1254" width="4" height="47" rx="2" fill="#eb6834"/>
+<text x="210.0" y="1272.5" class="label" text-anchor="middle">高频 H → 卷积编码</text>
+<text x="210.0" y="1296.5" class="small" text-anchor="middle">得到 C 通道几何特征 G</text>
+</g>
+<g tabindex="0"><title>空间软聚类（仅由 G / 坐标 / Q 决定）；最多 64×64 token；4×4 = 16 区域；两轮迭代：特征相似度 + 空间距离</title>
+<rect x="390" y="1230" width="450" height="96" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="391" y="1244" width="4" height="68" rx="2" fill="#eb6834"/>
+<text x="615.0" y="1261.0" class="label" text-anchor="middle">空间软聚类（仅由 G / 坐标 / Q 决定）</text>
+<text x="615.0" y="1285.0" class="small" text-anchor="middle">最多 64×64 token；4×4 = 16 区域</text>
+<text x="615.0" y="1309.0" class="small" text-anchor="middle">两轮迭代：特征相似度 + 空间距离</text>
+</g>
+<g tabindex="0"><title>区域原型 → 软分配回填；detail = G + Conv([G, 回填])</title>
+<rect x="915" y="1240" width="350" height="75" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="916" y="1254" width="4" height="47" rx="2" fill="#eb6834"/>
+<text x="1090.0" y="1272.5" class="label" text-anchor="middle">区域原型 → 软分配回填</text>
+<text x="1090.0" y="1296.5" class="small" text-anchor="middle">detail = G + Conv([G, 回填])</text>
+</g>
+<path d="M335,1278 L390,1278" class="edge" stroke="#eb6834"/>
+<polygon points="390,1278 380,1273 380,1283" fill="#eb6834"/>
+<path d="M840,1278 L915,1278" class="edge" stroke="#eb6834"/>
+<polygon points="915,1278 905,1273 905,1283" fill="#eb6834"/>
+<g tabindex="0"><title>低频 L → 卷积编码；Key / Value：最多 8×8；当前 F → 独立投影 → Query</title>
+<rect x="85" y="1380" width="250" height="100" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="86" y="1394" width="4" height="72" rx="2" fill="#eb6834"/>
+<text x="210.0" y="1413.0" class="label" text-anchor="middle">低频 L → 卷积编码</text>
+<text x="210.0" y="1437.0" class="small" text-anchor="middle">Key / Value：最多 8×8</text>
+<text x="210.0" y="1461.0" class="small" text-anchor="middle">当前 F → 独立投影 → Query</text>
+</g>
+<g tabindex="0"><title>低频跨模态注意力 · 4 heads；Query ≤32×32；二维位置 + Q 先验</title>
+<rect x="390" y="1390" width="450" height="80" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="391" y="1404" width="4" height="52" rx="2" fill="#eb6834"/>
+<text x="615.0" y="1425.0" class="label" text-anchor="middle">低频跨模态注意力 · 4 heads</text>
+<text x="615.0" y="1449.0" class="small" text-anchor="middle">Query ≤32×32；二维位置 + Q 先验</text>
+</g>
+<g tabindex="0"><title>低频上下文 low_context；上采样恢复当前特征分辨率</title>
+<rect x="915" y="1395" width="350" height="65" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="916" y="1409" width="4" height="37" rx="2" fill="#eb6834"/>
+<text x="1090.0" y="1422.5" class="label" text-anchor="middle">低频上下文 low_context</text>
+<text x="1090.0" y="1446.5" class="small" text-anchor="middle">上采样恢复当前特征分辨率</text>
+</g>
+<path d="M335,1430 L390,1430" class="edge" stroke="#eb6834"/>
+<polygon points="390,1430 380,1425 380,1435" fill="#eb6834"/>
+<path d="M840,1430 L915,1430" class="edge" stroke="#eb6834"/>
+<polygon points="915,1430 905,1425 905,1435" fill="#eb6834"/>
+<g tabindex="0"><title>可靠度门控融合；读取 F 投影 / detail / low / Q；Δ = Q × (aH·gH·detail；                  + aL·gL·low)；aH / aL 可学习，初始 0.1</title>
+<rect x="1350" y="1290" width="360" height="158" rx="12" fill="#fcfcfb" stroke="#eb6834" stroke-width="2"/>
+<rect x="1351" y="1304" width="4" height="130" rx="2" fill="#eb6834"/>
+<text x="1530.0" y="1328.0" class="label" text-anchor="middle">可靠度门控融合</text>
+<text x="1530.0" y="1352.0" class="small" text-anchor="middle">读取 F 投影 / detail / low / Q</text>
+<text x="1530.0" y="1376.0" class="small" text-anchor="middle">Δ = Q × (aH·gH·detail</text>
+<text x="1530.0" y="1400.0" class="small" text-anchor="middle">                  + aL·gL·low)</text>
+<text x="1530.0" y="1424.0" class="small" text-anchor="middle">aH / aL 可学习，初始 0.1</text>
+</g>
+<path d="M1265,1278 L1305,1278 L1305,1320 L1350,1320" class="edge" stroke="#eb6834"/>
+<polygon points="1350,1320 1340,1315 1340,1325" fill="#eb6834"/>
+<path d="M1265,1428 L1305,1428 L1305,1410 L1350,1410" class="edge" stroke="#eb6834"/>
+<polygon points="1350,1410 1340,1405 1340,1415" fill="#eb6834"/>
+<g tabindex="0"><title>输出投影回 64 通道；F_fused = F + Projection(Δ)；进入对应尺度的空间细化</title>
+<rect x="1350" y="1490" width="360" height="86" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2"/>
+<rect x="1351" y="1504" width="4" height="58" rx="2" fill="#2a78d6"/>
+<text x="1530.0" y="1516.0" class="label" text-anchor="middle">输出投影回 64 通道</text>
+<text x="1530.0" y="1540.0" class="small" text-anchor="middle">F_fused = F + Projection(Δ)</text>
+<text x="1530.0" y="1564.0" class="small" text-anchor="middle">进入对应尺度的空间细化</text>
+</g>
+<path d="M1530,1448 L1530,1490" class="edge" stroke="#eb6834"/>
+<polygon points="1530,1490 1525,1480 1535,1480" fill="#eb6834"/>
+<g tabindex="0"><title>未融合几何的 P8 / P4；独立 RGB reference 投影；与几何使用同一池化权重</title>
+<rect x="85" y="1555" width="330" height="95" rx="12" fill="#fcfcfb" stroke="#2a78d6" stroke-width="2" stroke-dasharray="7 5"/>
+<rect x="86" y="1569" width="4" height="67" rx="2" fill="#2a78d6"/>
+<text x="250.0" y="1585.5" class="label" text-anchor="middle">未融合几何的 P8 / P4</text>
+<text x="250.0" y="1609.5" class="small" text-anchor="middle">独立 RGB reference 投影</text>
+<text x="250.0" y="1633.5" class="small" text-anchor="middle">与几何使用同一池化权重</text>
+</g>
+<g tabindex="0"><title>区域配对：几何原型 / RGB 原型；各 16×C；pooling 权重 detach；Q / mass / 高频能量筛选有效区域</title>
+<rect x="465" y="1550" width="360" height="105" rx="12" fill="#fcfcfb" stroke="#52514e" stroke-width="2" stroke-dasharray="7 5"/>
+<rect x="466" y="1564" width="4" height="77" rx="2" fill="#52514e"/>
+<text x="645.0" y="1585.5" class="label" text-anchor="middle">区域配对：几何原型 / RGB 原型</text>
+<text x="645.0" y="1609.5" class="small" text-anchor="middle">各 16×C；pooling 权重 detach</text>
+<text x="645.0" y="1633.5" class="small" text-anchor="middle">Q / mass / 高频能量筛选有效区域</text>
+</g>
+<g tabindex="0"><title>两侧独立 MLP → 64维 → L2归一化；同区域正样本；其他有效区域负样本；SigLIP sigmoid（仅训练）</title>
+<rect x="885" y="1550" width="380" height="105" rx="12" fill="#fcfcfb" stroke="#52514e" stroke-width="2" stroke-dasharray="7 5"/>
+<rect x="886" y="1564" width="4" height="77" rx="2" fill="#52514e"/>
+<text x="1075.0" y="1585.5" class="label" text-anchor="middle">两侧独立 MLP → 64维 → L2归一化</text>
+<text x="1075.0" y="1609.5" class="small" text-anchor="middle">同区域正样本；其他有效区域负样本</text>
+<text x="1075.0" y="1633.5" class="small" text-anchor="middle">SigLIP sigmoid（仅训练）</text>
+</g>
+<path d="M840,1305 L870,1305 L870,1518 L645,1518 L645,1550" class="edge" stroke="#52514e" stroke-dasharray="7 5"/>
+<polygon points="645,1550 640,1540 650,1540" fill="#52514e"/>
+<path d="M415,1603 L465,1603" class="edge" stroke="#2a78d6" stroke-dasharray="7 5"/>
+<polygon points="465,1603 455,1598 455,1608" fill="#2a78d6"/>
+<path d="M825,1603 L885,1603" class="edge" stroke="#52514e" stroke-dasharray="7 5"/>
+<polygon points="885,1603 875,1598 875,1608" fill="#52514e"/>
+<text x="84" y="1705" class="small" text-anchor="start">梯度：分割路径的聚类可微；对比学习训练两侧特征 / 投影头，但不通过池化权重移动区域分配。</text>
+<rect x="60" y="1770" width="1680" height="325" rx="18" fill="#f9f9f7" stroke="#e1e0d9"/>
+<text x="84" y="1806" class="section" text-anchor="start">05  残差轮廓头展开 · 在 512×512 上联合细化</text>
+<g tabindex="0"><title>decoded：64×256×256；1×1 coarse head → 1×256×256；上采样 → base logit：1×512×512</title>
+<rect x="85" y="1840" width="335" height="92" rx="12" fill="#fcfcfb" stroke="#1baf7a" stroke-width="2"/>
+<rect x="86" y="1854" width="4" height="64" rx="2" fill="#1baf7a"/>
+<text x="252.5" y="1869.0" class="label" text-anchor="middle">decoded：64×256×256</text>
+<text x="252.5" y="1893.0" class="small" text-anchor="middle">1×1 coarse head → 1×256×256</text>
+<text x="252.5" y="1917.0" class="small" text-anchor="middle">上采样 → base logit：1×512×512</text>
+</g>
+<g tabindex="0"><title>共享 trunk 的三路输入；RGB 细节 24ch + 解码语义 24ch；+ sigmoid(base) 1ch = 49ch</title>
+<rect x="85" y="1960" width="335" height="95" rx="12" fill="#fcfcfb" stroke="#1baf7a" stroke-width="2"/>
+<rect x="86" y="1974" width="4" height="67" rx="2" fill="#1baf7a"/>
+<text x="252.5" y="1990.5" class="label" text-anchor="middle">共享 trunk 的三路输入</text>
+<text x="252.5" y="2014.5" class="small" text-anchor="middle">RGB 细节 24ch + 解码语义 24ch</text>
+<text x="252.5" y="2038.5" class="small" text-anchor="middle">+ sigmoid(base) 1ch = 49ch</text>
+</g>
+<path d="M250,1932 L250,1960" class="edge" stroke="#1baf7a"/>
+<polygon points="250,1960 245,1950 255,1950" fill="#1baf7a"/>
+<g tabindex="0"><title>共享细化网络 → 24 通道；1×1 ConvBlock；+ 深度可分离残差块</title>
+<rect x="485" y="1960" width="325" height="95" rx="12" fill="#fcfcfb" stroke="#1baf7a" stroke-width="2"/>
+<rect x="486" y="1974" width="4" height="67" rx="2" fill="#1baf7a"/>
+<text x="647.5" y="1990.5" class="label" text-anchor="middle">共享细化网络 → 24 通道</text>
+<text x="647.5" y="2014.5" class="small" text-anchor="middle">1×1 ConvBlock</text>
+<text x="647.5" y="2038.5" class="small" text-anchor="middle">+ 深度可分离残差块</text>
+</g>
+<path d="M420,2008 L485,2008" class="edge" stroke="#1baf7a"/>
+<polygon points="485,2008 475,2003 475,2013" fill="#1baf7a"/>
+<g tabindex="0"><title>残差 logit 头 → Δlogit；1×512×512；不由 SDF 或熵门控限制</title>
+<rect x="875" y="1835" width="330" height="85" rx="12" fill="#fcfcfb" stroke="#1baf7a" stroke-width="2"/>
+<rect x="876" y="1849" width="4" height="57" rx="2" fill="#1baf7a"/>
+<text x="1040.0" y="1860.5" class="label" text-anchor="middle">残差 logit 头 → Δlogit</text>
+<text x="1040.0" y="1884.5" class="small" text-anchor="middle">1×512×512</text>
+<text x="1040.0" y="1908.5" class="small" text-anchor="middle">不由 SDF 或熵门控限制</text>
+</g>
+<g tabindex="0"><title>SDF 头 → 距离场预测；仅辅助监督，不直接修正 logit</title>
+<rect x="875" y="1970" width="330" height="75" rx="12" fill="#fcfcfb" stroke="#52514e" stroke-width="2" stroke-dasharray="7 5"/>
+<rect x="876" y="1984" width="4" height="47" rx="2" fill="#52514e"/>
+<text x="1040.0" y="2002.5" class="label" text-anchor="middle">SDF 头 → 距离场预测</text>
+<text x="1040.0" y="2026.5" class="small" text-anchor="middle">仅辅助监督，不直接修正 logit</text>
+</g>
+<path d="M810,1985 L842,1985 L842,1877 L875,1877" class="edge" stroke="#1baf7a"/>
+<polygon points="875,1877 865,1872 865,1882" fill="#1baf7a"/>
+<path d="M810,2025 L875,2025" class="edge" stroke="#52514e" stroke-dasharray="7 5"/>
+<polygon points="875,2025 865,2020 865,2030" fill="#52514e"/>
+<g tabindex="0"><title>final logit = base logit + Δlogit；1×512×512；恢复输入尺寸 → 最终二分类</title>
+<rect x="1320" y="1835" width="390" height="95" rx="12" fill="#fcfcfb" stroke="#1baf7a" stroke-width="2"/>
+<rect x="1321" y="1849" width="4" height="67" rx="2" fill="#1baf7a"/>
+<text x="1515.0" y="1865.5" class="label" text-anchor="middle">final logit = base logit + Δlogit</text>
+<text x="1515.0" y="1889.5" class="small" text-anchor="middle">1×512×512</text>
+<text x="1515.0" y="1913.5" class="small" text-anchor="middle">恢复输入尺寸 → 最终二分类</text>
+</g>
+<path d="M1205,1877 L1320,1877" class="edge" stroke="#1baf7a"/>
+<polygon points="1320,1877 1310,1872 1310,1882" fill="#1baf7a"/>
+<path d="M420,1865 L450,1865 L450,1818 L1515,1818 L1515,1835" class="edge" stroke="#1baf7a"/>
+<polygon points="1515,1835 1510,1825 1520,1825" fill="#1baf7a"/>
+<text x="1325" y="1985" class="small" text-anchor="start">RGB 细节：原图平均池化到 1/2 后编码。</text>
+<text x="1325" y="2015" class="small" text-anchor="start">语义：decoded 投影后上采样到 1/2。</text>
+<text x="1325" y="2045" class="small" text-anchor="start">SDF 与 Δlogit 共用 trunk，分别预测。</text>
+<rect x="60" y="2125" width="1680" height="175" rx="18" fill="#f9f9f7" stroke="#e1e0d9"/>
+<text x="84" y="2161" class="section" text-anchor="start">06  训练目标 · 推理不计算损失</text>
+<text x="85" y="2200" class="body" text-anchor="start">最终 BCE + Dice ×1.0    +    粗分割 BCE + Dice ×0.3    +    SDF ×0.1    +    GT 边界带 BCE ×0.05</text>
+<text x="85" y="2240" class="body" text-anchor="start">+ 区域对比 ×0.05（F8 / F4 SigLIP sigmoid 的均值）    +    深度校正正则 ×0.01（修正量与偏移平方）</text>
+<text x="60" y="2340" class="small" text-anchor="start">源码：rpgv_net_v6.py / rpgv_v6_modules.py / rpgv_v6_decoder.py    ·    配置：configs/rpgv/v6/rpgv_v6.py</text>
+</svg>

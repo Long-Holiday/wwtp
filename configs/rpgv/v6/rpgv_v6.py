@@ -1,5 +1,12 @@
 _base_ = ['../v5/rpgv_v5.py']
 """Optimized V6: decoder geometry and residual contours, 5,000 joint updates."""
+import os
+import mmengine
+
+
+data_root = os.getenv('WWTP_DATA_ROOT', os.getenv('WWTP_V5_DATA_ROOT', 'wwtp_semantic_dataset_1m'))
+pseudo_root = os.getenv('WWTP_PSEUDO_ROOT', os.path.join(data_root, 'pseudo_geometry'))
+
 
 model = dict(
     type='RPGVNetV6',
@@ -20,7 +27,8 @@ model = dict(
     attention_cfg=dict(num_heads=4, query_size=32, kv_size=8),
     fusion_scale=0.1,
     contrastive_embed_dim=64,
-    contrastive_temperature=0.07,
+    contrastive_temperature=0.1,
+    contrastive_logit_bias=-10.0,
     contrastive_loss_weight=0.05,
     rectification_loss_weight=0.01,
     spatial_refinement=True,
@@ -33,18 +41,28 @@ train_pipeline = [
     dict(type='LoadImageFromFile'), dict(type='LoadAnnotations'),
     dict(type='RequireImageShape', size=(1024, 1024)),
     dict(type='PhotoMetricDistortion'),
-    dict(type='LoadPseudoGeometry', pseudo_root={{_base_.pseudo_root}}, required=True),
+    dict(type='LoadPseudoGeometry', pseudo_root=pseudo_root, required=True),
     dict(type='RandomFlip', prob=0.75, direction=['horizontal', 'vertical', 'diagonal']),
     dict(type='PackRPGVContourInputs', contour_truncation=5.0),
 ]
-train_dataloader = dict(dataset=dict(pipeline=train_pipeline))
+train_dataloader = dict(dataset=dict(data_root=data_root, pipeline=train_pipeline))
+test_pipeline = [
+    dict(type='LoadImageFromFile'), dict(type='LoadAnnotations'),
+    dict(type='RequireImageShape', size=(1024, 1024)),
+    dict(type='LoadPseudoGeometry', pseudo_root=pseudo_root, required=True),
+    dict(type='PackSegInputs'),
+]
+val_dataloader = dict(dataset=dict(data_root=data_root, pipeline=test_pipeline))
+test_dataloader = dict(dataset=dict(data_root=data_root, pipeline=test_pipeline))
 
-optim_wrapper = dict(
-    paramwise_cfg=dict(custom_keys={
-        'rgb_encoder': dict(lr_mult=0.1),
-        'logit_scale': dict(decay_mult=0.0),
-        'branch_gains': dict(decay_mult=0.0),
-    }))
+_protocol = mmengine.Config.fromfile(os.path.join(
+    '{{ fileDirname }}', '../../_base_/schedules/baseline_20k.py'))
+optim_wrapper = dict(_delete_=True, **_protocol.optim_wrapper)
+param_scheduler = _protocol.param_scheduler
+train_cfg = dict(_delete_=True, **_protocol.train_cfg)
+auto_scale_lr = _protocol.auto_scale_lr
+enable_early_stopping = _protocol.enable_early_stopping
+del _protocol
 load_from = None
 resume = False
-work_dir = 'work_dirs/rpgv_v6_optimized_1m'
+work_dir = 'work_dirs/rpgv_v6_siglip_1m'

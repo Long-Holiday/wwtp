@@ -84,7 +84,9 @@ docker compose run --rm wwtp python tools/data/prepare_public.py uavid \
 
 LoveDA 保留官方 1024 整图；UAVid 仅在官方训练 sequence 内切成 1024 块，边缘补零、标签补 255，不丢失边缘像素。验证与官方测试保留完整原始帧，用 1024／stride 768 滑窗拼接。**200 是原始训练帧数，不是切片后的样本数。** 不随机拆帧、不合并 train/val。
 
-七个主流模型使用统一预算：batch 2 × 累积 4 = 有效 batch 8，20,000 个数据加载迭代 = 5,000 次优化器更新；每 1,000 迭代验证，不默认早停。保留各模型优化器参数组；SegNeXt 和 Mask2Former 使用 FP32，其余默认 AMP。WWTP 指标含前景、边界与拓扑，边界容差 1.5 px=1.5 m；公开多分类集使用 mIoU/mDice/mFscore，按验证 mIoU 选权重。
+正式对比（七基线、WWTP RPGV v6及其消融、公开集已有RPGV多分类适配）统一使用 `configs/_base_/schedules/baseline_20k.py`：**FP32 OptimWrapper、AdamW（lr=6e-4、betas=0.9/0.999、eps=1e-8、weight decay=0.01）、norm参数不衰减，其余参数同学习率/衰减规则，无骨干或头部专属倍率；L2梯度裁剪max_norm=10**。batch 2 × 累积 4 = 单卡有效batch 8，20,000个数据加载迭代 = 5,000次优化器更新；前1,000迭代LinearLR从1e-6倍升至基础LR，随后PolyLR（power=0.9、eta_min=0）。每1,000迭代验证与保存，不早停，seed=42、deterministic=False，自动学习率缩放关闭。FP32覆盖原AMP模型，吞吐与显存需求需重新测量。
+
+同一数据集内保持相同划分、1024输入、RGB增强、采样及选权重规则：WWTP按验证前景IoU，公开集按验证mIoU。WWTP指标含前景、边界与拓扑，边界容差1.5px=1.5m；公开集使用mIoU/mDice/mFscore。**统一的是外部训练协议，模型原生辅助/匹配/几何损失及必要输入保留**。标准骨干使用各自ImageNet预训练；HDNet没有现成预训练骨干，保留随机初始化并单独披露，不能宣称预训练条件完全相同。
 
 ## 训练与测试
 
@@ -107,9 +109,9 @@ docker compose run --rm wwtp python tools/test.py configs/wwtp/hrnet.py \
   work_dirs/wwtp/hrnet/iter_20000.pth --split val
 ```
 
-默认输出为 `work_dirs/<dataset>/<model>/`。`--cfg-options` 可覆盖 batch、累积、workers 等；变更 batch 时同步调整累积和迭代预算，保持有效 batch 与更新数。多卡批处理用 `--gpus N`。
+默认输出为 `work_dirs/<dataset>/<model>/`。`--cfg-options` 仍可覆盖配置，但公平比较必须对整组实验应用相同策略，并使用相同GPU数；N卡默认全局有效batch为8N，不能与单卡结果混为等预算。变更batch时同步调整累积和迭代预算，保持全局有效batch、图像曝光与更新数。多卡批处理用 `--gpus N`。新协议必须重新训练并使用新的 `--work-dir`，旧策略的checkpoint/optimizer状态不能直接resume或混入正式结果。
 
-训练入口统一启用 TF32，数据加载使用 persistent workers 与 pin memory。删除训练循环与确定性设置的全局 monkey patch，恢复 MMEngine 原生断点续训语义。AMP 模型可用 `--amp-dtype bfloat16`，设备必须支持 BF16；FP32 配置不被该参数强制切换。测试/恢复从完整 checkpoint 加载时关闭骨干预训练下载。
+训练入口统一启用TF32，数据加载使用persistent workers与pin memory；FP32 wrapper并不代表禁用TF32的严格FP32矩阵运算。删除训练循环与确定性设置的全局monkey patch，使用MMEngine原生断点续训语义。`--amp-dtype`仅适用于历史或显式AMP配置，正式FP32配置不接受该选项。测试/恢复从完整checkpoint加载时关闭骨干预训练下载。
 
 UAVid/LoveDA 官方测试标签不公开，`tools/test.py` 的公开集配置明确评估官方 **val**。测试集预测用独立导出入口，不生成伪测试分数：
 
@@ -123,7 +125,7 @@ LoveDA 提交沿用官方预测脚本：导出 **0–6 ID**，以原图片编号
 
 ## RPGV
 
-RPGV 的结构开关、损失和初始化规则继续保留。v1/v2 阶段配置改用相同 1024 WWTP 根目录与整图增强；v3 锚点初始化和 v5.1 权重迁移仍需运行原初始化工具。阶段训练预算按各版本原方案保留；严格等预算对照可用 `configs/rpgv/v5/controls/`，不要把阶段实验与七个统一预算基线宣称为等预算比较。
+RPGV的结构开关、损失和初始化规则继续保留。v1/v2阶段配置使用相同1024 WWTP根目录与整图增强；v3锚点初始化和v5.1权重迁移仍需原初始化工具。**v1–v5.1保留历史阶段/迁移协议，不纳入当前七基线+v6的统一策略正式对比**；`configs/rpgv/v5/controls/` 仅是历史等预算对照，不能把“等预算”当成“相同训练策略”。v6及其五个消融直接复用公共正式协议，不需要额外阶段训练。
 
 ```bash
 docker compose run --rm wwtp python tools/data/generate_pseudo_geometry.py wwtp_semantic_dataset_1m --device cuda
@@ -135,7 +137,7 @@ docker compose run --rm wwtp python tests/smoke_test.py --include-rpgv --backwar
 
 ### RPGV v6
 
-优化版 v6 使用 SDPA MiT-B2，在 decoder F8/F4 注入几何残差；高频局部/区域细节不再被对比有效性阈值关闭，低频进行受限 token 交叉注意力。可靠度归一化 Gaussian 分解减少 Q 孔洞伪边缘，独立的 SDF 辅助头和无固定幅度限制的 logit 残差头负责轮廓细化。默认不关闭几何样本、不冻结骨干；无深度或 Q=0 时精确回退到 RGB 路径，不需要 CLIP 权重或文本编码器。
+优化版 v6 使用 SDPA MiT-B2，在 decoder F8/F4 注入几何残差；高频局部/区域细节不再被对比有效性阈值关闭，低频进行受限 token 交叉注意力。可靠度归一化 Gaussian 分解减少 Q 孔洞伪边缘，独立的 SDF 辅助头和无固定幅度限制的 logit 残差头负责轮廓细化。默认不关闭几何样本、不冻结骨干；无深度或 Q=0 时精确回退到 RGB 路径，不需要 CLIP/SigLIP 权重或文本编码器；RGB/几何区域对齐使用带可学习尺度与偏置的 SigLIP-style sigmoid 损失，单个有效区域也参与学习。
 
 ```bash
 docker compose run --rm wwtp bash scripts/rpgv/train_rpgv_v6.sh
@@ -147,7 +149,7 @@ docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v6.py \
   --output work_dirs/profiles/v6_train.json
 ```
 
-默认从 ImageNet RGB 骨干初始化联合训练，仍为1024整图、batch2×累积4、5,000次优化器更新；启用激活重计算，SDF目标在训练数据worker生成。新目录为 `work_dirs/rpgv_v6_optimized_1m`。**旧 v6/v5.1 完整权重不能直接 resume 新架构**，只恢复本版相同配置的checkpoint。除 `no_contrastive.py` / `rgb_only.py` 外，还提供 `encoder_fusion.py`、`legacy_contour.py`、`cluster32.py` 单因素消融。训练方式、WSL GPU启动替代命令、性能实测及已知限制见 [v6 设计说明](docs/rpgv_v6_design.md)。
+默认从 ImageNet RGB 骨干初始化联合训练，仍为1024整图、batch2×累积4、5,000次优化器更新；启用激活重计算，SDF目标在训练数据worker生成。新目录为 `work_dirs/rpgv_v6_siglip_1m`。**旧 InfoNCE v6、历史 v6/v5.1 完整权重不能直接 resume 本版 SigLIP 目标**，新增 `logit_bias` 参数且优化器参数集合改变，只恢复本版相同配置的checkpoint。除 `no_contrastive.py` / `rgb_only.py` 外，还提供 `encoder_fusion.py`、`legacy_contour.py`、`cluster32.py` 单因素消融。训练方式、WSL GPU启动替代命令、性能实测及已知限制见 [v6 设计说明](docs/rpgv_v6_design.md)。
 
 ## 小规模验证
 
