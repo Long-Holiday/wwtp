@@ -77,9 +77,9 @@ optim_wrapper = dict(
 # 2 images × 4 accumulation × 5,000 updates = 40,000 image exposures.
 param_scheduler = [
     dict(type='LinearLR', start_factor=0.01, by_epoch=False, begin=0, end=1000),
-    dict(type='PolyLR', eta_min=0.0, power=0.9, by_epoch=False, begin=1000, end=20000),
+    dict(type='PolyLR', eta_min=0.0, power=0.9, by_epoch=False, begin=1000, end=30000),
 ]
-train_cfg = dict(type='IterBasedTrainLoop', max_iters=20000, val_interval=1000)
+train_cfg = dict(type='IterBasedTrainLoop', max_iters=30000, val_interval=1000)
 default_hooks = dict(checkpoint=dict(interval=1000))
 enable_early_stopping = False
 randomness = dict(seed=42, deterministic=False)

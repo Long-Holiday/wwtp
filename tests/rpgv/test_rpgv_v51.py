@@ -47,7 +47,7 @@ class V51Test(unittest.TestCase):
                 self.assertEqual(cfg.train_dataloader.batch_size, 2)
                 self.assertEqual(cfg.optim_wrapper.accumulative_counts, 4)
                 self.assertEqual(cfg.train_cfg.max_iters,
-                                 20000 if name == 'from_scratch' else 6000)
+                                 30000 if name == 'from_scratch' else 6000)
                 for split in ('train', 'val', 'test'):
                     dataset = cfg[f'{split}_dataloader'].dataset
                     self.assertEqual(dataset.data_root, cfg.data_root)

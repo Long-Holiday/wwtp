@@ -19,11 +19,11 @@ param_scheduler = [
         power=0.9,
         by_epoch=False,
         begin=1000,
-        end=20000),
+        end=30000),
 ]
 
 train_cfg = dict(
-    type='IterBasedTrainLoop', max_iters=20000, val_interval=2000)
+    type='IterBasedTrainLoop', max_iters=30000, val_interval=2000)
 val_cfg = dict(type='ValLoop')
 test_cfg = dict(type='TestLoop')
 auto_scale_lr = dict(enable=False, base_batch_size=8)

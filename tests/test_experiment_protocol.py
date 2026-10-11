@@ -73,7 +73,7 @@ class ProtocolTest(unittest.TestCase):
             paramwise_cfg=dict(norm_decay_mult=0.0)))
         self.assertEqual(reference.param_scheduler, [
             dict(type='LinearLR', start_factor=1e-6, by_epoch=False, begin=0, end=1000),
-            dict(type='PolyLR', eta_min=0.0, power=0.9, by_epoch=False, begin=1000, end=20000),
+            dict(type='PolyLR', eta_min=0.0, power=0.9, by_epoch=False, begin=1000, end=30000),
         ])
         paths = [experiment_config(dataset, name)
                  for dataset in DATASET_NAMES for name in MAINSTREAM_MODELS]

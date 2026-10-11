@@ -453,7 +453,7 @@ class V6ConfigTests(unittest.TestCase):
             self.assertEqual(tuple(config.model.data_preprocessor.size), (1024, 1024))
             self.assertEqual(config.train_dataloader.batch_size, 2)
             self.assertEqual(config.optim_wrapper.accumulative_counts, 4)
-            self.assertEqual(config.train_cfg.max_iters, 20000)
+            self.assertEqual(config.train_cfg.max_iters, 30000)
             self.assertIsNone(config.load_from)
             self.assertFalse(config.resume)
             expected_dir = ('work_dirs/rpgv_v6_siglip_1m' if variant == 'rpgv_v6'

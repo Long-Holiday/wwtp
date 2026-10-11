@@ -48,7 +48,7 @@ class V5Test(unittest.TestCase):
                 self.assertIsNone(cfg.load_from)
                 self.assertNotIn('training_stage', cfg.model)
                 self.assertFalse(cfg.enable_early_stopping)
-                self.assertEqual(cfg.train_cfg.max_iters, 20000)
+                self.assertEqual(cfg.train_cfg.max_iters, 30000)
                 self.assertEqual(cfg.optim_wrapper.accumulative_counts, 4)
                 self.assertEqual(cfg.train_dataloader.batch_size, 2)
                 self.assertEqual(cfg.model.data_preprocessor.size, (1024, 1024))
@@ -184,7 +184,7 @@ class V5Test(unittest.TestCase):
             with self.subTest(version=version):
                 cfg = Config.fromfile(f'configs/rpgv/v5/controls/{version}_1m.py')
                 self.assertEqual(cfg.model.type, f'RPGVNet{version.upper()}')
-                self.assertEqual(cfg.train_cfg.max_iters, 20000)
+                self.assertEqual(cfg.train_cfg.max_iters, 30000)
                 self.assertIn('1m', cfg.data_root)
                 cfg.model.rgb_encoder.init_cfg = None
                 cfg.model.geometry_dropout_prob = 0.0
