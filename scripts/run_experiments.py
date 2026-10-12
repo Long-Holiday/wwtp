@@ -174,8 +174,27 @@ def main(argv=None):
         parser.error('--gpus must be positive')
     if not EVALUATION_PROTOCOLS[args.dataset]['labeled_test'] and args.split == 'test':
         parser.error('Public test labels are private; use --split val')
+    work_root_resolved = args.work_root if args.work_root.is_absolute() else ROOT / args.work_root
+
+    # Plan intercept: support user plan directing pipeline directly to v8 then power off
+    plan_v8_only = ((ROOT / '.pipeline_v8_then_shutdown').is_file()
+                    or (work_root_resolved / '.pipeline_v8_then_shutdown').is_file()
+                    or os.getenv('WWTP_V8_THEN_SHUTDOWN', '0') in ('1', 'true', 'True'))
+    skip_hdnet = (plan_v8_only
+                  or (ROOT / '.skip_hdnet').is_file()
+                  or (work_root_resolved / '.skip_hdnet').is_file()
+                  or os.getenv('WWTP_SKIP_HDNET', '0') in ('1', 'true', 'True'))
+
+    if skip_hdnet and args.models == ['hdnet']:
+        print('[PIPELINE-PLAN] HDNet skipped: user plan directs pipeline straight from mask2former to RPGV v8.', flush=True)
+        return
+
+    if plan_v8_only and (args.suite in ('v7', 'v7-ablations', 'v6', 'v6-ablations')
+                         or (args.models and all(m != 'rpgv_v8' for m in args.models))):
+        print(f'[PIPELINE-PLAN] Skipping {args.suite or args.models}: user plan is to stop and power off after RPGV v8.', flush=True)
+        return
+
     if args.suite in ('v7-ablations', 'v6-ablations') and not args.dry_run:
-        work_root_resolved = args.work_root if args.work_root.is_absolute() else ROOT / args.work_root
         if args.suite == 'v7-ablations' and args.dataset == 'wwtp' and args.auto_prerequisites:
             # 1. Ensure RPGV v8 is trained and evaluated first
             v8_eval = work_root_resolved / 'wwtp' / 'rpgv_v8' / 'eval' / 'metrics.json'
@@ -259,6 +278,13 @@ def main(argv=None):
                 marker = output / '.retrained_30k_done'
                 marker.parent.mkdir(parents=True, exist_ok=True)
                 marker.write_text('done\n')
+            if args.dataset == 'wwtp' and name == 'rpgv_v8' and not args.dry_run:
+                v8_done = ROOT / '.v8_pipeline_done'
+                v8_done.write_text('done\n')
+                if plan_v8_only:
+                    ready = ROOT / '.pipeline_finished_ready_shutdown'
+                    ready.write_text('done\n')
+                print('[PIPELINE-PLAN] RPGV v8 train-test completed successfully.', flush=True)
 
 
 if __name__ == '__main__':

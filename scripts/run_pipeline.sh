@@ -62,17 +62,30 @@ echo "==========================================================" | tee -a logs/
 python scripts/run_experiments.py train-test --dataset wwtp --models mask2former --resume 2>&1 | tee -a logs/pipeline_mask2former.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.1 Complete (mask2former)" | tee -a logs/pipeline.log
 
-echo "==========================================================" | tee -a logs/pipeline.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.2: HDNet" | tee -a logs/pipeline.log
-echo "==========================================================" | tee -a logs/pipeline.log
-python scripts/run_experiments.py train-test --dataset wwtp --models hdnet --resume 2>&1 | tee -a logs/pipeline_hdnet.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.2 Complete (HDNet)" | tee -a logs/pipeline.log
+if [[ -f .skip_hdnet || -f .pipeline_v8_then_shutdown || "${WWTP_SKIP_HDNET:-0}" == "1" ]]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Skipping Phase 2.2 (HDNet): user plan directs pipeline straight to RPGV v8." | tee -a logs/pipeline.log
+else
+  echo "==========================================================" | tee -a logs/pipeline.log
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.2: HDNet" | tee -a logs/pipeline.log
+  echo "==========================================================" | tee -a logs/pipeline.log
+  python scripts/run_experiments.py train-test --dataset wwtp --models hdnet --resume 2>&1 | tee -a logs/pipeline_hdnet.log
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.2 Complete (HDNet)" | tee -a logs/pipeline.log
+fi
 
 echo "==========================================================" | tee -a logs/pipeline.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.4: RPGV v8" | tee -a logs/pipeline.log
 echo "==========================================================" | tee -a logs/pipeline.log
 python scripts/run_experiments.py train-test --dataset wwtp --models rpgv_v8 --resume 2>&1 | tee -a logs/pipeline_v8.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.4 Complete (RPGV v8)" | tee -a logs/pipeline.log
+
+if [[ -f .pipeline_v8_then_shutdown || "${WWTP_V8_THEN_SHUTDOWN:-0}" == "1" ]]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Skipping Phase 2.5 (RPGV v7 retrain) and Phase 3 (Ablations): user plan is to shut down after RPGV v8." | tee -a logs/pipeline.log
+  touch .pipeline_finished_ready_shutdown
+  echo "==========================================================" | tee -a logs/pipeline.log
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ALL PIPELINE PHASES FINISHED (RPGV v8 complete, ready for shutdown)" | tee -a logs/pipeline.log
+  echo "==========================================================" | tee -a logs/pipeline.log
+  exit 0
+fi
 
 echo "==========================================================" | tee -a logs/pipeline.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.5: Retraining RPGV v7 from scratch (Full 30k schedule, overwriting previous result)" | tee -a logs/pipeline.log

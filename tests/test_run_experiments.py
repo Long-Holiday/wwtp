@@ -461,6 +461,26 @@ class ExperimentRunnerTest(unittest.TestCase):
             self.assertFalse(dummy_file.exists())
             self.assertTrue((output / 'new.txt').exists())
 
+    def test_plan_skip_hdnet(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work_root = Path(directory)
+            (work_root / '.skip_hdnet').touch()
+            calls = self.run_main(['train-test', '--dataset', 'wwtp', '--models', 'hdnet',
+                                   '--work-root', directory]).call_args_list
+            self.assertEqual(len(calls), 0)
+
+    def test_plan_v8_only_skips_v7_and_ablations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work_root = Path(directory)
+            (work_root / '.pipeline_v8_then_shutdown').touch()
+            for suite in ('v7', 'v7-ablations'):
+                calls = self.run_main(['train-test', '--dataset', 'wwtp', '--suite', suite,
+                                       '--work-root', directory]).call_args_list
+                self.assertEqual(len(calls), 0)
+            calls_hdnet = self.run_main(['train-test', '--dataset', 'wwtp', '--models', 'hdnet',
+                                         '--work-root', directory]).call_args_list
+            self.assertEqual(len(calls_hdnet), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
