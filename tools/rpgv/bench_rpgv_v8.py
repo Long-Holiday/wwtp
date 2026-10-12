@@ -36,10 +36,10 @@ from wwtpseg.engine.runtime import disable_pretraining
 
 # 'tf32' is fp32 with TF32 matmuls enabled; the others are autocast dtypes.
 PRECISION_DTYPES = {'fp32': None, 'tf32': None, 'bf16': torch.bfloat16, 'fp16': torch.float16}
-DEFAULT_TRAIN_CELLS = ('2:fp32:cp,4:fp32:cp,8:fp32:cp,8:fp32:nocp,8:tf32:cp,'
+DEFAULT_TRAIN_CELLS = ('2:tf32:cp,4:tf32:cp,8:tf32:cp,8:tf32:nocp,2:fp32:cp,'
                        '2:bf16:cp,4:bf16:cp,8:bf16:cp,8:bf16:nocp,12:bf16:nocp,'
                        '8:fp16:cp,8:fp16:nocp')
-DEFAULT_INFER_CELLS = '1:fp32,4:fp32,8:fp32,4:bf16,8:bf16'
+DEFAULT_INFER_CELLS = '1:tf32,4:tf32,8:tf32,1:bf16,4:bf16,8:bf16'
 
 
 def parse_train_cell(text):
@@ -83,12 +83,16 @@ def synchronize(device):
 
 
 def set_precision(precision, device):
-    """TF32 is a global backend flag; it is left on only for tf32 cells."""
+    """Mirror wwtpseg.engine.runtime.prepare_runtime, the flags real runs use.
+
+    'tf32' is what prepare_runtime enables for every run (both flags on), so it is
+    the honest fp32 baseline; 'fp32' keeps PyTorch's default matmul flag off to
+    show what disabling TF32 matmuls costs.
+    """
     if device.type != 'cuda':
         return
-    enabled = precision == 'tf32'
-    torch.backends.cuda.matmul.allow_tf32 = enabled
-    torch.backends.cudnn.allow_tf32 = enabled
+    torch.backends.cuda.matmul.allow_tf32 = precision in ('tf32', 'bf16', 'fp16')
+    torch.backends.cudnn.allow_tf32 = precision != 'fp32'
 
 
 def build_train_cell(cfg, cell, device):
@@ -127,11 +131,22 @@ def run_train_cell(cfg, cell, data, args, device):
             torch.cuda.reset_peak_memory_stats(device)
         if step > args.warmup:
             times.append(duration)
+    # mmengine zeroes gradients inside update_params, so the graded state has to
+    # come from a dedicated backward-only step rather than the end of the loop.
+    optim_wrapper.zero_grad()
+    with optim_wrapper.optim_context(model):
+        losses = model.loss(**data)
+        diagnostic_loss = sum(value for key, value in losses.items() if 'loss' in key)
+    optim_wrapper.backward(diagnostic_loss)
+    missing, nonfinite = [], []
     for name, parameter in model.named_parameters():
-        if parameter.requires_grad and (parameter.grad is None
-                                        or not torch.isfinite(parameter.grad).all()):
-            finite = False
-            break
+        if not parameter.requires_grad:
+            continue
+        if parameter.grad is None:
+            missing.append(name)
+        elif not torch.isfinite(parameter.grad).all():
+            nonfinite.append(name)
+    finite = not missing and not nonfinite
     if device.type == 'cuda':
         peak = dict(peak_allocated_mib=torch.cuda.max_memory_allocated(device) / 2**20,
                     peak_reserved_mib=torch.cuda.max_memory_reserved(device) / 2**20)
@@ -141,7 +156,9 @@ def run_train_cell(cfg, cell, data, args, device):
                   mean_seconds=statistics.mean(times),
                   median_seconds=statistics.median(times),
                   seconds_per_image=statistics.mean(times) / cell['batch_size'],
-                  seconds_all_steps=times, last_loss=loss_value, finite=finite, **peak)
+                  seconds_all_steps=times, last_loss=loss_value, finite=finite,
+                  parameters_without_gradient=missing[:8],
+                  parameters_with_nonfinite_gradient=nonfinite[:8], **peak)
     del model, optim_wrapper
     if device.type == 'cuda':
         torch.cuda.empty_cache()
@@ -207,6 +224,7 @@ def main():
     if device.type == 'cuda' and not torch.cuda.is_available():
         raise RuntimeError('CUDA unavailable')
     torch.set_num_threads(2)
+    torch.backends.cudnn.benchmark = True  # env_cfg.cudnn_benchmark in the real configs
     register_all_modules(init_default_scope=True)
     MMLogger.get_current_instance().setLevel(logging.ERROR)
     cfg = Config.fromfile(args.config)
