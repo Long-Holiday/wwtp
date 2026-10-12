@@ -38,6 +38,17 @@ python scripts/run_experiments.py train-test --dataset wwtp --suite baselines --
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2 Complete (Baselines)" | tee -a logs/pipeline.log
 
 echo "==========================================================" | tee -a logs/pipeline.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.5: Retraining RPGV v7 from scratch (Full 30k schedule, overwriting previous result)" | tee -a logs/pipeline.log
+echo "==========================================================" | tee -a logs/pipeline.log
+if [[ -d "work_dirs/wwtp/rpgv_v7" ]]; then
+  echo "Archiving previous rpgv_v7 to rpgv_v7_resumed_archive..." | tee -a logs/pipeline.log
+  rm -rf work_dirs/wwtp/rpgv_v7_resumed_archive
+  cp -r work_dirs/wwtp/rpgv_v7 work_dirs/wwtp/rpgv_v7_resumed_archive
+fi
+python scripts/run_experiments.py train-test --dataset wwtp --suite v7 --overwrite 2>&1 | tee -a logs/pipeline_v7_retrain_30k.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.5 Complete (RPGV v7 Fresh 30k)" | tee -a logs/pipeline.log
+
+echo "==========================================================" | tee -a logs/pipeline.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 3: V7 Ablations (Gated on V7 superiority)" | tee -a logs/pipeline.log
 echo "==========================================================" | tee -a logs/pipeline.log
 python scripts/run_experiments.py train-test --dataset wwtp --suite v7-ablations --resume 2>&1 | tee -a logs/pipeline_v7_ablations.log

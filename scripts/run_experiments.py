@@ -151,6 +151,8 @@ def main(argv=None):
     parser.add_argument('--work-root', type=Path, default=Path('work_dirs'))
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--overwrite', action='store_true',
+                        help='Overwrite and clear existing output directory instead of erroring when not resuming')
     parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument('--split', choices=('val', 'test'), help='Evaluation split; public datasets always use val')
     parser.add_argument('--cfg-options', nargs='+', default=[], help='Shared train/evaluation config overrides')
@@ -185,7 +187,12 @@ def main(argv=None):
     if training and not args.resume and not args.dry_run:
         for output in outputs:
             if output.exists() and (not output.is_dir() or any(output.iterdir())):
-                raise FileExistsError(f'Existing experiment: {output}; use --resume or a new --work-root')
+                if args.overwrite:
+                    import shutil
+                    print(f'Overwriting existing experiment directory: {output}', flush=True)
+                    shutil.rmtree(output)
+                else:
+                    raise FileExistsError(f'Existing experiment: {output}; use --resume, --overwrite or a new --work-root')
     for config in configs:
         if not config.is_file():
             raise FileNotFoundError(config)

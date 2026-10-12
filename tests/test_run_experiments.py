@@ -257,6 +257,25 @@ class ExperimentRunnerTest(unittest.TestCase):
                                        '--work-root', directory], train).call_args_list
             self.assertEqual(len(calls), 16)
 
+    def test_overwrite_clears_existing_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'wwtp' / 'hrnet'
+            output.mkdir(parents=True)
+            dummy_file = output / 'dummy.txt'
+            dummy_file.write_text('old')
+
+            with self.assertRaises(FileExistsError):
+                self.run_main(['train', '--models', 'hrnet', '--work-root', directory])
+
+            def mock_train(command, **kwargs):
+                out = Path(command[command.index('--work-dir') + 1])
+                out.mkdir(parents=True, exist_ok=True)
+                (out / 'new.txt').write_text('new')
+
+            self.run_main(['train', '--models', 'hrnet', '--work-root', directory, '--overwrite'], mock_train)
+            self.assertFalse(dummy_file.exists())
+            self.assertTrue((output / 'new.txt').exists())
+
 
 if __name__ == '__main__':
     unittest.main()
