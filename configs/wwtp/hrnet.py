@@ -5,6 +5,5 @@ _base_ = [
     '../_base_/default_runtime.py',
 ]
 
-train_dataloader = dict(batch_size=2)
 
 work_dir = 'work_dirs/wwtp/hrnet'
