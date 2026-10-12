@@ -6,10 +6,6 @@ MAINSTREAM_MODELS = (
     'hrnet', 'unetformer', 'segnext', 'segformer',
     'deeplabv3plus', 'mask2former', 'hdnet',
 )
-# Mask2Former's COCO query budget retuned for single-target WWTP imagery. Kept
-# out of MAINSTREAM_MODELS: it exists for WWTP only, and the tests pin the
-# baseline roster to seven names.
-BASELINE_VARIANTS = ('mask2former_q10',)
 DATASETS = ('wwtp', 'uavid', 'loveda', 'deepglobe')
 EVALUATION_PROTOCOLS = {
     'wwtp': dict(metric='binary/Foreground_IoU', split='test', labeled_test=True),
@@ -45,7 +41,7 @@ OFFLINE_GEOMETRY_MODELS = (
     ('rpgv_v6',) + V6_ABLATIONS + ('rpgv_v7',)
     + V7_ABLATIONS + V7_ANALYSIS_ABLATIONS + V7_LEGACY_ABLATIONS
 )
-OPTIONAL_MODELS = OFFLINE_GEOMETRY_MODELS + ('rpgv_v8',) + V8_ABLATIONS + BASELINE_VARIANTS
+OPTIONAL_MODELS = OFFLINE_GEOMETRY_MODELS + ('rpgv_v8',) + V8_ABLATIONS
 EXPERIMENT_SUITES = {
     'baselines': MAINSTREAM_MODELS,
     'v6': ('rpgv_v6',),
@@ -75,10 +71,6 @@ def experiment_config(dataset, model):
         if dataset != 'wwtp':
             raise ValueError(f'{version.upper()} ablations are only available for WWTP: {dataset}/{model}')
         return ROOT / f'configs/rpgv/{version}' / f'{model.removeprefix(f"rpgv_{version}_")}.py'
-    if model in BASELINE_VARIANTS:
-        if dataset != 'wwtp':
-            raise ValueError(f'Baseline variants are only available for WWTP: {dataset}/{model}')
-        return ROOT / 'configs' / dataset / f'{model}.py'
     if model in ('rpgv_v6', 'rpgv_v7', 'rpgv_v8'):
         if dataset == 'wwtp':
             return ROOT / 'configs/rpgv' / model.removeprefix('rpgv_') / f'{model}.py'

@@ -2,7 +2,7 @@
 # Sequential pipeline for WWTP 1024 experiments:
 # Phase 1: RPGV v7 train and test evaluation
 # Phase 2: Baselines train and test evaluation, minus mask2former and hdnet
-# Phase 2.1: Mask2Former with a query budget matched to single-target data
+# Phase 2.1: Mask2Former
 # Phase 2.2: HDNet
 # Phase 2.4: RPGV v8 train and test evaluation
 # Phase 2.5: RPGV v7 fresh 30k retraining, overwriting the previous result
@@ -57,10 +57,10 @@ else
 fi
 
 echo "==========================================================" | tee -a logs/pipeline.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.1: Mask2Former with a query budget matched to single-target data (num_queries=10)" | tee -a logs/pipeline.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.1: Mask2Former (COCO query budget, 30k schedule)" | tee -a logs/pipeline.log
 echo "==========================================================" | tee -a logs/pipeline.log
-python scripts/run_experiments.py train-test --dataset wwtp --models mask2former_q10 --resume 2>&1 | tee -a logs/pipeline_mask2former_q10.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.1 Complete (mask2former_q10)" | tee -a logs/pipeline.log
+python scripts/run_experiments.py train-test --dataset wwtp --models mask2former --resume 2>&1 | tee -a logs/pipeline_mask2former.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.1 Complete (mask2former)" | tee -a logs/pipeline.log
 
 echo "==========================================================" | tee -a logs/pipeline.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.2: HDNet" | tee -a logs/pipeline.log

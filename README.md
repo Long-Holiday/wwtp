@@ -112,8 +112,8 @@ python scripts/run_experiments.py train-test --dataset wwtp --suite all --dry-ru
 python scripts/run_experiments.py train-test --dataset wwtp --suite all --resume
 # 从套件中剔除个别模型（套件本身是数据集共享的静态清单）
 python scripts/run_experiments.py train-test --dataset wwtp --suite baselines --exclude mask2former hdnet
-# 单独选择变体：WWTP 的每张正样本图只有一个目标，Mask2Former 用 10 个 query 而非 COCO 默认的 100
-python scripts/run_experiments.py train-test --dataset wwtp --models mask2former_q10
+# 单独选择模型：流水线中 Mask2Former 与 HDNet 两项基线单独调度
+python scripts/run_experiments.py train-test --dataset wwtp --models mask2former
 
 # Docker 中将上述 python 命令前加 docker compose run --rm wwtp
 # 公开集支持七基线和完整 v6/v7；消融、all/v7-all 组仅适用于 WWTP
