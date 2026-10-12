@@ -1,6 +1,7 @@
 """Numerical, structural and model regressions for the independent v7 path."""
 from __future__ import annotations
 
+import copy
 import unittest
 from unittest.mock import patch
 
@@ -13,7 +14,9 @@ from mmseg.utils import register_all_modules
 
 from tests.rpgv.test_rpgv_v6 import tiny_model as v6_tiny_model, batch, objective
 from wwtpseg.engine.runtime import disable_pretraining
-from wwtpseg.experiments import experiment_config, V7_ABLATIONS
+from wwtpseg.experiments import (
+    experiment_config, V7_ABLATIONS, V7_ANALYSIS_ABLATIONS, V7_LEGACY_ABLATIONS,
+)
 from wwtpseg.models.utils.rpgv_v6_modules import SmoothFrequencySplitV6
 from wwtpseg.models.utils.rpgv_v7_modules import (
     GeometryPrimitivesV7, GeometryRelationNetworkV7, gather_nodes,
@@ -29,6 +32,18 @@ def tiny_model(**overrides):
                   hierarchical_cfg=dict(max_relations=16, composition_size=4))
     config.update(overrides)
     return v6_tiny_model(**config)
+
+
+def tiny_from_config(cfg):
+    return tiny_model(
+        use_geometry=cfg.model.use_geometry,
+        structure_source=cfg.model.structure_source,
+        structure_feedback=cfg.model.structure_feedback,
+        structure_aux_weight=cfg.model.structure_aux_weight,
+        graph_cfg=dict(cfg.model.graph_cfg),
+        hierarchical_cfg=dict(cfg.model.hierarchical_cfg),
+        primitive_cfg=dict(grid_size=2, max_size=16,
+                           fixed_grid=cfg.model.primitive_cfg.fixed_grid))
 
 
 def primitive_batch(quality=1.0, flat=False, size=(9, 11), **kwargs):
@@ -138,6 +153,24 @@ class V7ModuleTests(unittest.TestCase):
         torch.testing.assert_close(other, original[:, order], atol=1e-5, rtol=1e-5)
         torch.testing.assert_close(other_adj, adjacency[:, order][:, :, order])
         self.assertLessEqual(adjacency.sum(-1).max(), 4)
+
+    def test_no_message_passing_does_not_mix_node_features(self):
+        _, _, p = primitive_batch()
+        changed = p['nodes'].detach().clone()
+        changed[:, 0] += torch.randn_like(changed[:, 0]) * 2
+        for enabled in (True, False):
+            with self.subTest(message_passing=enabled):
+                graph = GeometryRelationNetworkV7(16, neighbors=3, use_edges=enabled).eval()
+                with torch.no_grad():
+                    original, adjacency = graph(p['nodes'], p['content'], p['positions'],
+                                                p['contact'], p['valid'])
+                    other, other_adjacency = graph(changed, p['content'], p['positions'],
+                                                   p['contact'], p['valid'])
+                torch.testing.assert_close(adjacency, other_adjacency)
+                if enabled:
+                    self.assertGreater((other[:, 1:] - original[:, 1:]).abs().sum().item(), 0)
+                else:
+                    torch.testing.assert_close(other[:, 1:], original[:, 1:], atol=0, rtol=0)
 
     def test_counterfactual_moves_content_not_positions(self):
         local = local_example()
@@ -357,9 +390,138 @@ class V7ModelTests(unittest.TestCase):
         self.assertNotIn('loss_composition_v7', losses)
         self.assertNotIn('loss_relation_v7', losses)
 
+    def test_core_and_analysis_ablation_config_differences(self):
+        reference = Config.fromfile(experiment_config('wwtp', 'rpgv_v7'))
+        changes = {
+            'rgb_only': {('use_geometry',): False},
+            'fixed_grid': {('primitive_cfg', 'fixed_grid'): True},
+            'no_feedback': {('structure_feedback',): False},
+            'no_hierarchical_supervision': {
+                ('hierarchical_cfg', weight): 0.0
+                for weight in ('node_weight', 'relation_weight', 'composition_weight')},
+            'no_node_supervision': {('hierarchical_cfg', 'node_weight'): 0.0},
+            'no_relation_supervision': {('hierarchical_cfg', 'relation_weight'): 0.0},
+            'no_composition': {('hierarchical_cfg', 'composition_weight'): 0.0},
+            'no_structure_aux': {('structure_aux_weight',): 0.0},
+            'no_message_passing': {
+                ('hierarchical_cfg', 'composition_weight'): 0.0,
+                ('graph_cfg', 'use_edges'): False},
+        }
+        self.assertEqual(set(V7_ABLATIONS + V7_ANALYSIS_ABLATIONS),
+                         {'rpgv_v7_' + suffix for suffix in changes})
+        directories = {reference.work_dir}
+        for suffix, overrides in changes.items():
+            with self.subTest(variant=suffix):
+                cfg = Config.fromfile(experiment_config('wwtp', 'rpgv_v7_' + suffix))
+                expected = copy.deepcopy(reference.model)
+                for path, value in overrides.items():
+                    target = expected
+                    for field in path[:-1]:
+                        target = target[field]
+                    target[path[-1]] = value
+                self.assertEqual(cfg.model, expected)
+                self.assertNotIn(cfg.work_dir, directories)
+                directories.add(cfg.work_dir)
+                if suffix != 'rgb_only':
+                    for split in ('train', 'val', 'test'):
+                        self.assertEqual(cfg[f'{split}_dataloader'], reference[f'{split}_dataloader'])
+        paired = Config.fromfile(experiment_config('wwtp', 'rpgv_v7_no_composition'))
+        expected = copy.deepcopy(paired.model)
+        expected.graph_cfg.use_edges = False
+        message = Config.fromfile(experiment_config('wwtp', 'rpgv_v7_no_message_passing'))
+        self.assertEqual(message.model, expected)
+        for current, historical in (('no_hierarchical_supervision', 'no_contrastive'),
+                                    ('no_composition', 'no_perturbation')):
+            new = Config.fromfile(experiment_config('wwtp', 'rpgv_v7_' + current))
+            old = Config.fromfile(experiment_config('wwtp', 'rpgv_v7_' + historical))
+            self.assertEqual(new.model, old.model)
+            self.assertNotEqual(new.work_dir, old.work_dir)
+
+    def test_core_and_analysis_ablation_objectives_and_heads(self):
+        structure_keys = {'loss_node_v7', 'loss_relation_v7', 'loss_composition_v7',
+                          'loss_structure_aux_v7'}
+        removed = {
+            'rpgv_v7': set(),
+            'rpgv_v7_rgb_only': structure_keys,
+            'rpgv_v7_fixed_grid': set(),
+            'rpgv_v7_no_feedback': set(),
+            'rpgv_v7_no_hierarchical_supervision': structure_keys - {'loss_structure_aux_v7'},
+            'rpgv_v7_no_node_supervision': {'loss_node_v7'},
+            'rpgv_v7_no_relation_supervision': {'loss_relation_v7'},
+            'rpgv_v7_no_composition': {'loss_composition_v7'},
+            'rpgv_v7_no_structure_aux': {'loss_structure_aux_v7'},
+            'rpgv_v7_no_message_passing': {'loss_composition_v7'},
+        }
+        x, samples = batch()
+        for name, absent in removed.items():
+            with self.subTest(variant=name):
+                cfg = Config.fromfile(experiment_config('wwtp', name))
+                model = tiny_from_config(cfg)
+                with patch('wwtpseg.models.utils.rpgv_v7_losses.permute_composition',
+                           wraps=permute_composition) as generate:
+                    losses = model.loss(x[:, :3] if not cfg.model.use_geometry else x, samples)
+                self.assertEqual(structure_keys & losses.keys(), structure_keys - absent)
+                composition = 'loss_composition_v7' not in absent
+                self.assertEqual(generate.call_count, cfg.model.hierarchical_cfg.negatives if composition else 0)
+                if not cfg.model.use_geometry:
+                    self.assertFalse(hasattr(model, 'primitives'))
+                    self.assertFalse(hasattr(model, 'relation_graph'))
+                    continue
+                self.assertEqual(hasattr(model, 'structure_head'), 'loss_structure_aux_v7' not in absent)
+                self.assertEqual(hasattr(model, 'structure_fusion'), cfg.model.structure_feedback)
+                self.assertEqual(hasattr(model, 'structure_rgb_projections'),
+                                 bool((structure_keys - {'loss_structure_aux_v7'}) - absent))
+                for weight, head in (('node_weight', 'node_contrast'),
+                                     ('relation_weight', 'rgb_relation'),
+                                     ('relation_weight', 'relation_prediction'),
+                                     ('composition_weight', 'rgb_composition'),
+                                     ('composition_weight', 'geometry_composition')):
+                    self.assertEqual(hasattr(model.hierarchical, head),
+                                     bool(cfg.model.hierarchical_cfg[weight]), head)
+                self.assertEqual(model.relation_graph.use_edges, cfg.model.graph_cfg.use_edges)
+                self.assertFalse(hasattr(model, 'region_contrastive'))
+
+    def test_message_passing_pair_has_trainable_graph_and_relation_heads(self):
+        x, samples = batch()
+        for name in ('rpgv_v7_no_composition', 'rpgv_v7_no_message_passing'):
+            with self.subTest(variant=name):
+                model = tiny_from_config(Config.fromfile(experiment_config('wwtp', name)))
+                for key in ('loss_final', 'loss_structure_aux_v7'):
+                    model.zero_grad(set_to_none=True)
+                    model.loss(x, samples)[key].backward()
+                    gradient = sum(p.grad.abs().sum().item() for p in model.relation_graph.parameters()
+                                   if p.grad is not None)
+                    self.assertGreater(gradient, 0, key)
+                model.zero_grad(set_to_none=True)
+                model.loss(x, samples)['loss_relation_v7'].backward()
+                self.assertTrue(all(p.grad is None for p in model.relation_graph.parameters()))
+                for module in (model.hierarchical.rgb_relation, model.hierarchical.relation_prediction,
+                               model.primitives.encoder):
+                    self.assertGreater(sum(p.grad.abs().sum().item() for p in module.parameters()
+                                           if p.grad is not None), 0)
+                model.zero_grad(set_to_none=True)
+                optimizer = torch.optim.AdamW(model.parameters(), lr=6e-4)
+                parameter = next(model.relation_graph.layers[0].parameters())
+                before = parameter.detach().clone()
+                objective(model.loss(x, samples)).backward()
+                optimizer.step()
+                self.assertFalse(torch.equal(before, parameter))
+
+    def test_removing_auxiliary_head_preserves_inference(self):
+        full = tiny_model().eval()
+        cfg = Config.fromfile(experiment_config('wwtp', 'rpgv_v7_no_structure_aux'))
+        without = tiny_from_config(cfg).eval()
+        without.load_state_dict({key: value for key, value in full.state_dict().items()
+                                 if not key.startswith('structure_head.')}, strict=True)
+        x, _ = batch()
+        with torch.no_grad():
+            expected = full._run_network(x)['final_logits']
+            actual = without._run_network(x)['final_logits']
+        torch.testing.assert_close(actual, expected, atol=0, rtol=0)
+
     def test_configs_and_shared_protocol(self):
         reference = Config.fromfile(experiment_config('wwtp', 'hrnet'))
-        for dataset, names in (('wwtp', ('rpgv_v7',) + V7_ABLATIONS),
+        for dataset, names in (('wwtp', ('rpgv_v7',) + V7_ABLATIONS + V7_ANALYSIS_ABLATIONS + V7_LEGACY_ABLATIONS),
                                ('loveda', ('rpgv_v7',)), ('uavid', ('rpgv_v7',))):
             for name in names:
                 with self.subTest(dataset=dataset, model=name):
@@ -375,17 +537,10 @@ class V7ModelTests(unittest.TestCase):
 
     def test_ablation_backward_paths_and_rgb_pipelines(self):
         x, samples = batch()
-        for name in V7_ABLATIONS:
+        for name in V7_ABLATIONS + V7_ANALYSIS_ABLATIONS + V7_LEGACY_ABLATIONS:
             with self.subTest(variant=name):
                 cfg = Config.fromfile(experiment_config('wwtp', name))
-                model = tiny_model(
-                    use_geometry=cfg.model.use_geometry,
-                    structure_source=cfg.model.structure_source,
-                    structure_feedback=cfg.model.structure_feedback,
-                    graph_cfg=dict(cfg.model.graph_cfg),
-                    hierarchical_cfg=dict(cfg.model.hierarchical_cfg),
-                    primitive_cfg=dict(grid_size=2, max_size=16,
-                                       fixed_grid=cfg.model.primitive_cfg.fixed_grid))
+                model = tiny_from_config(cfg)
                 rgb_only_input = name in ('rpgv_v7_rgb_only', 'rpgv_v7_rgb_capacity')
                 if rgb_only_input:
                     for split in ('train', 'val', 'test'):

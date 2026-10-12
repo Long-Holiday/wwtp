@@ -1,6 +1,6 @@
 # WWTP 遥感语义分割实验
 
-基于 MMSegmentation 1.2.2，统一 WWTP、UAVid2020 和 LoveDA 的模型、训练与评估入口。
+基于 MMSegmentation 1.2.2，统一 WWTP、UAVid2020、LoveDA 和 DeepGlobe Road Extraction 的模型、训练与评估入口。
 
 主流模型固定为 **HRNet-W18、UNetFormer-R18、SegNeXt-S、SegFormer-B2、DeepLabV3+-R50、Mask2Former-Swin-T、HDNet**。`untformer` 指 UNetFormer，`deeplab` 指 DeepLabV3+。训练批处理、测试批处理和合成冒烟测试使用同一份模型清单：`wwtpseg/experiments/__init__.py`。
 
@@ -14,6 +14,7 @@ configs/
   wwtp/               WWTP 七个主流模型
   uavid/              UAVid 同一组七个主流模型及已有 RPGV 多分类配置
   loveda/             LoveDA 同一组七个主流模型及已有 RPGV 多分类配置
+  deepglobe/          道路二分类：七基线与完整 RPGV v6/v7
   rpgv/{v1,v2,v3,v4,v5,v51,v6}/  各版本阶段、消融与对照配置
 wwtpseg/
   models/segmentors/  RPGV 各版本、hdnet/、multiclass/ 多分类适配
@@ -73,7 +74,7 @@ docker image rm wwtp-mmseg:torch2.5.1-cu124
 
 WWTP 默认根目录 `wwtp_semantic_dataset_1m/`，**1024×1024 整图、1 m/px**，沿用 v5 的光度扰动和精确翻转，不在线放大到 2048、不随机裁小块。误用非 1024 数据会明确报错。已有原始 WWTP 数据可用 `tools/data/resample_wwtp_dataset.py` 转换；影像面积采样、掩膜最近邻，划分保持不变。
 
-公开集仅使用 **UAVid2020、LoveDA**，本项目不下载数据。准备工具只读取官方解压目录。LoveDA 严格 `2522/1669/1796` 张；UAVid2020 严格 `200/70/150` 帧，按官方 sequence 保留 split，检查每个 sequence 十帧、划分间无 sequence 重叠。准备失败不会生成可用于训练的完整数据目录。详细目录与类别编码见 [数据协议](docs/datasets.md)。
+公开集支持 **UAVid2020、LoveDA、DeepGlobe Road Extraction**，本项目不下载数据。准备工具读取已解压目录。LoveDA 严格 `2522/1669/1796` 张；UAVid2020 严格 `200/70/150` 帧，按官方 sequence 保留 split，检查每个 sequence 十帧、划分间无 sequence 重叠。DeepGlobe 严格使用官方有标签 train 的 6226 对原图，构建固定本地 train/val/test，详见下节。准备失败不会生成可用于训练的完整数据目录。详细目录与类别编码见 [数据协议](docs/datasets.md)。
 
 ```bash
 docker compose run --rm wwtp python tools/data/prepare_public.py loveda \
@@ -84,9 +85,9 @@ docker compose run --rm wwtp python tools/data/prepare_public.py uavid \
 
 LoveDA 保留官方 1024 整图；UAVid 仅在官方训练 sequence 内切成 1024 块，边缘补零、标签补 255，不丢失边缘像素。验证与官方测试保留完整原始帧，用 1024／stride 768 滑窗拼接。**200 是原始训练帧数，不是切片后的样本数。** 不随机拆帧、不合并 train/val。
 
-正式对比（七基线、WWTP RPGV v6及其消融、公开集已有RPGV多分类适配）统一使用 `configs/_base_/schedules/baseline_20k.py`：**FP32 OptimWrapper、AdamW（lr=6e-4、betas=0.9/0.999、eps=1e-8、weight decay=0.01）、norm参数不衰减，其余参数同学习率/衰减规则，无骨干或头部专属倍率；L2梯度裁剪max_norm=10**。batch 2 × 累积 4 = 单卡有效batch 8，20,000个数据加载迭代 = 5,000次优化器更新；前1,000迭代LinearLR从1e-6倍升至基础LR，随后PolyLR（power=0.9、eta_min=0）。每1,000迭代验证与保存，不早停，seed=42、deterministic=False，自动学习率缩放关闭。FP32覆盖原AMP模型，吞吐与显存需求需重新测量。
+正式对比（七基线、WWTP RPGV v6及其消融、公开集已有RPGV多分类适配）统一使用 `configs/_base_/schedules/baseline_20k.py`：**FP32 OptimWrapper、AdamW（lr=6e-4、betas=0.9/0.999、eps=1e-8、weight decay=0.01）、norm参数不衰减，其余参数同学习率/衰减规则，无骨干或头部专属倍率；L2梯度裁剪max_norm=10**。batch 2 × 累积 4 = 单卡有效batch 8，30,000个数据加载迭代 = 7,500次优化器更新；前1,000迭代LinearLR从1e-6倍升至基础LR，随后PolyLR（power=0.9、eta_min=0）。每1,000迭代验证与保存，不早停，seed=42、deterministic=False，自动学习率缩放关闭。FP32覆盖原AMP模型，吞吐与显存需求需重新测量。
 
-同一数据集内保持相同划分、1024输入、RGB增强、采样及选权重规则：WWTP按验证前景IoU，公开集按验证mIoU。WWTP指标含前景、边界与拓扑，边界容差1.5px=1.5m；公开集使用mIoU/mDice/mFscore。**统一的是外部训练协议，模型原生辅助/匹配/几何损失及必要输入保留**。标准骨干使用各自ImageNet预训练；HDNet没有现成预训练骨干，保留随机初始化并单独披露，不能宣称预训练条件完全相同。
+同一数据集内保持相同划分、1024输入、RGB增强、采样及选权重规则：WWTP按验证前景IoU，UAVid/LoveDA按验证mIoU，DeepGlobe按本地验证道路IoU（`roadIoU`）。WWTP指标含前景、边界与拓扑，边界容差1.5px=1.5m；公开集使用mIoU/mDice/mFscore，DeepGlobe额外报告道路IoU/F1。**统一的是外部训练协议，模型原生辅助/匹配/几何损失及必要输入保留**。标准骨干使用各自ImageNet预训练；HDNet没有现成预训练骨干，保留随机初始化并单独披露，不能宣称预训练条件完全相同。
 
 ## 训练与测试
 
@@ -111,8 +112,8 @@ python scripts/run_experiments.py train-test --dataset wwtp --suite all --dry-ru
 python scripts/run_experiments.py train-test --dataset wwtp --suite all --resume
 
 # Docker 中将上述 python 命令前加 docker compose run --rm wwtp
-# 公开集支持七基线和完整 v6；v6 消融与 all 组目前仅适用于 WWTP
-# 公开集自动评估官方 val，不报告无标签 test 的指标
+# 公开集支持七基线和完整 v6/v7；消融、all/v7-all 组仅适用于 WWTP
+# UAVid/LoveDA 自动评估官方 val，不报告无标签 test 的指标
 python scripts/run_experiments.py train-test --dataset loveda --suite baselines
 python scripts/run_experiments.py train-test --dataset uavid --suite v6
 
@@ -129,7 +130,7 @@ docker compose run --rm wwtp python tools/test.py configs/wwtp/hrnet.py \
   work_dirs/wwtp/hrnet/iter_20000.pth --split val
 ```
 
-一键入口复用现有配置与正式训练策略，不更改预算或超参数；串行执行，任何训练、选权重或评估失败都会停止，不会静默跳过。默认输出为 `work_dirs/<dataset>/<model>/`，评估指标保存到该目录的 `eval/metrics.json`；消融目录名为 `rpgv_v6_<消融名>`。用 `--work-root` 指定新的整组输出根目录；非空训练目录需显式 `--resume`。`--models` 可选择子集，与 `--suite` 互斥；不指定时仍默认七基线。`train-test` 中额外训练参数（如 `--no-pretrained`）只传给训练，显式 `--cfg-options` 同时传给训练和评估；WWTP 默认评估 test，也可指定 `--split val`。一键 v6/消融会检查并补齐所需的伪几何，已有完整缓存则不加载深度模型；首次生成需要生成工具的依赖与 Depth Anything 权重。数据根目录用 `WWTP_DATA_ROOT`（兼容 `WWTP_V5_DATA_ROOT`）、`UAVID_DATA_ROOT`、`LOVEDA_DATA_ROOT` 指定，伪几何目录用 `WWTP_PSEUDO_ROOT` / `PUBLIC_PSEUDO_ROOT` 指定；真实运行会按配置覆盖后的 pipeline 解析生成路径，dry-run 的几何路径仅展示环境变量默认值。即使 RGB-only 消融，其现有 pipeline 也要求伪几何。此批处理入口的 v6 目录与旧 shell 入口的 `work_dirs/rpgv_v6_siglip_1m` 独立，不会自动复用旧权重。
+一键入口复用现有配置与正式训练策略，不更改预算或超参数；串行执行，任何训练、选权重或评估失败都会停止，不会静默跳过。默认输出为 `work_dirs/<dataset>/<model>/`，评估指标保存到该目录的 `eval/metrics.json`；消融目录名为 `rpgv_v6_<消融名>`。用 `--work-root` 指定新的整组输出根目录；非空训练目录需显式 `--resume`。`--models` 可选择子集，与 `--suite` 互斥；不指定时仍默认七基线。`train-test` 中额外训练参数（如 `--no-pretrained`）只传给训练，显式 `--cfg-options` 同时传给训练和评估；WWTP与DeepGlobe默认评估有标签test，UAVid/LoveDA默认评估官方val；也可指定 `--split val`。一键 v6/消融会检查并补齐所需的伪几何，已有完整缓存则不加载深度模型；首次生成需要生成工具的依赖与 Depth Anything 权重。数据根目录用 `WWTP_DATA_ROOT`（兼容 `WWTP_V5_DATA_ROOT`）、`UAVID_DATA_ROOT`、`LOVEDA_DATA_ROOT`、`DEEPGLOBE_DATA_ROOT` 指定，伪几何目录用 `WWTP_PSEUDO_ROOT` / `PUBLIC_PSEUDO_ROOT` 指定；真实运行会按配置覆盖后的 pipeline 解析生成路径，dry-run 的几何路径仅展示环境变量默认值。即使 RGB-only 消融，其现有 pipeline 也要求伪几何。此批处理入口的 v6 目录与旧 shell 入口的 `work_dirs/rpgv_v6_siglip_1m` 独立，不会自动复用旧权重。
 
 `--cfg-options` 仍可覆盖配置，但公平比较必须对整组实验应用相同策略，并使用相同GPU数；N卡默认全局有效batch为8N，不能与单卡结果混为等预算。变更batch时同步调整累积和迭代预算，保持全局有效batch、图像曝光与更新数。多卡批处理用 `--gpus N`。新协议必须重新训练并使用新的 `--work-dir`，旧策略的checkpoint/optimizer状态不能直接resume或混入正式结果。
 
@@ -144,6 +145,44 @@ docker compose run --rm wwtp python tools/evaluation/predict_public.py \
 ```
 
 LoveDA 提交沿用官方预测脚本：导出 **0–6 ID**，以原图片编号直接保存到输出目录；原始真值的 1–7 编号只用于读取训练标签。UAVid 导出与官方颜色匹配的 RGB mask，目录为 `seq*/Labels/<原帧名>.png`。
+
+### DeepGlobe Road Extraction
+
+自行获取 [DeepGlobe Road Extraction Dataset](https://www.kaggle.com/datasets/balraj98/deepglobe-road-extraction-dataset)，解压至新的原始数据目录。必需 `train/<id>_sat.jpg` 与 `train/<id>_mask.png` 共 6226 对；官方无标签 `valid/`（1243张）和 `test/`（1101张）可选。**不能用无标签官方 valid/test 计算本地指标。**
+
+默认将有标签 train 按原图 ID 固定 seed=42 拆成 **4982/622/622** 张本地 train/val/test，整图保持 1024×1024；标签黑色→背景0，白色→道路1，白色255不作为ignore。划分和来源记录在 `manifest.json`，训练入口校验成员互斥与完整覆盖；这是本地随机原图划分，不声称地理空间隔离，结果不可冒充官方排行榜成绩。`--split-seed`、`--split-ratios TRAIN VAL TEST` 可自定义划分，正式对比必须使用同一份 prepared 数据；修改后应准备到新目录。
+
+```bash
+docker compose run --rm wwtp python tools/data/prepare_public.py deepglobe \
+  --source data/remote_sensing/raw/deepglobe --output data/remote_sensing/prepared/deepglobe
+
+# 九模型：按本地 val 的道路IoU选best，再评估本地test
+# 先用 --dry-run 检查命令；删除该参数才会真正启动训练
+docker compose run --rm wwtp python scripts/run_experiments.py train-test \
+  --dataset deepglobe --models hrnet unetformer segnext segformer deeplabv3plus mask2former hdnet rpgv_v6 rpgv_v7 \
+  --dry-run
+# 也可分组运行（不要与上述正式运行使用相同的非空输出目录）
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset deepglobe --suite baselines
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset deepglobe --suite v6
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset deepglobe --suite v7
+```
+
+新增配置在 `configs/deepglobe/`，七基线及RPGV v6/v7均继承同一30k外部训练策略。根目录由 `DEEPGLOBE_DATA_ROOT` 指定；Docker Compose 使用容器内 `/workspace/...` 路径。RPGV复用 `PUBLIC_PSEUDO_ROOT`（默认 prepared 目录下的 `pseudo_geometry`），批量入口自动准备 train/val/test 所需缓存。默认按 `roadIoU` 保存 `best_roadIoU_iter_*.pth`，指标为全集合累计像素统计的百分数道路IoU/F1及mIoU/mDice/mFscore；道路指标零分母定义为0，不对逐图IoU取平均。本地test不参与选权重，显式 `--split val` 可只评估验证集。
+
+原始官方valid/test如已提供，准备工具分别导入 `img_dir/official_val` 和 `img_dir/official_test`，与本地test完全分离。导出黑白 `<id>_mask.png`（非本地评估）示例：
+
+```bash
+# RPGV导出前需为目标官方split生成伪几何；基线不需要此步
+docker compose run --rm wwtp python tools/data/generate_pseudo_geometry.py \
+  data/remote_sensing/prepared/deepglobe --image-dir img_dir --splits official_test
+
+docker compose run --rm wwtp python tools/evaluation/predict_public.py \
+  configs/deepglobe/rpgv_v7.py work_dirs/deepglobe/rpgv_v7/BEST.pth \
+  --split official_test --output work_dirs/deepglobe/rpgv_v7/official_predictions
+# --split official_val 可导出官方valid；不指定时默认official_test
+```
+
+新数据集不会自动插入 WWTP 的 `run_pipeline.sh` 训练队列。真实完整数据训练仍需由用户启动。
 
 ### 训练可视化（TensorBoard）
 
@@ -176,7 +215,7 @@ docker compose run --rm -p 6006:6006 wwtp \
 
 远程服务器上先用 `ssh -L 6006:localhost:6006 <host>` 建立本地转发，再访问同一端口。曲线内容：
 
-- **Scalars**：训练 `loss`、`lr`、`data_time`、`time`，每 50 迭代记录，数值与文本日志一致；验证指标每 `val_interval`（正式协议为 1000 迭代）记录一次。WWTP 为前景 IoU、边界与拓扑指标，公开集为 mIoU/mDice/mFscore，与 `save_best` 选择依据一致，因此最优 checkpoint 就是曲线峰值处。
+- **Scalars**：训练 `loss`、`lr`、`data_time`、`time`，每 50 迭代记录，数值与文本日志一致；验证指标每 `val_interval`（正式协议为 1000 迭代）记录一次。WWTP 为前景 IoU、边界与拓扑指标，UAVid/LoveDA 为 mIoU/mDice/mFscore，DeepGlobe 额外记录 roadIoU/roadF1，并按 roadIoU 选权重，与 `save_best` 选择依据一致，因此最优 checkpoint 就是曲线峰值处。
 - **Images**：默认关闭。mmseg 1.x 的 `SegVisualizationHook` 默认 `draw=False`，只打一条 warning 就返回，验证期不绘图、也不生成 `vis_image/`。需要时显式打开：`tools/train.py <config> --cfg-options default_hooks.visualization.draw=True`（`scripts/run_experiments.py` 同样透传 `--cfg-options`），打开后每 `interval`（默认 50）个验证样本画一张叠加了预测与真值的 1024 原分辨率图，同时写入 TensorBoard 与 `vis_data/vis_image/`。
 - **Text**：本次运行的完整配置，便于核对训练协议。
 
@@ -208,13 +247,20 @@ docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v6.py \
   --output work_dirs/profiles/v6_train.json
 ```
 
-默认从 ImageNet RGB 骨干初始化联合训练，仍为1024整图、batch2×累积4、5,000次优化器更新；启用激活重计算，SDF目标在训练数据worker生成。新目录为 `work_dirs/rpgv_v6_siglip_1m`。**旧 InfoNCE v6、历史 v6/v5.1 完整权重不能直接 resume 本版 SigLIP 目标**，新增 `logit_bias` 参数且优化器参数集合改变，只恢复本版相同配置的checkpoint。除 `no_contrastive.py` / `rgb_only.py` 外，还提供 `encoder_fusion.py`、`legacy_contour.py`、`cluster32.py` 单因素消融。训练方式、WSL GPU启动替代命令、性能实测及已知限制见 [v6 设计说明](docs/rpgv_v6_design.md)。
+默认从 ImageNet RGB 骨干初始化联合训练，仍为1024整图、batch2×累积4、7,500次优化器更新；启用激活重计算，SDF目标在训练数据worker生成。新目录为 `work_dirs/rpgv_v6_siglip_1m`。**旧 InfoNCE v6、历史 v6/v5.1 完整权重不能直接 resume 本版 SigLIP 目标**，新增 `logit_bias` 参数且优化器参数集合改变，只恢复本版相同配置的checkpoint。除 `no_contrastive.py` / `rgb_only.py` 外，还提供 `encoder_fusion.py`、`legacy_contour.py`、`cluster32.py` 单因素消融。训练方式、WSL GPU启动替代命令、性能实测及已知限制见 [v6 设计说明](docs/rpgv_v6_design.md)。
 
 ### RPGV v7
 
 v7 沿用统一外部训练策略，添加独立的“几何基元—空间关系—局部组合”结构路径：固定 64 个几何软节点（不平坦节点被筛掉），两层 128 维、4 头关系注意力，三层对比监督（区域、关系、组合）与结构扰动排序损失，结构图残差在 F16/F8 反馈到分割解码；F4 仍由 v6 几何与轮廓残差负责细节。GT 不参与构图或扰动；v6 checkpoint 不能 resume 完整 v7。保留辅助 SDF、边界带、校正正则；新损失按有效节点/边/组合归一化，并在日志记录有效样本数、负例数与组合分差，不进入总损失。
 
-v7 消融（仅 WWTP）：`rgb_only.py`、`no_contrastive.py`、`no_relational_supervision.py`、`no_edges.py`、`no_perturbation.py`、`no_feedback.py`、`fixed_grid.py`、`rgb_capacity.py`。统一协议与基线相同；其中 `rgb_only` 与 `rgb_capacity` 不加载伪几何。公开集支持七基线和完整 v7。
+v7 消融仅研究完整 v7 的模块与训练目标（仅 WWTP），不混入版本演进对比。默认 `v7-ablations` 精简为六项，加完整 v7 共七组：
+
+- 整体/前向机制：`rgb_only.py`、`fixed_grid.py`、`no_feedback.py`。
+- 核心监督归因：`no_relation_supervision.py`、`no_composition.py`、`no_structure_aux.py`。分别关闭关系目标组（含测量回归）、组合排序、结构辅助分割；其他目标保持不变。
+
+`no_hierarchical_supervision.py`、`no_node_supervision.py`、`no_message_passing.py` 保留为按需分析，不进入默认队列。前两项分别检查整体层次目标和区域监督；图推理项 **只与 `no_composition.py` 配对比较**，在两者共同关闭组合目标后，将关系注意力替换为节点独立 MLP，区域、关系及结构辅助监督均保留。无序 MLP 池化无法区分当前的内容置换，不能把此项与完整 v7 的差值单独归因于图消息传递，也不能称为仅去掉边属性。默认六项不单独证明区域目标或图消息传递的贡献。
+
+统一外部协议不变：30,000 microsteps / 7,500 次优化器更新。`v7-all` 为原七基线、v6、完整 v7 和六个消融，共 15 项；其中 v6 不是消融对照。旧 `no_contrastive.py`、`no_relational_supervision.py`、`no_edges.py`、`no_perturbation.py`、`rgb_capacity.py` 保留原语义，但与上述三项按需分析一样只通过显式 `--models` 选择，不进入默认队列、不迁移旧结果。`rgb_capacity` 是 RGB 灰度/单位支持替代外部几何，并非严格纯参数容量控制。默认只有 `rgb_only` 不加载伪几何；历史 `rgb_capacity` 也不加载。公开集支持七基线和完整 v7。
 
 ```bash
 python scripts/run_experiments.py train-test --dataset wwtp --suite v7-all --dry-run
@@ -234,7 +280,20 @@ docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v7.py \
 
 ## 小规模验证
 
-无需数据集和预训练权重下载：
+无需数据集和预训练权重下载。DeepGlobe 数据、配置、指标、调度与RPGV前后向，以及合成数据短步训练/选best/test，可在现有镜像中用CPU测试（不需要GPU透传）：
+
+```bash
+docker run --rm -v "$PWD:/workspace" -w /workspace \
+  -e PYTHONPATH=/workspace -e PYTHONDONTWRITEBYTECODE=1 -e OMP_NUM_THREADS=2 \
+  wwtp-mmseg:torch2.1.2-cu121 python -m unittest \
+  tests.test_deepglobe_data tests.test_deepglobe_training \
+  tests.test_run_experiments tests.test_experiment_protocol -v
+docker run --rm -v "$PWD:/workspace" -w /workspace \
+  -e PYTHONPATH=/workspace -e PYTHONDONTWRITEBYTECODE=1 \
+  wwtp-mmseg:torch2.1.2-cu121 python tests/smoke_test.py --dataset deepglobe --backward --device cpu
+```
+
+以下现有GPU测试命令仍可使用：
 
 ```bash
 docker compose run --rm wwtp python -m unittest discover -s tests -p 'test_experiment_protocol.py' -v

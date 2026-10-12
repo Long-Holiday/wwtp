@@ -1,3 +1,4 @@
+from .deepglobe import DeepGlobeRoadDataset
 from .uavid import UAVidDataset
 from .transforms.shape import RequireImageShape
 from .transforms import (
@@ -10,6 +11,7 @@ from .transforms import (
 from .wwtp_dataset import WWTPDataset
 
 __all__ = [
+    'DeepGlobeRoadDataset',
     'WWTPDataset',
     'RandomForegroundCrop',
     'LoadPseudoGeometry',

@@ -24,7 +24,7 @@ class ExperimentRunnerTest(unittest.TestCase):
     def test_roster_and_configs(self):
         self.assertEqual({key: len(value) for key, value in runner.EXPERIMENT_SUITES.items()},
                          {'baselines': 7, 'v6': 1, 'v6-ablations': 5, 'all': 13,
-                          'v7': 1, 'v7-ablations': 8, 'v7-all': 17})
+                          'v7': 1, 'v7-ablations': 6, 'v7-all': 15})
         self.assertEqual(len(set(runner.EXPERIMENT_SUITES['all'])), 13)
         for name in runner.EXPERIMENT_SUITES['all']:
             self.assertTrue(runner.experiment_config('wwtp', name).is_file())
@@ -54,11 +54,49 @@ class ExperimentRunnerTest(unittest.TestCase):
         result = subprocess.run([sys.executable, '-S', str(runner.ROOT / 'scripts/run_experiments.py'),
                                  'train-test', '--suite', 'v7-all', '--dry-run'],
                                 capture_output=True, text=True, check=True)
-        self.assertEqual(result.stdout.count('tools/train.py'), 17)
-        self.assertEqual(result.stdout.count('tools/test.py'), 17)
+        self.assertEqual(result.stdout.count('tools/train.py'), 15)
+        self.assertEqual(result.stdout.count('tools/test.py'), 15)
         self.assertEqual(result.stdout.count('tools/data/generate_pseudo_geometry.py'), 1)
         self.assertIn('configs/rpgv/v7/rpgv_v7.py', result.stdout)
         self.assertNotIn('rpgv_v7', runner.EXPERIMENT_SUITES['all'])
+
+    def test_v7_core_analysis_and_legacy_selections(self):
+        expected = tuple('rpgv_v7_' + suffix for suffix in (
+            'rgb_only', 'fixed_grid', 'no_feedback', 'no_relation_supervision',
+            'no_composition', 'no_structure_aux'))
+        analysis = tuple('rpgv_v7_' + suffix for suffix in (
+            'no_hierarchical_supervision', 'no_node_supervision', 'no_message_passing'))
+        legacy = tuple('rpgv_v7_' + suffix for suffix in (
+            'no_contrastive', 'no_relational_supervision', 'no_edges',
+            'no_perturbation', 'rgb_capacity'))
+        self.assertEqual(runner.EXPERIMENT_SUITES['v7-ablations'], expected)
+        self.assertEqual(len(set(runner.OPTIONAL_MODELS)), len(runner.OPTIONAL_MODELS))
+        for name in expected + analysis + legacy:
+            self.assertIn(name, runner.OPTIONAL_MODELS)
+            self.assertTrue(runner.experiment_config('wwtp', name).is_file())
+            for dataset in ('uavid', 'loveda', 'deepglobe'):
+                with self.assertRaises(ValueError):
+                    runner.experiment_config(dataset, name)
+        for name in analysis + legacy:
+            self.assertNotIn(name, runner.EXPERIMENT_SUITES['v7-all'])
+        for selection, names in ((['--suite', 'v7-ablations'], expected),
+                                 (['--models', *analysis], analysis),
+                                 (['--models', *legacy], legacy)):
+            result = subprocess.run([
+                sys.executable, '-S', str(runner.ROOT / 'scripts/run_experiments.py'),
+                'train-test', *selection, '--dry-run'],
+                capture_output=True, text=True, check=True)
+            self.assertEqual(result.stdout.count('tools/train.py'), len(names))
+            self.assertEqual(result.stdout.count('tools/test.py'), len(names))
+            for name in names:
+                config = str(runner.experiment_config('wwtp', name).relative_to(runner.ROOT))
+                self.assertIn(config, result.stdout)
+                self.assertIn(f'work_dirs/wwtp/{name}', result.stdout)
+            if selection[0] == '--suite':
+                for name in analysis + legacy:
+                    config = str(runner.experiment_config('wwtp', name).relative_to(runner.ROOT))
+                    self.assertNotIn(config, result.stdout)
+                    self.assertNotIn(f'work_dirs/wwtp/{name}', result.stdout)
 
     def test_train_then_validation_selected_test(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -255,7 +293,80 @@ class ExperimentRunnerTest(unittest.TestCase):
             with patch.object(runner, 'prepare_geometry'):
                 calls = self.run_main(['train-test', '--suite', 'v7-ablations',
                                        '--work-root', directory], train).call_args_list
-            self.assertEqual(len(calls), 16)
+            self.assertEqual(len(calls), 12)
+
+    def test_deepglobe_nine_models_dependency_free_dry_run(self):
+        models = runner.MAINSTREAM_MODELS + ('rpgv_v6', 'rpgv_v7')
+        for name in models:
+            self.assertTrue(runner.experiment_config('deepglobe', name).is_file())
+        result = subprocess.run([
+            sys.executable, '-S', str(runner.ROOT / 'scripts/run_experiments.py'),
+            'train-test', '--dataset', 'deepglobe', '--models', *models, '--dry-run'],
+            capture_output=True, text=True, check=True)
+        self.assertEqual(result.stdout.count('tools/train.py'), 9)
+        self.assertEqual(result.stdout.count('tools/test.py'), 9)
+        self.assertEqual(result.stdout.count('tools/data/generate_pseudo_geometry.py'), 1)
+        self.assertEqual(result.stdout.count('--split test'), 9)
+        self.assertIn('best_roadIoU_iter_SELECTED.pth', result.stdout)
+        self.assertIn('--splits test train val', result.stdout)
+        with self.assertRaises(ValueError):
+            runner.experiment_config('deepglobe', 'rpgv_v7_fixed_grid')
+        self.assertEqual(runner.extract_primary_metric({'roadIoU': 63.5, 'mIoU': 81.0}, 'deepglobe'), 63.5)
+        self.assertIsNone(runner.extract_primary_metric({'mIoU': 81.0}, 'deepglobe'))
+
+    def test_deepglobe_validation_selected_local_test(self):
+        for split in (None, 'val'):
+            with tempfile.TemporaryDirectory() as directory:
+                def train(command, **kwargs):
+                    if 'tools/train.py' in command:
+                        output = Path(command[command.index('--work-dir') + 1])
+                        output.mkdir(parents=True)
+                        (output / 'best_roadIoU_iter_1000.pth').touch()
+                        (output / 'iter_30000.pth').touch()
+                args = ['train-test', '--dataset', 'deepglobe', '--models', 'hrnet',
+                        '--work-root', directory, '--cfg-options', 'randomness.seed=123']
+                if split:
+                    args += ['--split', split]
+                calls = self.run_main(args, train).call_args_list
+                self.assertEqual(len(calls), 2)
+                self.assertIn('best_roadIoU_iter_1000.pth', calls[1].args[0][3])
+                self.assertEqual(calls[1].args[0][-4:-2], ['--split', split or 'test'])
+                for call in calls:
+                    self.assertIn('randomness.seed=123', call.args[0])
+
+    def test_deepglobe_missing_best_and_failed_train_never_test(self):
+        for error in (None, subprocess.CalledProcessError(1, 'train')):
+            with tempfile.TemporaryDirectory() as directory:
+                def train(command, **kwargs):
+                    if error:
+                        raise error
+                    output = Path(command[command.index('--work-dir') + 1])
+                    output.mkdir(parents=True)
+                    (output / 'iter_30000.pth').touch()
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(
+                        runner.subprocess, 'run', side_effect=train) as execute:
+                    with self.assertRaises(subprocess.CalledProcessError if error else FileNotFoundError):
+                        runner.main(['train-test', '--dataset', 'deepglobe', '--models', 'hrnet',
+                                     '--work-root', directory])
+                    self.assertEqual(execute.call_count, 1)
+
+    def test_deepglobe_rpgv_geometry_splits(self):
+        for mode, expected in (('train', ['train', 'val']), ('train-test', ['train', 'val', 'test'])):
+            with tempfile.TemporaryDirectory() as directory, patch.object(runner, 'prepare_geometry') as geometry:
+                def train(command, **kwargs):
+                    if 'tools/train.py' in command:
+                        output = Path(command[command.index('--work-dir') + 1])
+                        output.mkdir(parents=True)
+                        (output / 'best_roadIoU_iter_1000.pth').touch()
+                calls = self.run_main([mode, '--dataset', 'deepglobe', '--models', 'rpgv_v6', 'rpgv_v7',
+                                       '--work-root', directory], train).call_args_list
+                geometry.assert_called_once()
+                self.assertEqual(len(geometry.call_args.args[0]), 2)
+                self.assertEqual(geometry.call_args.args[2], expected)
+                self.assertEqual(len(calls), 2 if mode == 'train' else 4)
+        with patch.dict(os.environ, {'DEEPGLOBE_DATA_ROOT': '/roads', 'PUBLIC_PSEUDO_ROOT': '/geometry'}):
+            self.assertEqual(runner.geometry_jobs([], 'deepglobe', ['test'], [], True),
+                             {('/roads', '/geometry', 'img_dir'): {'test'}})
 
     def test_overwrite_clears_existing_directory(self):
         with tempfile.TemporaryDirectory() as directory:

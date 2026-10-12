@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
-"""Prepare already extracted UAVid/LoveDA; never download datasets."""
+"""Prepare already extracted UAVid/LoveDA/DeepGlobe; never download datasets."""
 import argparse
 import json
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
+
+if __package__:
+    from .deepglobe_protocol import (
+        DEFAULT_SPLIT_RATIOS, DEFAULT_SPLIT_SEED, OFFICIAL_FOLDERS,
+        SPLIT_PROTOCOL, SPLIT_ROUNDING, local_splits, source_id)
+else:
+    from deepglobe_protocol import (
+        DEFAULT_SPLIT_RATIOS, DEFAULT_SPLIT_SEED, OFFICIAL_FOLDERS,
+        SPLIT_PROTOCOL, SPLIT_ROUNDING, local_splits, source_id)
 
 # Class order is shared with UAVidDataset and exported prediction masks.
 UAVID_COLORS = (
@@ -16,11 +25,34 @@ UAVID_COLORS = (
 OFFICIAL_COUNTS = {
     'loveda': {'train': 2522, 'val': 1669, 'test': 1796},
     'uavid': {'train': 200, 'val': 70, 'test': 150},
+    'deepglobe': {'train': 6226, 'valid': 1243, 'test': 1101},
 }
 
 
 def inventory(dataset, source):
     """Validate official source splits before writing a single prepared image."""
+    if dataset == 'deepglobe':
+        splits = {}
+        seen_ids = set()
+        for split, expected in OFFICIAL_COUNTS[dataset].items():
+            directory = source / split
+            if split != 'train' and not directory.exists():
+                continue
+            paths = sorted(directory.glob('*_sat.jpg'))
+            if len(paths) != expected:
+                raise ValueError(f'DeepGlobe {split}: expected {expected} images, got {len(paths)} in {directory}')
+            ids = {source_id(p.relative_to(source).as_posix(), split) for p in paths}
+            if len(ids) != expected or seen_ids & ids:
+                raise ValueError(f'Duplicate DeepGlobe source IDs: {split}')
+            seen_ids.update(ids)
+            if split == 'train':
+                masks = {p.name.removesuffix('_mask.png') for p in directory.glob('*_mask.png')}
+                if masks != ids:
+                    raise ValueError('DeepGlobe train image/mask inventory differs')
+            elif list(directory.glob('*_mask.png')):
+                raise ValueError(f'DeepGlobe official {split} is an unlabeled prediction split')
+            splits[split] = paths
+        return splits
     splits = {}
     sequences = {}
     for split, expected in OFFICIAL_COUNTS[dataset].items():
@@ -98,12 +130,70 @@ def _save_tiles(image, mask, root, split, stem, size=1024):
     return count
 
 
-def prepare(dataset, source, output):
+def deepglobe_label_ids(image):
+    values = np.asarray(image)
+    if values.ndim == 3 and values.shape[2] == 3:
+        if not np.all(values == values[..., :1]):
+            raise ValueError('DeepGlobe RGB masks must contain black/white pixels only')
+        values = values[..., 0]
+    if values.ndim != 2 or not set(np.unique(values)).issubset({0, 255}):
+        raise ValueError('DeepGlobe masks must use black=0 and white=255')
+    return Image.fromarray((values == 255).astype(np.uint8))
+
+
+def _prepare_deepglobe(source, output, splits, seed, ratios):
+    files = [p.relative_to(source).as_posix() for p in splits['train']]
+    local = local_splits(files, seed, ratios)
+    prediction = {prepared: [p.relative_to(source).as_posix() for p in splits[official]]
+                  for prepared, official in OFFICIAL_FOLDERS.items() if official in splits}
+    stage = output.with_name(output.name + '.building')
+    if stage.exists():
+        raise FileExistsError(f'Incomplete preparation exists: {stage}')
+    counts = {}
+    for split, filenames in {**local, **prediction}.items():
+        (stage / 'img_dir' / split).mkdir(parents=True)
+        if split in local:
+            (stage / 'ann_dir' / split).mkdir(parents=True)
+        for filename in filenames:
+            path = source / filename
+            identifier = source_id(filename, 'train' if split in local else OFFICIAL_FOLDERS[split])
+            with Image.open(path) as stream:
+                image = stream.convert('RGB')
+            if image.size != (1024, 1024):
+                raise ValueError(f'DeepGlobe must be 1024x1024: {path} = {image.size}')
+            mask = None
+            if split in local:
+                label = path.with_name(f'{identifier}_mask.png')
+                with Image.open(label) as stream:
+                    mask = deepglobe_label_ids(stream)
+                if mask.size != image.size:
+                    raise ValueError(f'Image/mask size mismatch: {path}')
+            _save(image, mask, stage, split, f'{identifier}.png')
+        counts[split] = dict(source_images=len(filenames), prepared_images=len(filenames))
+    manifest = dict(
+        dataset='deepglobe', patch_size=1024, counts=counts,
+        official_source_counts=OFFICIAL_COUNTS['deepglobe'], source_files=local,
+        prediction_source_files=prediction, split_protocol=SPLIT_PROTOCOL,
+        split_seed=seed, split_ratios=list(ratios), split_rounding=SPLIT_ROUNDING,
+        labeled_source_split='train', checkpoint_selection_split='val',
+        test_labels='local_labeled_holdout', local_evaluation_split='test',
+        label_encoding='background=0; road=1; ignore=255')
+    (stage / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    stage.rename(output)
+    return manifest
+
+
+def prepare(dataset, source, output, split_seed=DEFAULT_SPLIT_SEED,
+            split_ratios=DEFAULT_SPLIT_RATIOS):
     if not source.is_dir():
         raise FileNotFoundError(source)
     if output.exists():
         raise FileExistsError(f'Refusing to replace prepared data: {output}')
     splits = inventory(dataset, source)
+    if dataset == 'deepglobe':
+        return _prepare_deepglobe(source, output, splits, split_seed, split_ratios)
+    if split_seed != DEFAULT_SPLIT_SEED or tuple(split_ratios) != DEFAULT_SPLIT_RATIOS:
+        raise ValueError('Local split options are only supported for DeepGlobe')
     stage = output.with_name(output.name + '.building')
     if stage.exists():
         raise FileExistsError(f'Incomplete preparation exists: {stage}')
@@ -161,11 +251,16 @@ def prepare(dataset, source, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('dataset', choices=('uavid', 'loveda'))
+    parser.add_argument('dataset', choices=('uavid', 'loveda', 'deepglobe'))
     parser.add_argument('--source', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--split-seed', type=int, default=DEFAULT_SPLIT_SEED,
+                        help='DeepGlobe local split seed (default: 42)')
+    parser.add_argument('--split-ratios', type=float, nargs=3, default=DEFAULT_SPLIT_RATIOS,
+                        metavar=('TRAIN', 'VAL', 'TEST'), help='DeepGlobe local split ratios (default: 0.8 0.1 0.1)')
     args = parser.parse_args()
-    print(json.dumps(prepare(args.dataset, args.source, args.output), indent=2))
+    print(json.dumps(prepare(args.dataset, args.source, args.output,
+                             args.split_seed, args.split_ratios), indent=2))
 
 
 if __name__ == '__main__':

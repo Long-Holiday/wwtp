@@ -6,17 +6,35 @@ MAINSTREAM_MODELS = (
     'hrnet', 'unetformer', 'segnext', 'segformer',
     'deeplabv3plus', 'mask2former', 'hdnet',
 )
-DATASETS = ('wwtp', 'uavid', 'loveda')
+DATASETS = ('wwtp', 'uavid', 'loveda', 'deepglobe')
+EVALUATION_PROTOCOLS = {
+    'wwtp': dict(metric='binary/Foreground_IoU', split='test', labeled_test=True),
+    'uavid': dict(metric='mIoU', split='val', labeled_test=False),
+    'loveda': dict(metric='mIoU', split='val', labeled_test=False),
+    'deepglobe': dict(metric='roadIoU', split='test', labeled_test=True),
+}
 V6_ABLATIONS = (
     'rpgv_v6_rgb_only', 'rpgv_v6_no_contrastive', 'rpgv_v6_encoder_fusion',
     'rpgv_v6_legacy_contour', 'rpgv_v6_cluster32',
 )
 V7_ABLATIONS = (
-    'rpgv_v7_rgb_only', 'rpgv_v7_no_contrastive', 'rpgv_v7_no_relational_supervision',
-    'rpgv_v7_no_edges', 'rpgv_v7_no_perturbation', 'rpgv_v7_no_feedback',
-    'rpgv_v7_fixed_grid', 'rpgv_v7_rgb_capacity',
+    'rpgv_v7_rgb_only', 'rpgv_v7_fixed_grid', 'rpgv_v7_no_feedback',
+    'rpgv_v7_no_relation_supervision', 'rpgv_v7_no_composition', 'rpgv_v7_no_structure_aux',
 )
-OPTIONAL_MODELS = ('rpgv_v6',) + V6_ABLATIONS + ('rpgv_v7',) + V7_ABLATIONS
+# More detailed objective/graph analyses are opt-in rather than default training jobs.
+V7_ANALYSIS_ABLATIONS = (
+    'rpgv_v7_no_hierarchical_supervision', 'rpgv_v7_no_node_supervision',
+    'rpgv_v7_no_message_passing',
+)
+# Historical/specialized controls remain selectable with --models, outside default suites.
+V7_LEGACY_ABLATIONS = (
+    'rpgv_v7_no_contrastive', 'rpgv_v7_no_relational_supervision',
+    'rpgv_v7_no_edges', 'rpgv_v7_no_perturbation', 'rpgv_v7_rgb_capacity',
+)
+OPTIONAL_MODELS = (
+    ('rpgv_v6',) + V6_ABLATIONS + ('rpgv_v7',)
+    + V7_ABLATIONS + V7_ANALYSIS_ABLATIONS + V7_LEGACY_ABLATIONS
+)
 EXPERIMENT_SUITES = {
     'baselines': MAINSTREAM_MODELS,
     'v6': ('rpgv_v6',),
@@ -33,7 +51,8 @@ def experiment_config(dataset, model):
     model = ALIASES.get(model, model)
     if dataset not in DATASETS:
         raise ValueError(f'Unsupported experiment: {dataset}/{model}')
-    if model in V6_ABLATIONS or model in V7_ABLATIONS:
+    if (model in V6_ABLATIONS
+            or model in V7_ABLATIONS + V7_ANALYSIS_ABLATIONS + V7_LEGACY_ABLATIONS):
         version = 'v6' if model in V6_ABLATIONS else 'v7'
         if dataset != 'wwtp':
             raise ValueError(f'{version.upper()} ablations are only available for WWTP: {dataset}/{model}')

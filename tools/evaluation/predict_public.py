@@ -5,15 +5,15 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
-from mmengine.config import Config, DictAction
-from mmseg.apis import init_model, inference_model
-
-from wwtpseg.engine.runtime import prepare_runtime
 from tools.data.prepare_public import UAVID_COLORS
 
 
 def submission_mask(dataset_type, prepared_name, ids):
     """Return submission-relative path and mask in the benchmark's encoding."""
+    if dataset_type == 'DeepGlobeRoadDataset':
+        if not np.isin(ids, (0, 1)).all():
+            raise ValueError('Invalid DeepGlobe road prediction')
+        return Path(f'{Path(prepared_name).stem}_mask.png'), Image.fromarray(ids.astype(np.uint8) * 255)
     group, separator, filename = Path(prepared_name).stem.partition('_')
     if not separator or not filename:
         raise ValueError(f'Expected prepared domain/sequence prefix: {prepared_name}')
@@ -31,27 +31,37 @@ def submission_mask(dataset_type, prepared_name, ids):
 
 
 def main():
+    from mmengine.config import Config, DictAction
+    from mmseg.apis import init_model, inference_model
+    from wwtpseg.engine.runtime import prepare_runtime
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('config')
     parser.add_argument('checkpoint')
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--device', default='cuda:0')
+    parser.add_argument('--split', choices=('test', 'official_val', 'official_test'),
+                        help='Unlabeled prediction split; defaults to predict_dataset in the config')
     parser.add_argument('--cfg-options', nargs='+', action=DictAction)
     args = parser.parse_args()
     cfg = Config.fromfile(args.config)
     if args.cfg_options:
         cfg.merge_from_dict(args.cfg_options)
     prepare_runtime(cfg, inference=True)
-    paths = sorted((Path(cfg.data_root) / 'img_dir' / 'test').glob('*.png'))
+    dataset_type = cfg.predict_dataset.type
+    allowed = ('official_val', 'official_test') if dataset_type == 'DeepGlobeRoadDataset' else ('test',)
+    split = args.split or Path(cfg.predict_dataset.data_prefix.img_path).name
+    if split not in allowed:
+        parser.error(f'{dataset_type} unlabeled prediction splits: {allowed}')
+    paths = sorted((Path(cfg.predict_dataset.data_root) / 'img_dir' / split).glob('*.png'))
     if not paths:
-        raise FileNotFoundError(f'No prepared test images under {cfg.data_root}')
+        raise FileNotFoundError(f'No prepared {split} images under {cfg.predict_dataset.data_root}')
     if args.output.exists():
         raise FileExistsError(args.output)
     args.output.mkdir(parents=True)
     model = init_model(cfg, args.checkpoint, device=args.device)
     # inference_model uses the configured annotation-free pipeline.
     model.cfg.test_pipeline = cfg.predict_pipeline
-    dataset_type = cfg.predict_dataset.type
     for path in paths:
         result = inference_model(model, str(path))
         ids = result.pred_sem_seg.data[0].cpu().numpy().astype(np.uint8)

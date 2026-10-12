@@ -38,7 +38,8 @@ class ProtocolTest(unittest.TestCase):
                     cfg = Config.fromfile(experiment_config(dataset, name))
                     self.assertEqual(cfg.model.data_preprocessor.size, (1024, 1024))
                     self.assertEqual(cfg.train_dataloader.batch_size * cfg.optim_wrapper.accumulative_counts, 8)
-                    self.assertEqual(cfg.train_cfg.max_iters // cfg.optim_wrapper.accumulative_counts, 5000)
+                    self.assertEqual(cfg.train_cfg.max_iters, 30000)
+                    self.assertEqual(cfg.train_cfg.max_iters // cfg.optim_wrapper.accumulative_counts, 7500)
                     self.assertFalse(cfg.enable_early_stopping)
                     self.assertEqual(cfg.param_scheduler[-1].end, cfg.train_cfg.max_iters)
                     steps = {s.type for s in cfg.train_dataloader.dataset.pipeline}
@@ -50,10 +51,15 @@ class ProtocolTest(unittest.TestCase):
                         boundary = next(x for x in cfg.test_evaluator if x.type == 'BinaryBoundaryMetric')
                         self.assertEqual((boundary.boundary_tolerance, boundary.pixel_size_m), (1.5, 1.0))
                     else:
-                        self.assertEqual(cfg.test_dataloader, cfg.val_dataloader)
-                        self.assertEqual(cfg.default_hooks.checkpoint.save_best, 'mIoU')
+                        if dataset == 'deepglobe':
+                            self.assertNotEqual(cfg.test_dataloader, cfg.val_dataloader)
+                            self.assertEqual(cfg.test_dataloader.dataset.data_prefix.seg_map_path, 'ann_dir/test')
+                            self.assertEqual(cfg.default_hooks.checkpoint.save_best, 'roadIoU')
+                        else:
+                            self.assertEqual(cfg.test_dataloader, cfg.val_dataloader)
+                            self.assertEqual(cfg.default_hooks.checkpoint.save_best, 'mIoU')
                         self.assertNotIn('LoadAnnotations', [s.type for s in cfg.predict_pipeline])
-                        classes = 8 if dataset == 'uavid' else 7
+                        classes = {'uavid': 8, 'loveda': 7, 'deepglobe': 2}[dataset]
                         if name == 'hdnet':
                             self.assertEqual(cfg.model.num_classes, classes)
                         else:
@@ -81,6 +87,7 @@ class ProtocolTest(unittest.TestCase):
         paths += list((ROOT / 'configs/rpgv/v7').glob('*.py'))
         paths += [ROOT / 'configs' / dataset / f'rpgv_{variant}.py'
                   for dataset in ('uavid', 'loveda') for variant in ('rgb', 'full', 'v2', 'v6', 'v7')]
+        paths += [experiment_config('deepglobe', f'rpgv_{variant}') for variant in ('v6', 'v7')]
         self.assertEqual(reference.randomness, dict(seed=42, deterministic=False))
         shared_fields = ('optim_wrapper', 'param_scheduler', 'train_cfg',
                          'auto_scale_lr', 'randomness', 'env_cfg')
@@ -97,7 +104,7 @@ class ProtocolTest(unittest.TestCase):
                 self.assertIsNone(cfg.load_from)
                 self.assertFalse(cfg.resume)
                 self.assertNotIn('required_previous_stage', cfg)
-                for field in ('batch_size', 'num_workers', 'persistent_workers', 'pin_memory', 'sampler'):
+                for field in ('batch_size', 'persistent_workers', 'pin_memory', 'sampler'):
                     self.assertEqual(cfg.train_dataloader[field], reference.train_dataloader[field], field)
                 rgb_steps = [step for step in cfg.train_dataloader.dataset.pipeline
                              if step['type'] not in ('LoadPseudoGeometry', 'PackSegInputs', 'PackRPGVContourInputs')]
@@ -108,7 +115,10 @@ class ProtocolTest(unittest.TestCase):
                 self.assertEqual(checkpoint.max_keep_ckpts, 3)
                 self.assertEqual(checkpoint.rule, 'greater')
                 dataset = 'wwtp' if 'configs/rpgv/' in str(path) else Path(path).parent.name
-                self.assertEqual(checkpoint.save_best, 'binary/Foreground_IoU' if dataset == 'wwtp' else 'mIoU')
+                metric = {'wwtp': 'binary/Foreground_IoU', 'deepglobe': 'roadIoU'}.get(dataset, 'mIoU')
+                self.assertEqual(checkpoint.save_best, metric)
+                workers = reference.train_dataloader.num_workers if dataset == 'wwtp' and 'configs/rpgv/' not in str(path) else 4
+                self.assertEqual(cfg.train_dataloader.num_workers, workers)
 
     def test_optimizer_parameter_groups(self):
         paths = [experiment_config('wwtp', name) for name in MAINSTREAM_MODELS]
@@ -161,7 +171,7 @@ class ProtocolTest(unittest.TestCase):
                             self.assertEqual(step['pseudo_root'], '/shared/wwtp/pseudo_geometry')
 
     def test_every_retained_config_resolves(self):
-        for directory in ('wwtp', 'uavid', 'loveda', 'rpgv'):
+        for directory in ('wwtp', 'uavid', 'loveda', 'deepglobe', 'rpgv'):
             self.assertTrue((ROOT / 'configs' / directory).is_dir())
             for path in (ROOT / 'configs' / directory).rglob('*.py'):
                 with self.subTest(config=str(path)):
@@ -170,7 +180,7 @@ class ProtocolTest(unittest.TestCase):
                     self.assertNotIn('Potsdam', cfg.train_dataloader.dataset.type)
 
     def test_every_retained_config_enables_both_vis_backends(self):
-        for directory in ('wwtp', 'uavid', 'loveda', 'rpgv'):
+        for directory in ('wwtp', 'uavid', 'loveda', 'deepglobe', 'rpgv'):
             for path in (ROOT / 'configs' / directory).rglob('*.py'):
                 with self.subTest(config=str(path)):
                     backends = {backend['type'] for backend in Config.fromfile(path).vis_backends}
@@ -200,11 +210,11 @@ class ProtocolTest(unittest.TestCase):
                 for prefix in data.data_prefix.values():
                     (Path(data.data_root) / prefix).mkdir(parents=True)
                 Image.new('RGB', (1024, 1024), (32, 64, 96)).save(Path(data.data_root) / data.data_prefix.img_path / 'sample.png')
-                labels = np.tile(np.arange(1024, dtype=np.uint16) % (2 if dataset == 'wwtp' else 8), (1024, 1)).astype(np.uint8)
+                labels = np.tile(np.arange(1024, dtype=np.uint16) % (2 if dataset in ('wwtp', 'deepglobe') else 8), (1024, 1)).astype(np.uint8)
                 Image.fromarray(labels).save(Path(data.data_root) / data.data_prefix.seg_map_path / 'sample.png')
                 sample = DATASETS.build(data)[0]
                 observed = set(sample['data_samples'].gt_sem_seg.data.unique().tolist())
-                self.assertEqual(observed, {0, 1} if dataset == 'wwtp' else set(range(8)) if dataset == 'uavid' else set(range(7)) | {255})
+                self.assertEqual(observed, {0, 1} if dataset in ('wwtp', 'deepglobe') else set(range(8)) if dataset == 'uavid' else set(range(7)) | {255})
                 self.assertEqual(tuple(sample['inputs'].shape), (3, 1024, 1024))
         reject = TRANSFORMS.build(dict(type='RequireImageShape', size=(1024, 1024)))
         with self.assertRaises(ValueError):

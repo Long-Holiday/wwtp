@@ -15,6 +15,7 @@ services:
       PYTHONPATH: /workspace
       PYTHONDONTWRITEBYTECODE: "1"
       WWTP_DATA_ROOT: ${WWTP_DATA_ROOT:-/workspace/wwtp_semantic_dataset_1m}
+      DEEPGLOBE_DATA_ROOT: ${DEEPGLOBE_DATA_ROOT:-/workspace/data/remote_sensing/prepared/deepglobe}
       CUBLAS_WORKSPACE_CONFIG: ":4096:8"
 volumes:
   torch-cache:

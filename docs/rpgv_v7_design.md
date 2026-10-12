@@ -142,33 +142,67 @@ RGB 的上下文来自原骨干，不是靠直接复制几何边解决任务。�
 
 ## 6. 消融与公平协议
 
-所有配置继承原统一协议：1024 整图、AdamW lr=6e-4、统一参数组规则、FP32、max_norm=10、batch2×累积4、20,000 microsteps/5,000 updates、相同 warmup/PolyLR、增强与选权重规则。
+所有配置继承统一外部协议：1024 整图、AdamW lr=6e-4、统一参数组规则、FP32、max_norm=10、batch2×累积4、30,000 microsteps/7,500 updates、相同 warmup/PolyLR、增强与选权重规则。消融只针对完整 v7 的机制和目标，不以版本差异作为消融结论。默认队列聚焦核心研究问题，更细的监督拆分和图机制配对按需运行。
+
+### 6.1 默认核心消融
+
+`v7` 提供完整模型基准，`v7-ablations` 提供以下六个对照，均直接与完整 v7 比较；加完整模型共七组。
 
 | WWTP 配置 | 改变与对照解释 |
 |---|---|
-| `rpgv_v7.py` | 完整模型 |
-| `rgb_only.py` | 删除全部几何/结构支路，保留 RGB decoder/轮廓 |
-| `no_contrastive.py` | 关闭三层对比，保留结构网络、结构辅助分割和反馈；容量对照 |
-| `no_relational_supervision.py` | 关闭关系/组合监督，保留节点对比及全部推理模块 |
-| `no_edges.py` | **相对 no_relational_supervision** 将消息传递改为节点独立 MLP；没有边依赖 |
-| `no_perturbation.py` | 关闭组合扰动排序，其余监督保留 |
-| `no_feedback.py` | 删除 F16/F8 结构注入，保留所有结构训练目标及局部 v6 几何 |
-| `fixed_grid.py` | 软几何分区替换为确定性网格，其余相同 |
-| `rgb_capacity.py` | 所有额外分支使用 RGB 灰度及单位支持，彻底忽略外部 D/Q；模块/损失数量相同 |
+| `rpgv_v7.py` | 完整模型；不属于六项消融 |
+| `rgb_only.py` | 删除全部几何/结构支路，保留 RGB decoder/轮廓；整体几何增强对照，不是局部模块单因素 |
+| `fixed_grid.py` | 软几何分区替换为确定性网格，其余相同；验证自适应基元构建 |
+| `no_feedback.py` | 只删除 F16/F8 结构注入，保留所有结构训练目标与局部几何融合 |
+| `no_relation_supervision.py` | 仅关闭关系对比和测量预测，**保留组合排序**与区域/辅助监督；不是关闭关系图 |
+| `no_composition.py` | 仅关闭整个组合扰动排序目标，其余监督保留；不是仅删除扰动采样而保留另一种组合目标 |
+| `no_structure_aux.py` | 仅移除结构辅助语义 head/损失，保留所有层次目标、图与反馈；区分普通辅助监督与层次学习 |
 
-`no_edges` 的无序节点聚合数学上不能区分内容置换，因此与 `no_relational_supervision` 构成单因素对照，而不是声称它与完整模型只差一个开关。它仍按原区域支持回投节点，并非完全丢掉每个节点的空间定位。
+优先验证整体几何、分区、反馈及关系/组合/辅助监督，不默认拆解每个层级。`no_relation_supervision` 检查的是关系对比与回归这一目标组，不能独立归因其中每个子项；默认六项也不单独证明区域目标或图消息传递的贡献。
 
-`rgb_only` 和 `rgb_capacity` 的数据 pipeline 不再加载伪几何。RGB 容量对照的“深度差”实际是灰度差，不将其称为独立几何；其作用是控制额外分支容量。所有模型参数量仍应分别披露。
+### 6.2 按需分析
+
+| 配置 | 保留的问题与对照范围 |
+|---|---|
+| `no_hierarchical_supervision.py` | 关闭区域、关系（含测量预测）、组合目标，保留结构网络、反馈及辅助分割；整个监督包分析，不等于关闭全部结构监督 |
+| `no_node_supervision.py` | 仅关闭区域对比，保留关系、组合与辅助监督；更细的区域监督条件贡献 |
+| `no_message_passing.py` | **相对 `no_composition`** 将关系注意力改为逐节点残差 MLP；保留区域、关系及辅助监督 |
+
+以上三项通过显式 `--models` 选择，不进入 `v7-ablations` 或 `v7-all`。保留它们是为了可复现与后续机制分析，不代表必须全部补跑。整体层次与单层消融测量整体/条件贡献，单项收益不能简单相加。
+
+**图推理必须做受控配对：`no_composition ↔ no_message_passing`。** 逐节点 MLP 后做 masked mean 无法区分有效节点内容的联合置换，保留组合排序会产生不可辨别的正负表示（有有效候选时排序项理论上为固定 margin 基准）。因此两侧共同关闭组合目标，但关系监督读取图推理前节点及测量关系，仍然有效，无需一并关闭。节点 MLP 仍通过结构反馈和辅助语义目标学习。
+
+该配对替换了跨节点消息传递及边属性条件化，参数量也改变，应分别披露参数量；不是“仅将边属性归零”。`full ↔ no_message_passing` 同时改变组合目标与图，不能将该差值全部归因于消息传递。它仍按原区域支持回投节点，未删除每个节点的空间定位。
+
+### 6.3 保留但不默认运行的历史配置
+
+| 配置 | 保留语义与使用范围 |
+|---|---|
+| `no_contrastive.py` | 与新 `no_hierarchical_supervision` 模型设置相同；旧名字未准确体现关系回归也被关闭 |
+| `no_perturbation.py` | 与新 `no_composition` 模型设置相同；实际关闭整个组合目标 |
+| `no_relational_supervision.py` | 同时关闭关系和组合目标，保留区域对比；仅适用于历史嵌套监督分析 |
+| `no_edges.py` | 继承旧 `no_relational_supervision` 再改为逐节点 MLP；仅与该旧配置配对，不与 full 作单因素归因 |
+| `rgb_capacity.py` | 额外分支使用 RGB 灰度及单位支持，忽略外部 D/Q；是替代信息源控制，不是严格纯参数容量控制 |
+
+这些配置仍能通过显式 `--models` 选择，路径、输出名字与模型语义不变；默认队列不再重复训练同义配置。新名字使用独立输出目录，不自动搬迁旧结果或恢复旧优化器。`rgb_only` 与历史 `rgb_capacity` 的 pipeline 不加载伪几何；灰度差不是独立几何，单位 Q 也不同于真实可靠度分布，不能仅以参数量解释替代信息源对照。
 
 ## 7. 入口
 
 ```bash
-# 依赖无关的计划检查：七基线 + v6 锚点 + v7 + 八个 v7 消融（17 项）
+# 依赖无关的计划检查：原七基线 + v6 + 完整 v7 + 六个 v7 消融（15 项）
 python scripts/run_experiments.py train-test --dataset wwtp --suite v7-all --dry-run
 
 # 完整 v7 / 消融训练与验证选权重后的测试
 python scripts/run_experiments.py train-test --dataset wwtp --suite v7
 python scripts/run_experiments.py train-test --dataset wwtp --suite v7-ablations
+
+# 按需图消息传递配对，不在默认队列；直接与完整 v7 的差值不是单因素
+python scripts/run_experiments.py train-test --dataset wwtp \
+  --models rpgv_v7_no_composition rpgv_v7_no_message_passing
+
+# 历史配置仍可显式复现，但不自动加入主消融队列
+python scripts/run_experiments.py train-test --dataset wwtp \
+  --models rpgv_v7_no_relational_supervision rpgv_v7_no_edges
 
 # 公开集完整 v7（公开 test 不产生伪本地测试分数）
 python scripts/run_experiments.py train-test --dataset loveda --suite v7
@@ -201,6 +235,24 @@ python tools/rpgv/profile_rpgv_v7.py --mode infer --size 1024 --batch-size 1 \
 诊断文件已存在时拒绝覆盖。合成 profiler 每步执行一次完整优化器更新，**不模拟梯度累积、LR 调度、数据 IO 或验证**。输出逐组梯度、首参数更新、原始损失、结构负例计数/分差和 CUDA allocated/reserved 峰值。
 
 WSL GPU 可沿用 v6 的 `/dev/dxg`、`/usr/lib/wsl` 只读驱动挂载。CPU 完整模块测试覆盖低 Q/平坦区域、缺失观测隔离、目标/池化梯度边界、图重编号、内容置换、同质负例屏蔽、公式对照、分割对结构梯度、所有消融反向、ignore/RGB 回退、二/多分类、滑窗、重载与统一协议。另有 CUDA FP16 支持/全无效样本梯度测试；这不改变正式训练的 FP32 配置。
+
+### 六项默认方案验证（2026-10-12）
+
+默认从九项收敛为六项，另三项保留为按需分析，配置及模型语义不变。
+
+- 在既有 `wwtp-mmseg:torch2.1.2-cu121` 镜像中沿用 WSL GPU 透传，重新运行上述四组测试：**118 项全部通过，无跳过**，约 41 秒。
+- 配置、损失开关、梯度和前后向测试继续覆盖六项默认、三项按需与五项历史配置，未因默认队列缩减降低测试覆盖。
+- Docker 内 dry-run 核对：默认消融为 6 次训练/6 次测试，`v7-all` 为 15/15，三项按需显式选择为 3/3，五项历史显式选择为 5/5。
+- 未改模型、共同训练策略或 gate，未启动真实数据训练。
+
+### 九项方案历史验证（2026-10-12）
+
+环境：既有 `wwtp-mmseg:torch2.1.2-cu121` 镜像，当前工作区挂载到 `/workspace`；WSL `/dev/dxg` 与只读 `/usr/lib/wsl` 驱动挂载透传 RTX3050 Laptop GPU。
+
+- `tests.test_run_experiments`、`tests.test_experiment_protocol`、`tests.rpgv.test_rpgv_v7`、`tests.rpgv.test_rpgv_v6` 共 **118 项测试全部通过，无跳过**，约 43 秒；后者仅作既有功能回归，不是版本消融。
+- 九项主消融及五项历史配置完成配置加载与 CPU 小尺寸前后向；新增断言覆盖 loss/head 启停、辅助头移除不改变公共权重下推理、无消息传递的节点独立性，以及图配对的真实非零梯度与参数更新。既有 CUDA FP16 有/无支持梯度测试通过；正式训练仍为 FP32。
+- Docker 内依赖无关 dry-run 核对：`v7-ablations` 为 9 次训练/9 次测试，`v7-all` 为 18/18，五个历史名字显式选择为 5/5。
+- 未启动真实数据训练、未改完整 v7 或统一训练策略；这些验证不证明任何消融的精度差值。
 
 ### 本次实际验证（2026-10-11）
 

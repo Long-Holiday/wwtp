@@ -12,6 +12,7 @@ import sys
 # Loading the lightweight roster directly avoids importing the training stack for dry-run.
 _roster = runpy.run_path(str(Path(__file__).resolve().parents[1] / 'wwtpseg/experiments/__init__.py'))
 DATASETS = _roster['DATASETS']
+EVALUATION_PROTOCOLS = _roster['EVALUATION_PROTOCOLS']
 MAINSTREAM_MODELS = _roster['MAINSTREAM_MODELS']
 OPTIONAL_MODELS = _roster['OPTIONAL_MODELS']
 EXPERIMENT_SUITES = _roster['EXPERIMENT_SUITES']
@@ -30,7 +31,8 @@ def run_command(command, dry_run):
 def extract_primary_metric(metrics_dict, dataset='wwtp'):
     if not isinstance(metrics_dict, dict):
         return None
-    keys = ('binary/Foreground_IoU', 'binary_Foreground_IoU', 'Foreground_IoU') if dataset == 'wwtp' else ('mIoU',)
+    metric = EVALUATION_PROTOCOLS[dataset]['metric']
+    keys = (metric, metric.replace('/', '_'), metric.rsplit('/', 1)[-1])
     for key in keys:
         if key in metrics_dict:
             return float(metrics_dict[key])
@@ -73,7 +75,7 @@ def check_v7_superiority(work_root, dataset='wwtp'):
 
 
 def best_checkpoint(output, dataset, dry_run):
-    metric = 'binary_Foreground_IoU' if dataset == 'wwtp' else 'mIoU'
+    metric = EVALUATION_PROTOCOLS[dataset]['metric'].replace('/', '_')
     checkpoints = [path for path in output.glob(f'best_{metric}_iter_*.pth') if path.is_file()]
     if checkpoints:
         return max(checkpoints, key=lambda path: path.stat().st_mtime_ns)
@@ -154,7 +156,8 @@ def main(argv=None):
     parser.add_argument('--overwrite', action='store_true',
                         help='Overwrite and clear existing output directory instead of erroring when not resuming')
     parser.add_argument('--gpus', type=int, default=1)
-    parser.add_argument('--split', choices=('val', 'test'), help='Evaluation split; public datasets always use val')
+    parser.add_argument('--split', choices=('val', 'test'),
+                        help='Evaluation split; UAVid/LoveDA use val, WWTP/DeepGlobe default to labeled test')
     parser.add_argument('--cfg-options', nargs='+', default=[], help='Shared train/evaluation config overrides')
     parser.add_argument('--gate-v7-superiority', action='store_true',
                         default=os.getenv('GATE_V7_SUPERIORITY', '1') in ('1', 'true', 'True'),
@@ -162,7 +165,7 @@ def main(argv=None):
     args, extra = parser.parse_known_args(argv)
     if args.gpus < 1:
         parser.error('--gpus must be positive')
-    if args.dataset != 'wwtp' and args.split == 'test':
+    if not EVALUATION_PROTOCOLS[args.dataset]['labeled_test'] and args.split == 'test':
         parser.error('Public test labels are private; use --split val')
     if args.suite in ('v7-ablations', 'v6-ablations') and args.gate_v7_superiority and not args.dry_run:
         work_root_resolved = args.work_root if args.work_root.is_absolute() else ROOT / args.work_root
@@ -196,7 +199,7 @@ def main(argv=None):
     for config in configs:
         if not config.is_file():
             raise FileNotFoundError(config)
-    split = args.split or ('test' if args.dataset == 'wwtp' else 'val')
+    split = args.split or EVALUATION_PROTOCOLS[args.dataset]['split']
     shared = ['--cfg-options', *args.cfg_options] if args.cfg_options else []
     geometry_configs = [config for name, config in zip(models, configs) if name in OPTIONAL_MODELS]
     if geometry_configs:
