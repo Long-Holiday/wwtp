@@ -77,7 +77,9 @@ class ProtocolTest(unittest.TestCase):
     # checkpoint every 250 updates. A model whose micro batch has to be smaller keeps
     # the same contract by raising accumulative_counts and scaling max_iters and
     # every schedule boundary by that same factor; datasets may only differ in the
-    # data, the model and the selection metric.
+    # data, the model and the selection metric. The shared optimiser is the default,
+    # not a straitjacket: a config may set `protocol_optimizer_override` to a string
+    # explaining why that architecture needs its own learning rate or optimiser.
     UPDATES = 7500
     WARMUP_UPDATES = 250
     CADENCE_UPDATES = 250
@@ -116,9 +118,18 @@ class ProtocolTest(unittest.TestCase):
                     self.assertEqual(cfg.optim_wrapper, dict(
                         type='AmpOptimWrapper', dtype='bfloat16', loss_scale=1.0,
                         accumulative_counts=accum,
-                        optimizer=self.OPTIMIZER,
+                        optimizer=cfg.optim_wrapper.optimizer,
                         clip_grad=dict(max_norm=10.0, norm_type=2),
                         paramwise_cfg=dict(norm_decay_mult=0.0)))
+                    # A fair comparison does not require identical hyperparameters:
+                    # an architecture may need its own learning rate or optimiser to
+                    # converge at all. Such a deviation has to be declared in the
+                    # config, so it stays a decision rather than an accident.
+                    if dict(cfg.optim_wrapper.optimizer) != self.OPTIMIZER:
+                        self.assertTrue(
+                            cfg.get('protocol_optimizer_override'),
+                            f'{path} changes the shared optimiser without '
+                            f'protocol_optimizer_override explaining why')
                     warmup = self.WARMUP_UPDATES * accum
                     self.assertEqual(cfg.param_scheduler, [
                         dict(type='LinearLR', start_factor=1e-6, by_epoch=False,
@@ -195,18 +206,32 @@ class ProtocolTest(unittest.TestCase):
                 self.assertEqual(covered, {id(param) for param in model.parameters()})
                 del wrapper, model
 
-    def test_four_microsteps_per_update(self):
+    def test_microsteps_per_update(self):
+        """Parameters change exactly once per `accumulative_counts` micro batches.
+
+        The protocol runs one micro batch per update for models that fit the
+        reference micro batch and four for models that do not, so both regimes are
+        exercised instead of pinning a single accumulation count.
+        """
         cfg = Config.fromfile(experiment_config('wwtp', 'hrnet'))
-        model = torch.nn.Linear(2, 1)
-        wrapper = build_optim_wrapper(model, cfg.optim_wrapper)
-        wrapper.initialize_count_status(model, 0, 4)
-        initial = [param.detach().clone() for param in model.parameters()]
-        for step in range(4):
-            loss = (model(torch.ones(2, 2)) - 10).square().mean()
-            wrapper.update_params(loss)
-            changed = [not torch.equal(param.detach(), before)
-                       for param, before in zip(model.parameters(), initial)]
-            self.assertEqual(any(changed), step == 3)
+        wrapper_cfg = copy.deepcopy(cfg.optim_wrapper)
+        # Accumulation is wrapper independent and AmpOptimWrapper needs a CUDA device.
+        wrapper_cfg.type = 'OptimWrapper'
+        wrapper_cfg.pop('dtype', None)
+        wrapper_cfg.pop('loss_scale', None)
+        for accumulation in (1, 4):
+            with self.subTest(accumulative_counts=accumulation):
+                wrapper_cfg['accumulative_counts'] = accumulation
+                model = torch.nn.Linear(2, 1)
+                wrapper = build_optim_wrapper(model, wrapper_cfg)
+                wrapper.initialize_count_status(model, 0, accumulation)
+                initial = [param.detach().clone() for param in model.parameters()]
+                for step in range(1, 5):
+                    loss = (model(torch.ones(2, 2)) - 10).square().mean()
+                    wrapper.update_params(loss)
+                    changed = [not torch.equal(param.detach(), before)
+                               for param, before in zip(model.parameters(), initial)]
+                    self.assertEqual(any(changed), step % accumulation == 0)
 
     def test_wwtp_data_root_precedence(self):
         with patch.dict(os.environ, {'WWTP_DATA_ROOT': '/shared/wwtp',
