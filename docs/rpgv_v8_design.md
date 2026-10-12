@@ -206,4 +206,18 @@ python tools/rpgv/profile_rpgv_v8.py --mode matrix --size 1024 --batch-size 2 \
 - dry-run 核对：`v8` 1/1、`v8-ablations` 7/7、`v8-all` 15/15，三者均 0 次 `generate_pseudo_geometry`。
 - CPU 合成 profiler（64×64、batch1）：参数 25,175,144，`center_log_scale` 初值梯度 L2 为 1.9e-3（非零），阶段顺序为 encoder → predictor → graph → structure_fusion[0..1] → local_fusion[1,0] → decoder → refiner。
 - **与改造前的数值等价性**（同一 seed，`grid_sizes=(8,)` 且 `center_log_scale=0`，`git archive` 取改动前代码做对照）：31 组预测器参数张量与输入 `encoded`/`seeds` 全部逐位相同，产出的 `centers` 与 `cholesky` 逐位相同；其余张量差异为 `nn.Linear` 的 1-5 ULP（隐层 ≤8.9e-8、`nodes` ≤5.4e-7）。因此准确表述是**机器精度内等价**，不是全链路逐位相同；该差异来自两个构建方式不同的进程间的浮点派发效应（已验证与张量内存布局无关），不影响任何研究结论。
-- 未启动真实数据训练，未在 1024/batch2 上测过显存与吞吐；这些验证不证明分割精度提升。
+- 未启动真实数据训练；这些验证不证明分割精度提升，64×64 合成测量的耗时也不代表 1024 正式训练（后者见下）。
+
+### 1024/batch2 资源实测（2026-10-12，RTX 3090 24G）
+
+在同一张卡上另有一个 mask2former 训练任务占用 11.7 GiB、GPU 利用率 85% 的情况下测得，因此**耗时被争用抬高**，显存数字仍然有效（按进程统计）：
+
+| 配置 | 节点数 | peak allocated | peak reserved | 秒/步 |
+|---|---:|---:|---:|---:|
+| 默认 `(4, 8, 16)` | 336 | 4043 MiB | 5758 MiB | 0.95 |
+| `single_scale_dense` `(20,)` | 400 | 4059 MiB | 6132 MiB | 1.87（单步冷启动） |
+
+- **节点数不是显存主因**：336 与 400 节点的峰值几乎相同，说明显存由编码器与高分辨率解码/轮廓路径主导。
+- 分阶段（默认配置，阶段内耗时与累计峰值）：`rgb_encoder` 0.49 s / 685 MiB，`gaussian_predictor` 0.12 s / 921 MiB，`gaussian_graph` 0.035 s / 1433 MiB，结构注入 F16/F8 与局部注入 F8/F4 合计约 0.09 s，`decoder` 收尾至 2728 MiB，`refiner` 收尾至 3822 MiB。时间上编码器占一半以上，显存增长主要发生在解码与轮廓细化。
+- 默认配置 30000 microsteps 约 7.9 小时（受争用抬高，非独占吞吐）。
+- 全部参数族均获得有限非零梯度，无死参数：`center_log_scale` 为 1.6e-3（与既有 `amplitude_head` 的 5.4e-3 同量级），`gaussian_node_head` 为 7.6e-2，`rgb_encoder` 为 3.2。`center_log_scale` 的梯度偏小不构成问题：AdamW 的步长按梯度 RMS 归一化，不随梯度绝对量级缩小。
