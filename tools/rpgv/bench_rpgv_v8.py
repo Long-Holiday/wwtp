@@ -58,6 +58,13 @@ def parse_infer_cell(text):
     return dict(batch_size=int(fields[0]), precision=fields[1])
 
 
+def _finite(value):
+    """Predictions stay on the GPU; isfinite runs there."""
+    if not isinstance(value, torch.Tensor):
+        value = torch.as_tensor(np.asarray(value))
+    return bool(torch.isfinite(value).all())
+
+
 def packed_batch(size, batch_size):
     """BGR-only synthetic batch, mirroring the geometry of the v8 profiler."""
     packer = TRANSFORMS.build(dict(type='PackSegInputs'))
@@ -186,8 +193,7 @@ def run_infer_cell(cfg, cell, packed, args, device):
                 torch.cuda.reset_peak_memory_stats(device)
             if step > args.warmup:
                 times.append(duration)
-            finite = finite and all(
-                bool(np.isfinite(sample.pred_sem_seg.data).all()) for sample in outputs)
+            finite = finite and all(_finite(sample.pred_sem_seg.data) for sample in outputs)
         if device.type == 'cuda':
             peak = dict(peak_allocated_mib=torch.cuda.max_memory_allocated(device) / 2**20,
                         peak_reserved_mib=torch.cuda.max_memory_reserved(device) / 2**20)
