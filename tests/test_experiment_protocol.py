@@ -38,7 +38,9 @@ class ProtocolTest(unittest.TestCase):
                     cfg = Config.fromfile(experiment_config(dataset, name))
                     self.assertEqual(cfg.model.data_preprocessor.size, (1024, 1024))
                     self.assertEqual(cfg.train_dataloader.batch_size * cfg.optim_wrapper.accumulative_counts, 8)
-                    self.assertEqual(cfg.train_cfg.max_iters, 30000)
+                    self.assertEqual(
+                        cfg.train_cfg.max_iters,
+                        7500 * cfg.optim_wrapper.accumulative_counts)
                     self.assertEqual(cfg.train_cfg.max_iters // cfg.optim_wrapper.accumulative_counts, 7500)
                     self.assertFalse(cfg.enable_early_stopping)
                     self.assertEqual(cfg.param_scheduler[-1].end, cfg.train_cfg.max_iters)
