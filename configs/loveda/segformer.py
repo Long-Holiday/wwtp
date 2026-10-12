@@ -3,6 +3,7 @@ _base_ = [
     '../_base_/datasets/loveda_1024x1024.py',
     '../_base_/schedules/baseline_20k.py',
     '../_base_/public_runtime.py',
+    '../_base_/schedules/micro_batch_2.py',
 ]
 
 model = dict(decode_head=dict(num_classes=7))
