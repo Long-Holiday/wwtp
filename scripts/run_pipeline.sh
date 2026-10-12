@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Sequential pipeline for WWTP 1024 experiments:
 # Phase 1: RPGV v7 train and test evaluation
-# Phase 2: Baselines train and test evaluation
+# Phase 2: Baselines train and test evaluation, minus mask2former and hdnet
+# Phase 2.1: Mask2Former with a query budget matched to single-target data
+# Phase 2.2: HDNet
+# Phase 2.4: RPGV v8 train and test evaluation
+# Phase 2.5: RPGV v7 fresh 30k retraining, overwriting the previous result
 # Phase 3: V7 ablations train and test evaluation
 set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -32,10 +36,22 @@ python scripts/run_experiments.py train-test --dataset wwtp --suite v7 --resume 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 1 Complete (RPGV v7)" | tee -a logs/pipeline.log
 
 echo "==========================================================" | tee -a logs/pipeline.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2: Baselines" | tee -a logs/pipeline.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2: Baselines (mask2former and hdnet scheduled separately)" | tee -a logs/pipeline.log
 echo "==========================================================" | tee -a logs/pipeline.log
-python scripts/run_experiments.py train-test --dataset wwtp --suite baselines --resume 2>&1 | tee -a logs/pipeline_baselines.log
+python scripts/run_experiments.py train-test --dataset wwtp --suite baselines --exclude mask2former hdnet --resume 2>&1 | tee -a logs/pipeline_baselines.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2 Complete (Baselines)" | tee -a logs/pipeline.log
+
+echo "==========================================================" | tee -a logs/pipeline.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.1: Mask2Former with a query budget matched to single-target data (num_queries=10)" | tee -a logs/pipeline.log
+echo "==========================================================" | tee -a logs/pipeline.log
+python scripts/run_experiments.py train-test --dataset wwtp --models mask2former_q10 --resume 2>&1 | tee -a logs/pipeline_mask2former_q10.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.1 Complete (mask2former_q10)" | tee -a logs/pipeline.log
+
+echo "==========================================================" | tee -a logs/pipeline.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.2: HDNet" | tee -a logs/pipeline.log
+echo "==========================================================" | tee -a logs/pipeline.log
+python scripts/run_experiments.py train-test --dataset wwtp --models hdnet --resume 2>&1 | tee -a logs/pipeline_hdnet.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.2 Complete (HDNet)" | tee -a logs/pipeline.log
 
 echo "==========================================================" | tee -a logs/pipeline.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.4: RPGV v8" | tee -a logs/pipeline.log
@@ -47,9 +63,7 @@ echo "==========================================================" | tee -a logs/
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.5: Retraining RPGV v7 from scratch (Full 30k schedule, overwriting previous result)" | tee -a logs/pipeline.log
 echo "==========================================================" | tee -a logs/pipeline.log
 if [[ -d "work_dirs/wwtp/rpgv_v7" ]]; then
-  echo "Archiving previous rpgv_v7 to rpgv_v7_resumed_archive..." | tee -a logs/pipeline.log
-  rm -rf work_dirs/wwtp/rpgv_v7_resumed_archive
-  cp -r work_dirs/wwtp/rpgv_v7 work_dirs/wwtp/rpgv_v7_resumed_archive
+  echo "Existing rpgv_v7 will be cleared by --overwrite; no archive is kept." | tee -a logs/pipeline.log
 fi
 python scripts/run_experiments.py train-test --dataset wwtp --suite v7 --overwrite 2>&1 | tee -a logs/pipeline_v7_retrain_30k.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.5 Complete (RPGV v7 Fresh 30k)" | tee -a logs/pipeline.log

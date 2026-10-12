@@ -159,6 +159,8 @@ def main(argv=None):
     parser.add_argument('--gpus', type=int, default=1)
     parser.add_argument('--split', choices=('val', 'test'),
                         help='Evaluation split; UAVid/LoveDA use val, WWTP/DeepGlobe default to labeled test')
+    parser.add_argument('--exclude', nargs='+', default=[], choices=MAINSTREAM_MODELS + OPTIONAL_MODELS,
+                        help='Drop models from the selected suite or model list')
     parser.add_argument('--cfg-options', nargs='+', default=[], help='Shared train/evaluation config overrides')
     parser.add_argument('--gate-v7-superiority', action='store_true',
                         default=os.getenv('GATE_V7_SUPERIORITY', '1') in ('1', 'true', 'True'),
@@ -188,15 +190,7 @@ def main(argv=None):
             # 2. Ensure RPGV v7 fresh 30k retraining is completed
             v7_marker = work_root_resolved / 'wwtp' / 'rpgv_v7' / '.retrained_30k_done'
             if not v7_marker.is_file():
-                print('[PIPELINE-AUTO] Pre-requisite RPGV v7 30k fresh retraining not marked. Archiving and retraining v7...', flush=True)
-                v7_dir = work_root_resolved / 'wwtp' / 'rpgv_v7'
-                archive_dir = work_root_resolved / 'wwtp' / 'rpgv_v7_resumed_archive'
-                if v7_dir.is_dir() and any(v7_dir.iterdir()):
-                    import shutil
-                    if archive_dir.exists():
-                        shutil.rmtree(archive_dir)
-                    shutil.copytree(v7_dir, archive_dir)
-                    print(f'[PIPELINE-AUTO] Archived previous rpgv_v7 to {archive_dir}', flush=True)
+                print('[PIPELINE-AUTO] Pre-requisite RPGV v7 30k fresh retraining not marked. Retraining v7...', flush=True)
                 v7_cmd = [sys.executable, str(Path(__file__).resolve()), 'train-test', '--dataset', 'wwtp',
                           '--suite', 'v7', '--overwrite', '--work-root', str(work_root_resolved)]
                 if args.cfg_options:
@@ -218,6 +212,7 @@ def main(argv=None):
                 print(f"[GATE] RPGV v7 test metric ({v7_score:.4f}) is higher than best baseline "
                       f"{best_baseline} ({best_score:.4f}). Proceeding with ablations.", flush=True)
     models = args.models or EXPERIMENT_SUITES[args.suite or 'baselines']
+    models = [name for name in models if name not in args.exclude]
     try:
         configs = [experiment_config(args.dataset, name) for name in models]
     except ValueError as error:

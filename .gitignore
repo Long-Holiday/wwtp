@@ -40,6 +40,10 @@ last_checkpoint
 
 # Generated experiment artifacts and local environments
 work_dirs/
+# work_dirs may be replaced by a symlink to a larger volume. The trailing-slash
+# pattern above only matches directories, so the bare name keeps that form out
+# of git status as well.
+work_dirs
 analysis/
 .venv*/
 .cache/

@@ -110,6 +110,10 @@ python scripts/run_experiments.py train-test --dataset wwtp --suite all
 python scripts/run_experiments.py train-test --dataset wwtp --suite all --dry-run
 # 断点恢复全套实验；仅恢复同一版本、同一配置、同一训练协议的 checkpoint
 python scripts/run_experiments.py train-test --dataset wwtp --suite all --resume
+# 从套件中剔除个别模型（套件本身是数据集共享的静态清单）
+python scripts/run_experiments.py train-test --dataset wwtp --suite baselines --exclude mask2former hdnet
+# 单独选择变体：WWTP 的每张正样本图只有一个目标，Mask2Former 用 10 个 query 而非 COCO 默认的 100
+python scripts/run_experiments.py train-test --dataset wwtp --models mask2former_q10
 
 # Docker 中将上述 python 命令前加 docker compose run --rm wwtp
 # 公开集支持七基线和完整 v6/v7；消融、all/v7-all 组仅适用于 WWTP
@@ -130,7 +134,7 @@ docker compose run --rm wwtp python tools/test.py configs/wwtp/hrnet.py \
   work_dirs/wwtp/hrnet/iter_20000.pth --split val
 ```
 
-一键入口复用现有配置与正式训练策略，不更改预算或超参数；串行执行，任何训练、选权重或评估失败都会停止，不会静默跳过。默认输出为 `work_dirs/<dataset>/<model>/`，评估指标保存到该目录的 `eval/metrics.json`；消融目录名为 `rpgv_v6_<消融名>`、`rpgv_v8_<消融名>`。用 `--work-root` 指定新的整组输出根目录；非空训练目录需显式 `--resume`。`--models` 可选择子集，与 `--suite` 互斥；不指定时仍默认七基线。`train-test` 中额外训练参数（如 `--no-pretrained`）只传给训练，显式 `--cfg-options` 同时传给训练和评估；WWTP与DeepGlobe默认评估有标签test，UAVid/LoveDA默认评估官方val；也可指定 `--split val`。一键 v6/消融会检查并补齐所需的伪几何，已有完整缓存则不加载深度模型；首次生成需要生成工具的依赖与 Depth Anything 权重。**需要离线几何的模型与可选模型是两套清单（`OFFLINE_GEOMETRY_MODELS` / `OPTIONAL_MODELS`）：v8 全系列只输入 RGB，真实运行与 dry-run 都不会为它生成伪几何。** 数据根目录用 `WWTP_DATA_ROOT`（兼容 `WWTP_V5_DATA_ROOT`）、`UAVID_DATA_ROOT`、`LOVEDA_DATA_ROOT`、`DEEPGLOBE_DATA_ROOT` 指定，伪几何目录用 `WWTP_PSEUDO_ROOT` / `PUBLIC_PSEUDO_ROOT` 指定；真实运行会按配置覆盖后的 pipeline 解析生成路径，dry-run 的几何路径仅展示环境变量默认值。即使 RGB-only 消融，其现有 pipeline 也要求伪几何（v8 的 `rgb_only` 不在此列）。此批处理入口的 v6 目录与旧 shell 入口的 `work_dirs/rpgv_v6_siglip_1m` 独立，不会自动复用旧权重。
+一键入口复用现有配置与正式训练策略，不更改预算或超参数；串行执行，任何训练、选权重或评估失败都会停止，不会静默跳过。默认输出为 `work_dirs/<dataset>/<model>/`，评估指标保存到该目录的 `eval/metrics.json`；消融目录名为 `rpgv_v6_<消融名>`、`rpgv_v8_<消融名>`。用 `--work-root` 指定新的整组输出根目录；非空训练目录需显式 `--resume`。`--models` 可选择子集，与 `--suite` 互斥；`--exclude` 可从套件或模型清单中剔除若干名称；不指定时仍默认七基线。`train-test` 中额外训练参数（如 `--no-pretrained`）只传给训练，显式 `--cfg-options` 同时传给训练和评估；WWTP与DeepGlobe默认评估有标签test，UAVid/LoveDA默认评估官方val；也可指定 `--split val`。一键 v6/消融会检查并补齐所需的伪几何，已有完整缓存则不加载深度模型；首次生成需要生成工具的依赖与 Depth Anything 权重。**需要离线几何的模型与可选模型是两套清单（`OFFLINE_GEOMETRY_MODELS` / `OPTIONAL_MODELS`）：v8 全系列只输入 RGB，真实运行与 dry-run 都不会为它生成伪几何。** 数据根目录用 `WWTP_DATA_ROOT`（兼容 `WWTP_V5_DATA_ROOT`）、`UAVID_DATA_ROOT`、`LOVEDA_DATA_ROOT`、`DEEPGLOBE_DATA_ROOT` 指定，伪几何目录用 `WWTP_PSEUDO_ROOT` / `PUBLIC_PSEUDO_ROOT` 指定；真实运行会按配置覆盖后的 pipeline 解析生成路径，dry-run 的几何路径仅展示环境变量默认值。即使 RGB-only 消融，其现有 pipeline 也要求伪几何（v8 的 `rgb_only` 不在此列）。此批处理入口的 v6 目录与旧 shell 入口的 `work_dirs/rpgv_v6_siglip_1m` 独立，不会自动复用旧权重。
 
 `--cfg-options` 仍可覆盖配置，但公平比较必须对整组实验应用相同策略，并使用相同GPU数；N卡默认全局有效batch为8N，不能与单卡结果混为等预算。变更batch时同步调整累积和迭代预算，保持全局有效batch、图像曝光与更新数。多卡批处理用 `--gpus N`。新协议必须重新训练并使用新的 `--work-dir`，旧策略的checkpoint/optimizer状态不能直接resume或混入正式结果。
 

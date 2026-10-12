@@ -99,6 +99,34 @@ class ExperimentRunnerTest(unittest.TestCase):
                     self.assertNotIn(config, result.stdout)
                     self.assertNotIn(f'work_dirs/wwtp/{name}', result.stdout)
 
+    def test_baseline_variant_selection(self):
+        self.assertIn('mask2former_q10', runner.OPTIONAL_MODELS)
+        self.assertTrue(runner.experiment_config('wwtp', 'mask2former_q10').is_file())
+        for dataset in ('uavid', 'loveda', 'deepglobe'):
+            with self.assertRaises(ValueError):
+                runner.experiment_config(dataset, 'mask2former_q10')
+        result = subprocess.run([sys.executable, '-S', str(runner.ROOT / 'scripts/run_experiments.py'),
+                                 'train-test', '--models', 'mask2former_q10', '--dry-run'],
+                                capture_output=True, text=True, check=True)
+        self.assertEqual(result.stdout.count('tools/train.py'), 1)
+        self.assertEqual(result.stdout.count('tools/test.py'), 1)
+        self.assertIn('configs/wwtp/mask2former_q10.py', result.stdout)
+        self.assertIn('work_dirs/wwtp/mask2former_q10', result.stdout)
+
+    def test_exclude_drops_models_from_a_suite(self):
+        script = str(runner.ROOT / 'scripts/run_experiments.py')
+        full = subprocess.run([sys.executable, '-S', script, 'train-test', '--suite', 'baselines',
+                               '--dry-run'], capture_output=True, text=True, check=True)
+        filtered = subprocess.run([sys.executable, '-S', script, 'train-test', '--suite', 'baselines',
+                                   '--exclude', 'mask2former', 'hdnet', '--dry-run'],
+                                  capture_output=True, text=True, check=True)
+        self.assertEqual(full.stdout.count('tools/train.py'), len(runner.EXPERIMENT_SUITES['baselines']))
+        self.assertEqual(filtered.stdout.count('tools/train.py'), full.stdout.count('tools/train.py') - 2)
+        self.assertNotIn('configs/wwtp/mask2former.py', filtered.stdout)
+        self.assertNotIn('configs/wwtp/hdnet.py', filtered.stdout)
+        self.assertIn('configs/wwtp/mask2former.py', full.stdout)
+        self.assertIn('configs/wwtp/hdnet.py', full.stdout)
+
     def test_v8_dry_runs_need_no_geometry_dependencies(self):
         script = str(runner.ROOT / 'scripts/run_experiments.py')
         for dataset in runner.DATASETS:
