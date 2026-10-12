@@ -185,6 +185,14 @@ def main(argv=None):
                   or (work_root_resolved / '.skip_hdnet').is_file()
                   or os.getenv('WWTP_SKIP_HDNET', '0') in ('1', 'true', 'True'))
 
+    skip_mask2former = ((ROOT / '.skip_mask2former').is_file()
+                        or (work_root_resolved / '.skip_mask2former').is_file()
+                        or os.getenv('WWTP_SKIP_MASK2FORMER', '0') in ('1', 'true', 'True'))
+
+    if skip_mask2former and args.models == ['mask2former']:
+        print('[PIPELINE-PLAN] Mask2Former skipped: starting RPGV v8 directly.', flush=True)
+        return
+
     if skip_hdnet and args.models == ['hdnet']:
         print('[PIPELINE-PLAN] HDNet skipped: user plan directs pipeline straight from mask2former to RPGV v8.', flush=True)
         return

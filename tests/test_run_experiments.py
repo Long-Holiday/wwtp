@@ -461,6 +461,14 @@ class ExperimentRunnerTest(unittest.TestCase):
             self.assertFalse(dummy_file.exists())
             self.assertTrue((output / 'new.txt').exists())
 
+    def test_plan_skip_mask2former(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work_root = Path(directory)
+            (work_root / '.skip_mask2former').touch()
+            calls = self.run_main(['train-test', '--dataset', 'wwtp', '--models', 'mask2former',
+                                   '--work-root', directory]).call_args_list
+            self.assertEqual(len(calls), 0)
+
     def test_plan_skip_hdnet(self):
         with tempfile.TemporaryDirectory() as directory:
             work_root = Path(directory)

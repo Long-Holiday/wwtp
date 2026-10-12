@@ -56,11 +56,15 @@ else
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2 Complete (Baselines)" | tee -a logs/pipeline.log
 fi
 
-echo "==========================================================" | tee -a logs/pipeline.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.1: Mask2Former (COCO query budget, 30k schedule)" | tee -a logs/pipeline.log
-echo "==========================================================" | tee -a logs/pipeline.log
-python scripts/run_experiments.py train-test --dataset wwtp --models mask2former --resume 2>&1 | tee -a logs/pipeline_mask2former.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.1 Complete (mask2former)" | tee -a logs/pipeline.log
+if [[ -f .skip_mask2former || "${WWTP_SKIP_MASK2FORMER:-0}" == "1" ]]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Skipping Phase 2.1 (Mask2Former): starting RPGV v8 directly." | tee -a logs/pipeline.log
+else
+  echo "==========================================================" | tee -a logs/pipeline.log
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.1: Mask2Former (COCO query budget, 30k schedule)" | tee -a logs/pipeline.log
+  echo "==========================================================" | tee -a logs/pipeline.log
+  python scripts/run_experiments.py train-test --dataset wwtp --models mask2former --resume 2>&1 | tee -a logs/pipeline_mask2former.log
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.1 Complete (mask2former)" | tee -a logs/pipeline.log
+fi
 
 if [[ -f .skip_hdnet || -f .pipeline_v8_then_shutdown || "${WWTP_SKIP_HDNET:-0}" == "1" ]]; then
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] Skipping Phase 2.2 (HDNet): user plan directs pipeline straight to RPGV v8." | tee -a logs/pipeline.log
