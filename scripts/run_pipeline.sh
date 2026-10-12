@@ -29,17 +29,32 @@ export PYTHONUNBUFFERED=1
 
 mkdir -p logs
 
-echo "==========================================================" | tee -a logs/pipeline.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 1: RPGV v7" | tee -a logs/pipeline.log
-echo "==========================================================" | tee -a logs/pipeline.log
-python scripts/run_experiments.py train-test --dataset wwtp --suite v7 --resume 2>&1 | tee -a logs/pipeline_v7.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 1 Complete (RPGV v7)" | tee -a logs/pipeline.log
+# Phases 1 and 2 yield no new output once their models are trained, and --resume
+# makes mmengine advance the dataloader over the whole remaining schedule (30000
+# batches of decoded 1024px crops) before the loop exits, so restarting them
+# costs a dataloader pass per model. Set WWTP_SKIP_COMPLETED_PHASES=1 when
+# restarting a pipeline whose RPGV v7 and baseline outputs already exist.
+skip_completed="${WWTP_SKIP_COMPLETED_PHASES:-0}"
 
-echo "==========================================================" | tee -a logs/pipeline.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2: Baselines (mask2former and hdnet scheduled separately)" | tee -a logs/pipeline.log
-echo "==========================================================" | tee -a logs/pipeline.log
-python scripts/run_experiments.py train-test --dataset wwtp --suite baselines --exclude mask2former hdnet --resume 2>&1 | tee -a logs/pipeline_baselines.log
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2 Complete (Baselines)" | tee -a logs/pipeline.log
+if [[ "$skip_completed" == "1" ]]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Skipping Phase 1 (RPGV v7): already trained and evaluated." | tee -a logs/pipeline.log
+else
+  echo "==========================================================" | tee -a logs/pipeline.log
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 1: RPGV v7" | tee -a logs/pipeline.log
+  echo "==========================================================" | tee -a logs/pipeline.log
+  python scripts/run_experiments.py train-test --dataset wwtp --suite v7 --resume 2>&1 | tee -a logs/pipeline_v7.log
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 1 Complete (RPGV v7)" | tee -a logs/pipeline.log
+fi
+
+if [[ "$skip_completed" == "1" ]]; then
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Skipping Phase 2 (Baselines): already trained and evaluated." | tee -a logs/pipeline.log
+else
+  echo "==========================================================" | tee -a logs/pipeline.log
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2: Baselines (mask2former and hdnet scheduled separately)" | tee -a logs/pipeline.log
+  echo "==========================================================" | tee -a logs/pipeline.log
+  python scripts/run_experiments.py train-test --dataset wwtp --suite baselines --exclude mask2former hdnet --resume 2>&1 | tee -a logs/pipeline_baselines.log
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2 Complete (Baselines)" | tee -a logs/pipeline.log
+fi
 
 echo "==========================================================" | tee -a logs/pipeline.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.1: Mask2Former with a query budget matched to single-target data (num_queries=10)" | tee -a logs/pipeline.log
