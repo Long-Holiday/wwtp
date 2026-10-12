@@ -22,7 +22,7 @@ param_scheduler = [
     dict(type='PolyLR', eta_min=0.0, power=0.9, by_epoch=False, begin=500, end=15000),
 ]
 train_cfg = dict(max_iters=15000, val_interval=500)
-default_hooks = dict(logger=dict(interval=50), checkpoint=dict(interval=500))
+default_hooks = dict(logger=dict(interval=50), checkpoint=dict(interval=500, save_best='roadIoU', rule='greater'))
 protocol_amp_override = (
     "mmcv's ms_deform_attn_forward_cuda has no bfloat16 kernel, so the deformable attention "
     "this model is built on can only run under fp16 autocast")

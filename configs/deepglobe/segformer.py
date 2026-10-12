@@ -23,4 +23,4 @@ param_scheduler = [
     dict(type='PolyLR', eta_min=0.0, power=0.9, by_epoch=False, begin=1000, end=30000),
 ]
 train_cfg = dict(max_iters=30000, val_interval=1000)
-default_hooks = dict(logger=dict(interval=100), checkpoint=dict(interval=1000))
+default_hooks = dict(logger=dict(interval=100), checkpoint=dict(interval=1000, save_best='roadIoU', rule='greater'))
