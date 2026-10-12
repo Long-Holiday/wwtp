@@ -77,9 +77,10 @@ class ProtocolTest(unittest.TestCase):
     # checkpoint every 250 updates. A model whose micro batch has to be smaller keeps
     # the same contract by raising accumulative_counts and scaling max_iters and
     # every schedule boundary by that same factor; datasets may only differ in the
-    # data, the model and the selection metric. The shared optimiser is the default,
-    # not a straitjacket: a config may set `protocol_optimizer_override` to a string
-    # explaining why that architecture needs its own learning rate or optimiser.
+    # data, the model and the selection metric. The shared optimiser and autocast
+    # dtype are defaults, not a straitjacket: a config may set
+    # `protocol_optimizer_override` or `protocol_amp_override` to a string explaining
+    # why that architecture needs its own learning rate, optimiser or precision.
     UPDATES = 7500
     WARMUP_UPDATES = 250
     CADENCE_UPDATES = 250
@@ -115,8 +116,20 @@ class ProtocolTest(unittest.TestCase):
                     self.assertTrue(cfg.pretty_text)
                     accum = cfg.optim_wrapper.accumulative_counts
                     self.assertGreaterEqual(accum, 1)
+                    amp = {key: cfg.optim_wrapper[key]
+                           for key in ('type', 'dtype', 'loss_scale')}
+                    if amp != dict(type='AmpOptimWrapper', dtype='bfloat16', loss_scale=1.0):
+                        # Some vendored CUDA kernels implement only fp16 (mmcv's
+                        # deformable attention, torch's grid_sample), so a model may
+                        # run the same protocol under a different autocast dtype - if
+                        # it says so in the config.
+                        self.assertTrue(
+                            cfg.get('protocol_amp_override'),
+                            f'{path} changes the shared autocast dtype without '
+                            f'protocol_amp_override explaining why')
                     self.assertEqual(cfg.optim_wrapper, dict(
-                        type='AmpOptimWrapper', dtype='bfloat16', loss_scale=1.0,
+                        type=cfg.optim_wrapper.type, dtype=cfg.optim_wrapper.dtype,
+                        loss_scale=cfg.optim_wrapper.loss_scale,
                         accumulative_counts=accum,
                         optimizer=cfg.optim_wrapper.optimizer,
                         clip_grad=dict(max_norm=10.0, norm_type=2),
