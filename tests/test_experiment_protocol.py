@@ -69,60 +69,94 @@ class ProtocolTest(unittest.TestCase):
                         if name == 'mask2former':
                             self.assertEqual(len(cfg.model.decode_head.loss_cls.class_weight), classes + 1)
 
+    # The 2026-10-12 training protocol, expressed in optimizer updates: every model
+    # and every dataset runs bfloat16 autocast, an effective batch of 8 samples,
+    # 7,500 updates and 60,000 image exposures, with one validation and one
+    # checkpoint every 250 updates. A model whose micro batch has to be smaller keeps
+    # the same contract by raising accumulative_counts and scaling max_iters and
+    # every schedule boundary by that same factor; datasets may only differ in the
+    # data, the model and the selection metric.
+    UPDATES = 7500
+    WARMUP_UPDATES = 250
+    CADENCE_UPDATES = 250
+    EFFECTIVE_BATCH = 8
+    OPTIMIZER = dict(type='AdamW', lr=6e-4, betas=(0.9, 0.999), eps=1e-8,
+                     weight_decay=0.01)
+
+    def dataset_paths(self):
+        """Every retained config, grouped by the dataset whose protocol it must obey."""
+        grouped = {dataset: [experiment_config(dataset, name) for name in MAINSTREAM_MODELS]
+                   for dataset in DATASET_NAMES}
+        grouped['wwtp'] += list((ROOT / 'configs/rpgv/v6').glob('*.py'))
+        grouped['wwtp'] += list((ROOT / 'configs/rpgv/v7').glob('*.py'))
+        grouped['wwtp'] += list((ROOT / 'configs/rpgv/v8').glob('*.py'))
+        for dataset in DATASET_NAMES:
+            if dataset != 'wwtp':
+                grouped[dataset].append(experiment_config(dataset, 'rpgv_v8'))
+        grouped['uavid'] += [ROOT / 'configs' / 'uavid' / f'rpgv_{variant}.py'
+                             for variant in ('rgb', 'full', 'v2', 'v6', 'v7')]
+        grouped['loveda'] += [ROOT / 'configs' / 'loveda' / f'rpgv_{variant}.py'
+                              for variant in ('rgb', 'full', 'v2', 'v6', 'v7')]
+        grouped['deepglobe'] += [experiment_config('deepglobe', f'rpgv_{variant}')
+                                 for variant in ('v6', 'v7')]
+        return grouped
+
     def test_shared_training_strategy(self):
-        reference = Config.fromfile(experiment_config('wwtp', 'hrnet'))
-        self.assertEqual(reference.optim_wrapper, dict(
-            type='OptimWrapper', accumulative_counts=4,
-            optimizer=dict(type='AdamW', lr=6e-4, betas=(0.9, 0.999),
-                           eps=1e-8, weight_decay=0.01),
-            clip_grad=dict(max_norm=10.0, norm_type=2),
-            paramwise_cfg=dict(norm_decay_mult=0.0)))
-        self.assertEqual(reference.param_scheduler, [
-            dict(type='LinearLR', start_factor=1e-6, by_epoch=False, begin=0, end=1000),
-            dict(type='PolyLR', eta_min=0.0, power=0.9, by_epoch=False, begin=1000, end=30000),
-        ])
-        paths = [experiment_config(dataset, name)
-                 for dataset in DATASET_NAMES for name in MAINSTREAM_MODELS]
-        paths += list((ROOT / 'configs/rpgv/v6').glob('*.py'))
-        paths += list((ROOT / 'configs/rpgv/v7').glob('*.py'))
-        paths += list((ROOT / 'configs/rpgv/v8').glob('*.py'))
-        paths += [experiment_config(dataset, 'rpgv_v8') for dataset in DATASET_NAMES if dataset != 'wwtp']
-        paths += [ROOT / 'configs' / dataset / f'rpgv_{variant}.py'
-                  for dataset in ('uavid', 'loveda') for variant in ('rgb', 'full', 'v2', 'v6', 'v7')]
-        paths += [experiment_config('deepglobe', f'rpgv_{variant}') for variant in ('v6', 'v7')]
-        self.assertEqual(reference.randomness, dict(seed=42, deterministic=False))
-        shared_fields = ('optim_wrapper', 'param_scheduler', 'train_cfg',
-                         'auto_scale_lr', 'randomness', 'env_cfg')
-        for path in paths:
-            with self.subTest(config=str(path)):
-                cfg = Config.fromfile(path)
-                self.assertTrue(cfg.pretty_text)
-                for field in shared_fields:
-                    self.assertEqual(cfg[field], reference[field], field)
-                self.assertEqual(cfg.auto_scale_lr, dict(enable=False, base_batch_size=8))
-                self.assertFalse(cfg.enable_early_stopping)
-                self.assertFalse(any(hook['type'] in ('EarlyStoppingHook', 'RPGVEarlyStoppingHook')
-                                     for hook in cfg.get('custom_hooks', [])))
-                self.assertIsNone(cfg.load_from)
-                self.assertFalse(cfg.resume)
-                self.assertNotIn('required_previous_stage', cfg)
-                for field in ('batch_size', 'persistent_workers', 'pin_memory', 'sampler'):
-                    self.assertEqual(cfg.train_dataloader[field], reference.train_dataloader[field], field)
-                rgb_steps = [step for step in cfg.train_dataloader.dataset.pipeline
-                             if step['type'] not in ('LoadPseudoGeometry', 'PackSegInputs', 'PackRPGVContourInputs')]
-                self.assertEqual(rgb_steps, reference.train_dataloader.dataset.pipeline[:-1])
-                checkpoint = cfg.default_hooks.checkpoint
-                self.assertEqual(checkpoint.interval, 1000)
-                self.assertFalse(checkpoint.by_epoch)
-                self.assertEqual(checkpoint.max_keep_ckpts, 3)
-                self.assertEqual(checkpoint.rule, 'greater')
-                dataset = 'wwtp' if 'configs/rpgv/' in str(path) else Path(path).parent.name
-                metric = {'wwtp': 'binary/Foreground_IoU', 'deepglobe': 'roadIoU'}.get(dataset, 'mIoU')
-                self.assertEqual(checkpoint.save_best, metric)
-                rgb_base_workers = dataset == 'wwtp' and (
-                    'configs/rpgv/' not in str(path) or '/v8/' in str(path))
-                workers = reference.train_dataloader.num_workers if rgb_base_workers else 4
-                self.assertEqual(cfg.train_dataloader.num_workers, workers)
+        for dataset, paths in self.dataset_paths().items():
+            reference = Config.fromfile(experiment_config(dataset, 'hrnet'))
+            self.assertEqual(reference.randomness, dict(seed=42, deterministic=False))
+            for path in paths:
+                with self.subTest(dataset=dataset, config=str(path)):
+                    cfg = Config.fromfile(path)
+                    self.assertTrue(cfg.pretty_text)
+                    accum = cfg.optim_wrapper.accumulative_counts
+                    self.assertGreaterEqual(accum, 1)
+                    self.assertEqual(cfg.optim_wrapper, dict(
+                        type='AmpOptimWrapper', dtype='bfloat16', loss_scale=1.0,
+                        accumulative_counts=accum,
+                        optimizer=self.OPTIMIZER,
+                        clip_grad=dict(max_norm=10.0, norm_type=2),
+                        paramwise_cfg=dict(norm_decay_mult=0.0)))
+                    warmup = self.WARMUP_UPDATES * accum
+                    self.assertEqual(cfg.param_scheduler, [
+                        dict(type='LinearLR', start_factor=1e-6, by_epoch=False,
+                             begin=0, end=warmup),
+                        dict(type='PolyLR', eta_min=0.0, power=0.9, by_epoch=False,
+                             begin=warmup, end=self.UPDATES * accum),
+                    ])
+                    self.assertEqual(cfg.train_cfg.max_iters, self.UPDATES * accum)
+                    self.assertEqual(cfg.train_cfg.val_interval, self.CADENCE_UPDATES * accum)
+                    self.assertEqual(cfg.train_cfg.type, 'IterBasedTrainLoop')
+                    micro_batch = cfg.train_dataloader.batch_size
+                    self.assertEqual(micro_batch * accum, self.EFFECTIVE_BATCH)
+                    self.assertEqual(micro_batch * cfg.train_cfg.max_iters,
+                                     self.EFFECTIVE_BATCH * self.UPDATES)
+                    for field in ('randomness', 'env_cfg'):
+                        self.assertEqual(cfg[field], reference[field], field)
+                    self.assertEqual(cfg.auto_scale_lr, dict(enable=False, base_batch_size=8))
+                    self.assertFalse(cfg.enable_early_stopping)
+                    self.assertFalse(any(hook['type'] in ('EarlyStoppingHook', 'RPGVEarlyStoppingHook')
+                                         for hook in cfg.get('custom_hooks', [])))
+                    self.assertIsNone(cfg.load_from)
+                    self.assertFalse(cfg.resume)
+                    self.assertNotIn('required_previous_stage', cfg)
+                    for field in ('persistent_workers', 'pin_memory', 'sampler'):
+                        self.assertEqual(cfg.train_dataloader[field], reference.train_dataloader[field], field)
+                    rgb_steps = [step for step in cfg.train_dataloader.dataset.pipeline
+                                 if step['type'] not in ('LoadPseudoGeometry', 'PackSegInputs',
+                                                         'PackRPGVContourInputs')]
+                    self.assertEqual(rgb_steps, reference.train_dataloader.dataset.pipeline[:-1])
+                    checkpoint = cfg.default_hooks.checkpoint
+                    self.assertEqual(checkpoint.interval, self.CADENCE_UPDATES * accum)
+                    self.assertFalse(checkpoint.by_epoch)
+                    self.assertEqual(checkpoint.max_keep_ckpts, 3)
+                    self.assertEqual(checkpoint.rule, 'greater')
+                    metric = {'wwtp': 'binary/Foreground_IoU', 'deepglobe': 'roadIoU'}.get(dataset, 'mIoU')
+                    self.assertEqual(checkpoint.save_best, metric)
+                    rgb_base_workers = dataset == 'wwtp' and (
+                        'configs/rpgv/' not in str(path) or '/v8/' in str(path))
+                    workers = reference.train_dataloader.num_workers if rgb_base_workers else 4
+                    self.assertEqual(cfg.train_dataloader.num_workers, workers)
 
     def test_optimizer_parameter_groups(self):
         paths = [experiment_config('wwtp', name) for name in MAINSTREAM_MODELS]
@@ -140,7 +174,15 @@ class ProtocolTest(unittest.TestCase):
                 model = MODELS.build(cfg.model)
                 norms = {id(param) for module in model.modules() if isinstance(module, norm_types)
                          for param in module.parameters(recurse=False)}
-                wrapper = build_optim_wrapper(model, cfg.optim_wrapper)
+                # The protocol wraps every model in AmpOptimWrapper, which requires a
+                # CUDA device to instantiate. Parameter groups do not depend on the
+                # wrapper, so they are checked through the FP32 wrapper this test can
+                # build anywhere; the AMP wrapper itself is exercised in smoke_runner.
+                wrapper_cfg = copy.deepcopy(cfg.optim_wrapper)
+                wrapper_cfg.type = 'OptimWrapper'
+                wrapper_cfg.pop('loss_scale', None)
+                wrapper_cfg.pop('dtype', None)
+                wrapper = build_optim_wrapper(model, wrapper_cfg)
                 self.assertEqual(wrapper.__class__.__name__, 'OptimWrapper')
                 covered = set()
                 for group in wrapper.optimizer.param_groups:

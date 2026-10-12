@@ -18,19 +18,19 @@ train_num_workers = int(os.getenv('WWTP_NUM_WORKERS', '8'))
 eval_num_workers = int(os.getenv('WWTP_VAL_NUM_WORKERS', '4'))
 
 train_dataloader = dict(
-    batch_size=2, num_workers=train_num_workers, persistent_workers=True, pin_memory=True,
+    batch_size=8, num_workers=train_num_workers, persistent_workers=True, pin_memory=True,
     sampler=dict(type='InfiniteSampler', shuffle=True),
     dataset=dict(type='WWTPDataset', data_root=data_root,
                  data_prefix=dict(img_path='images/train', seg_map_path='annotations/train'),
                  pipeline=train_pipeline))
 val_dataloader = dict(
-    batch_size=1, num_workers=eval_num_workers, persistent_workers=True, pin_memory=True,
+    batch_size=8, num_workers=eval_num_workers, persistent_workers=True, pin_memory=True,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(type='WWTPDataset', data_root=data_root,
                  data_prefix=dict(img_path='images/val', seg_map_path='annotations/val'),
                  pipeline=test_pipeline))
 test_dataloader = dict(
-    batch_size=1, num_workers=eval_num_workers, persistent_workers=True, pin_memory=True,
+    batch_size=8, num_workers=eval_num_workers, persistent_workers=True, pin_memory=True,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(type='WWTPDataset', data_root=data_root,
                  data_prefix=dict(img_path='images/test', seg_map_path='annotations/test'),

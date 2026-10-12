@@ -45,15 +45,15 @@ train_pipeline = [
     dict(type='RandomFlip', prob=0.75, direction=['horizontal', 'vertical', 'diagonal']),
     dict(type='PackRPGVContourInputs', contour_truncation=5.0),
 ]
-train_dataloader = dict(dataset=dict(data_root=data_root, pipeline=train_pipeline))
+train_dataloader = dict(batch_size=8, dataset=dict(data_root=data_root, pipeline=train_pipeline))
 test_pipeline = [
     dict(type='LoadImageFromFile'), dict(type='LoadAnnotations'),
     dict(type='RequireImageShape', size=(1024, 1024)),
     dict(type='LoadPseudoGeometry', pseudo_root=pseudo_root, required=True),
     dict(type='PackSegInputs'),
 ]
-val_dataloader = dict(dataset=dict(data_root=data_root, pipeline=test_pipeline))
-test_dataloader = dict(dataset=dict(data_root=data_root, pipeline=test_pipeline))
+val_dataloader = dict(batch_size=8, dataset=dict(data_root=data_root, pipeline=test_pipeline))
+test_dataloader = dict(batch_size=8, dataset=dict(data_root=data_root, pipeline=test_pipeline))
 
 _protocol = mmengine.Config.fromfile(os.path.join(
     '{{ fileDirname }}', '../../_base_/schedules/baseline_20k.py'))
@@ -63,6 +63,9 @@ train_cfg = dict(_delete_=True, **_protocol.train_cfg)
 auto_scale_lr = _protocol.auto_scale_lr
 enable_early_stopping = _protocol.enable_early_stopping
 del _protocol
+# v5 pins a 1000-iteration checkpoint interval, which would survive the shared
+# runtime change; the protocol fixes it in updates like the schedule does.
+default_hooks = dict(logger=dict(interval=25), checkpoint=dict(interval=250))
 load_from = None
 resume = False
 work_dir = 'work_dirs/rpgv_v6_siglip_1m'

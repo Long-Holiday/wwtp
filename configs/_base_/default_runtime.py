@@ -4,12 +4,12 @@ custom_imports = dict(
 
 default_hooks = dict(
     timer=dict(type='IterTimerHook'),
-    logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
+    logger=dict(type='LoggerHook', interval=25, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
         type='CheckpointHook',
         by_epoch=False,
-        interval=1000,
+        interval=250,
         max_keep_ckpts=3,
         save_best='binary/Foreground_IoU',
         rule='greater'),
