@@ -128,6 +128,8 @@ class ProtocolTest(unittest.TestCase):
         paths = [experiment_config('wwtp', name) for name in MAINSTREAM_MODELS]
         paths.append(ROOT / 'configs/rpgv/v6/rpgv_v6.py')
         paths.append(experiment_config('wwtp', 'rpgv_v8'))
+        for name in ('rpgv_v8_bounded_centers', 'rpgv_v8_no_contact', 'rpgv_v8_single_scale_dense'):
+            paths.append(experiment_config('wwtp', name))
         norm_types = (torch.nn.modules.batchnorm._BatchNorm,
                       torch.nn.modules.instancenorm._InstanceNorm,
                       torch.nn.GroupNorm, torch.nn.LayerNorm)

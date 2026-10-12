@@ -285,9 +285,11 @@ docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v7.py \
 
 v8 取消对外部伪深度的依赖：只输入三通道 RGB，从 RGB 特征前馈预测高斯基元（中心、各向异性协方差、幅值、相对潜高度、节点内容），经可微正射溅射得到局部几何场与覆盖度，再用两层稠密关系注意力推理节点关系，并把关系更新前/后的高斯特征、高度、覆盖度与方差分别反馈到 F16/F8 和 F8/F4。RGB 解码路径与轮廓残差保留，高斯路径另有稠密辅助与节点语义两项直接监督。**训练、验证、推理与公共导出都不读取 Depth Anything 或伪几何缓存**，因此批量入口不会为 v8 触发生成命令。
 
+锚点默认取 `grid_sizes=(4, 8, 16)` 三级网格，共 336 个基元（原为单一 8×8 的 64 个），使细窄目标与大面积水域各自获得成比例的基元预算；`step` 逐节点，中心可达半径 `step * exp(center_log_scale)` 因此随层级自适应，`center_log_scale` 初值 0 令初值与改造前一致。关系边描述子含一维**可微软接触**——与 v7 同一测量量同源，但 v7 在冻结观测上以 `no_grad` 计算它，v8 的接触依赖学到的中心与协方差，全程带梯度。
+
 这是面向分割的可学习 2.5D 高斯表示，不是多视角 3DGS 重建：没有真实高度、相机位姿、逐场景优化、深度排序或遮挡合成；潜高度是任务驱动的相对量，覆盖率不是标定可靠度。官方 ImageNet 骨干预训练仍保留，但不存在深度教师。**v7 checkpoint 不能作为 v8 resume。**
 
-四数据集主配置为 `configs/rpgv/v8/rpgv_v8.py` 与 `configs/{loveda,uavid,deepglobe}/rpgv_v8.py`，统一沿用 30k 外部训练协议与原有选权重口径。仅 WWTP 的四项核心消融：`rgb_only`（完全不构造高斯路径）、`fixed_gaussians`（固定中心/协方差，其余仍学习）、`no_message_passing`（去掉关系网络）、`no_gaussian_aux`（去掉两项高斯辅助监督）。`v8-all` 为七基线、完整 v8 与四项消融共12组；`all`/`v7-all` 与 v7 superiority gate 均不变。
+四数据集主配置为 `configs/rpgv/v8/rpgv_v8.py` 与 `configs/{loveda,uavid,deepglobe}/rpgv_v8.py`，统一沿用 30k 外部训练协议与原有选权重口径。仅 WWTP 的七项核心消融：`rgb_only`（完全不构造高斯路径）、`fixed_gaussians`（固定中心/协方差，其余仍学习）、`no_message_passing`（去掉关系网络）、`no_gaussian_aux`（去掉两项高斯辅助监督）、`bounded_centers`（冻结中心可达半径）、`no_contact`（只去掉接触维）、`single_scale_dense`（单一 20×20 = 400 个锚点，比默认的 336 更多，用于区分尺度多样性与节点容量）。`v8-all` 为七基线、完整 v8 与七项消融共15组；`all`/`v7-all` 与 v7 superiority gate 均不变。
 
 ```bash
 python scripts/run_experiments.py train-test --dataset wwtp --suite v8-all --dry-run
@@ -299,6 +301,8 @@ docker compose run --rm wwtp python scripts/run_experiments.py train-test --data
 docker compose run --rm wwtp python -m unittest tests.rpgv.test_rpgv_v8 \
   tests.test_run_experiments tests.test_experiment_protocol -v
 docker compose run --rm wwtp python tests/smoke_runner.py --config configs/rpgv/v8/rpgv_v8.py --device cpu
+docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v8.py --size 1024 --batch-size 2 \
+  --stages --output work_dirs/profiles/v8_train.json
 ```
 
 设计公式、梯度路径、损失、消融含义、Docker 验证结果与已知限制见 [v8 设计说明](docs/rpgv_v8_design.md)。

@@ -107,6 +107,11 @@ def main():
             key = 'gaussian_predictor.center_head.weight'
             if torch.equal(first['state_dict'][key], resumed['state_dict'][key]):
                 raise AssertionError('Gaussian centers did not update during resumed training')
+            # The learned center reach must round-trip; a single scalar update can
+            # legitimately round to the same value, so only presence is asserted.
+            reach = 'gaussian_predictor.center_log_scale'
+            if reach not in first['state_dict'] or reach not in resumed['state_dict']:
+                raise AssertionError('Gaussian center reach is missing from the checkpoint')
         print('PASS production train/checkpoint/test/resume', flush=True)
 
 

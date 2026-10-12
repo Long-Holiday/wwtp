@@ -38,6 +38,7 @@ V7_LEGACY_ABLATIONS = (
 V8_ABLATIONS = (
     'rpgv_v8_rgb_only', 'rpgv_v8_fixed_gaussians',
     'rpgv_v8_no_message_passing', 'rpgv_v8_no_gaussian_aux',
+    'rpgv_v8_bounded_centers', 'rpgv_v8_no_contact', 'rpgv_v8_single_scale_dense',
 )
 # Model selection and offline geometry requirements are separate capabilities.
 OFFLINE_GEOMETRY_MODELS = (

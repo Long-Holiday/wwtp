@@ -15,6 +15,11 @@ from torch.nn import functional as F
 from .rpgv_v6_modules import _conv_block, _coordinates, _resize
 
 
+# Pair descriptor: relative center, log-scale ratios, relative height, correlation
+# difference, support cosine overlap, squared center distance.
+RELATION_DIM = 8
+
+
 def bounded_grid(size, maximum):
     scale = min(1.0, maximum / max(size))
     return tuple(max(1, round(value * scale)) for value in size)
@@ -22,6 +27,31 @@ def bounded_grid(size, maximum):
 
 def _geometry_dtype(value):
     return torch.float64 if value.dtype == torch.float64 else torch.float32
+
+
+def contact_descriptor(support, size):
+    """Soft spatial adjacency between primitives on the structure raster.
+
+    The same measure v7 derives from a frozen observation, kept differentiable
+    here: it depends on the learned centers and covariances through the splatted
+    support. Each direction sums soft-support products over four-neighbour pairs
+    and is bounded by ``min(area_i, area_j) <= sqrt(area_i * area_j)``, so the
+    ratio stays in [0, 2] and the clamp is a guard rather than an active term.
+    """
+    maps = support.reshape(support.shape[0], support.shape[1], *size)
+    area = support.sum(dim=-1)
+    contact = torch.zeros(support.shape[0], area.shape[1], area.shape[1],
+                          dtype=support.dtype, device=support.device)
+    for dim, extent in ((-2, size[0]), (-1, size[1])):
+        if extent < 2:
+            continue
+        stacked = maps.narrow(dim, 0, extent - 1).flatten(2)
+        shifted = maps.narrow(dim, 1, extent - 1).flatten(2)
+        cross = torch.bmm(stacked, shifted.transpose(1, 2))
+        # Out of place: the accumulator must stay writable by autograd.
+        contact = contact + cross + cross.transpose(1, 2)
+    denominator = (area.unsqueeze(-1) * area.unsqueeze(-2)).clamp_min(1e-12).sqrt()
+    return (contact / denominator).unsqueeze(-1)
 
 
 class GaussianSplatV8(nn.Module):
@@ -63,12 +93,15 @@ class GaussianSplatV8(nn.Module):
 
 
 class GaussianPrimitivePredictorV8(nn.Module):
-    def __init__(self, in_channels, channels=128, grid_size=8, max_size=64,
-                 fixed_gaussians=False):
+    def __init__(self, in_channels, channels=128, grid_sizes=(4, 8, 16), max_size=64,
+                 fixed_gaussians=False, center_scale_learnable=True):
         super().__init__()
-        if grid_size < 1 or max_size < 1:
-            raise ValueError('Gaussian grid_size and max_size must be positive')
-        self.grid_size = int(grid_size)
+        levels = (grid_sizes,) if isinstance(grid_sizes, int) else tuple(grid_sizes)
+        if not levels or any(int(value) < 1 for value in levels):
+            raise ValueError('Gaussian grid_sizes must be a nonempty sequence of positive anchors')
+        if max_size < 1:
+            raise ValueError('Gaussian max_size must be positive')
+        self.grid_sizes = tuple(int(value) for value in levels)
         self.max_size = int(max_size)
         self.fixed_gaussians = bool(fixed_gaussians)
         self.projections = nn.ModuleList([
@@ -77,6 +110,14 @@ class GaussianPrimitivePredictorV8(nn.Module):
         if not self.fixed_gaussians:
             self.center_head = nn.Linear(channels, 2)
             self.covariance_head = nn.Linear(channels, 3)
+        # Learned center reach, a no-op at its zero initialization (exp(0) == 1).
+        # Fixed or frozen centers cannot move, so the key becomes a buffer there:
+        # one state_dict layout across every ablation, and no parameter that can
+        # never receive a gradient.
+        if self.fixed_gaussians or not center_scale_learnable:
+            self.register_buffer('center_log_scale', torch.zeros(()))
+        else:
+            self.center_log_scale = nn.Parameter(torch.zeros(()))
         self.amplitude_head = nn.Linear(channels, 1)
         self.height_head = nn.Linear(channels, 1)
         self.feature_head = nn.Linear(channels, channels)
@@ -90,20 +131,25 @@ class GaussianPrimitivePredictorV8(nn.Module):
         encoded = self.encoder(sum(_resize(layer(feature), size)
                                   for layer, feature in zip(self.projections, features))
                                / len(features))
-        grid = (min(self.grid_size, size[0]), min(self.grid_size, size[1]))
-        seeds = F.adaptive_avg_pool2d(encoded, grid).flatten(2).transpose(1, 2)
+        levels = [(min(value, size[0]), min(value, size[1])) for value in self.grid_sizes]
+        seeds = torch.cat([F.adaptive_avg_pool2d(encoded, grid).flatten(2).transpose(1, 2)
+                           for grid in levels], dim=1)
         with torch.autocast(device_type=encoded.device.type, enabled=False):
             seeds = seeds.to(_geometry_dtype(seeds))
-            anchors = _coordinates(*grid, seeds).flatten(2).transpose(1, 2)
-            step = seeds.new_tensor((2.0 / grid[1], 2.0 / grid[0]))
+            anchors = torch.cat([_coordinates(*grid, seeds).flatten(2).transpose(1, 2)
+                                 for grid in levels], dim=1)
+            # One lattice pitch per anchor, so a center's reach scales with its own
+            # level: coarse primitives roam far, fine primitives stay local.
+            step = torch.cat([seeds.new_tensor((2.0 / grid[1], 2.0 / grid[0])).expand(
+                grid[0] * grid[1], 2) for grid in levels], dim=0).unsqueeze(0)
             if self.fixed_gaussians:
                 centers = anchors.expand(seeds.shape[0], -1, -1)
-                factor = torch.diag_embed((step * 0.8).expand(*seeds.shape[:2], 2))
+                factor = torch.diag_embed(step.expand(*seeds.shape[:2], 2) * 0.8)
             else:
-                centers = anchors + self.center_head(seeds).tanh() * step
+                centers = anchors + self.center_head(seeds).tanh() * step * self.center_log_scale.exp()
                 parameters = self.covariance_head(seeds)
                 diagonal = (F.softplus(parameters[..., :2]) + 1e-4) * step
-                off_diagonal = parameters[..., 2] * step[1]
+                off_diagonal = parameters[..., 2] * step[..., 1]
                 zero = torch.zeros_like(off_diagonal)
                 factor = torch.stack((diagonal[..., 0], zero, off_diagonal,
                                       diagonal[..., 1]), dim=-1).reshape(*seeds.shape[:2], 2, 2)
@@ -122,14 +168,15 @@ class GaussianPrimitivePredictorV8(nn.Module):
 
 
 class GaussianRelationLayerV8(nn.Module):
-    def __init__(self, channels, heads):
+    def __init__(self, channels, heads, use_contact=True):
         super().__init__()
         if channels % heads:
             raise ValueError('Gaussian relation channels must be divisible by heads')
         self.heads = heads
         self.norm = nn.LayerNorm(channels)
         self.qkv = nn.Linear(channels, 3 * channels)
-        self.edge_bias = nn.Sequential(nn.Linear(8, channels), nn.GELU(approximate='tanh'),
+        descriptor = RELATION_DIM + int(bool(use_contact))
+        self.edge_bias = nn.Sequential(nn.Linear(descriptor, channels), nn.GELU(approximate='tanh'),
                                        nn.Linear(channels, heads))
         self.output = nn.Linear(channels, channels)
         self.ffn = nn.Sequential(nn.LayerNorm(channels), nn.Linear(channels, 2 * channels),
@@ -148,11 +195,13 @@ class GaussianRelationLayerV8(nn.Module):
 
 
 class GaussianRelationNetworkV8(nn.Module):
-    def __init__(self, channels=128, heads=4, layers=2):
+    def __init__(self, channels=128, heads=4, layers=2, use_contact=True):
         super().__init__()
         if layers < 1:
             raise ValueError('relation network needs at least one layer')
-        self.layers = nn.ModuleList([GaussianRelationLayerV8(channels, heads) for _ in range(layers)])
+        self.use_contact = bool(use_contact)
+        self.layers = nn.ModuleList([GaussianRelationLayerV8(channels, heads, self.use_contact)
+                                     for _ in range(layers)])
 
     def forward(self, nodes, primitives, raster):
         with torch.autocast(device_type=nodes.device.type, enabled=False):
@@ -173,6 +222,8 @@ class GaussianRelationNetworkV8(nn.Module):
             overlap = torch.bmm(unit, unit.transpose(1, 2)).unsqueeze(-1)
             distance = delta.square().sum(-1, keepdim=True)
             edges = torch.cat((delta, ratio, dz, dc, overlap, distance), dim=-1)
+            if self.use_contact:
+                edges = torch.cat((edges, contact_descriptor(support, raster['size'])), dim=-1)
             for layer in self.layers:
                 nodes = layer(nodes, edges)
         return nodes
