@@ -35,6 +35,7 @@ RPGV_CONFIGS = {
     'rpgv_v4': ROOT / 'configs/rpgv/v4/rpgv_v4.py',
     'rpgv_v5': ROOT / 'configs/rpgv/v5/rpgv_v5.py',
     'rpgv_v51': ROOT / 'configs/rpgv/v51/from_scratch.py',
+    'rpgv_v8': ROOT / 'configs/rpgv/v8/rpgv_v8.py',
     'rpgv_v6': ROOT / 'configs/rpgv/v6/rpgv_v6.py',
 }
 
@@ -184,7 +185,8 @@ def smoke_model(name, config_path, size, backward, device='cpu'):
         sample.gt_sem_seg.data = torch.arange(size * size).reshape(1, size, size) % num_classes
         sample.gt_sem_seg.data[:, :2] = 255
         sample.global_img = PixelData(data=image.clone())
-    if model_cfg['type'].startswith('RPGV') and model_cfg.get('training_stage') != 'rgb':
+    if (model_cfg['type'].startswith('RPGV') and model_cfg.get('training_stage') != 'rgb'
+            and model_cfg['type'] not in ('RPGVNetV8', 'RPGVRemoteSensingV8')):
         items = [(_add_pseudo_geometry(image), sample) for image, sample in items]
     processed = model.data_preprocessor(dict(inputs=[x for x, _ in items],
                                             data_samples=[s for _, s in items]), training=True)
@@ -454,7 +456,7 @@ def smoke_pseudo_geometry(size: int) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--models', nargs='+', choices=MAINSTREAM_MODELS, default=MAINSTREAM_MODELS)
+    parser.add_argument('--models', nargs='+', choices=(*MAINSTREAM_MODELS, 'rpgv_v8'), default=MAINSTREAM_MODELS)
     parser.add_argument('--dataset', choices=DATASET_NAMES, default='wwtp')
     parser.add_argument('--input-size', type=int, default=64)
     parser.add_argument('--backward', action='store_true')

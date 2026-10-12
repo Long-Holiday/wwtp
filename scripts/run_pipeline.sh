@@ -38,6 +38,12 @@ python scripts/run_experiments.py train-test --dataset wwtp --suite baselines --
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2 Complete (Baselines)" | tee -a logs/pipeline.log
 
 echo "==========================================================" | tee -a logs/pipeline.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.4: RPGV v8" | tee -a logs/pipeline.log
+echo "==========================================================" | tee -a logs/pipeline.log
+python scripts/run_experiments.py train-test --dataset wwtp --models rpgv_v8 --resume 2>&1 | tee -a logs/pipeline_v8.log
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Phase 2.4 Complete (RPGV v8)" | tee -a logs/pipeline.log
+
+echo "==========================================================" | tee -a logs/pipeline.log
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting Phase 2.5: Retraining RPGV v7 from scratch (Full 30k schedule, overwriting previous result)" | tee -a logs/pipeline.log
 echo "==========================================================" | tee -a logs/pipeline.log
 if [[ -d "work_dirs/wwtp/rpgv_v7" ]]; then

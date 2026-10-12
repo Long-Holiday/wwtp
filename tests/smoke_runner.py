@@ -84,7 +84,7 @@ def main():
             loader.dataset.pipeline = pipeline + [packer]
         path = root / 'config.py'
         cfg.dump(path)
-        subprocess.run([sys.executable, 'tools/train.py', str(path)], check=True, env=process_env)
+        subprocess.run([sys.executable, 'tools/train.py', str(path), '--no-tensorboard'], check=True, env=process_env)
         checkpoint = root / 'run/iter_2.pth'
         check_checkpoint(checkpoint)
         subprocess.run([sys.executable, 'tools/test.py', str(path), str(checkpoint)], check=True, env=process_env)
@@ -93,8 +93,20 @@ def main():
             raise AssertionError('Production test did not write expected metrics')
         cfg.train_cfg.max_iters = 4
         cfg.dump(path)
-        subprocess.run([sys.executable, 'tools/train.py', str(path), '--resume', str(checkpoint)], check=True, env=process_env)
-        check_checkpoint(root / 'run/iter_4.pth')
+        subprocess.run([sys.executable, 'tools/train.py', str(path), '--resume', str(checkpoint),
+                        '--no-tensorboard'], check=True, env=process_env)
+        final_checkpoint = root / 'run/iter_4.pth'
+        check_checkpoint(final_checkpoint)
+        first = torch.load(checkpoint, map_location='cpu')
+        resumed = torch.load(final_checkpoint, map_location='cpu')
+        if first['meta']['iter'] != 2 or resumed['meta']['iter'] != 4:
+            raise AssertionError('Production resume did not preserve iteration counters')
+        if not first.get('optimizer', {}).get('state') or not resumed.get('optimizer', {}).get('state'):
+            raise AssertionError('Checkpoints must include initialized optimizer state')
+        if cfg.model.type == 'RPGVNetV8':
+            key = 'gaussian_predictor.center_head.weight'
+            if torch.equal(first['state_dict'][key], resumed['state_dict'][key]):
+                raise AssertionError('Gaussian centers did not update during resumed training')
         print('PASS production train/checkpoint/test/resume', flush=True)
 
 

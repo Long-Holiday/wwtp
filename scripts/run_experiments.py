@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plan, train and evaluate baseline, RPGV v6/v7 and ablation suites."""
+"""Plan, train and evaluate baseline, RPGV v6/v7/v8 and ablation suites."""
 import argparse
 import json
 import os
@@ -15,6 +15,7 @@ DATASETS = _roster['DATASETS']
 EVALUATION_PROTOCOLS = _roster['EVALUATION_PROTOCOLS']
 MAINSTREAM_MODELS = _roster['MAINSTREAM_MODELS']
 OPTIONAL_MODELS = _roster['OPTIONAL_MODELS']
+OFFLINE_GEOMETRY_MODELS = _roster['OFFLINE_GEOMETRY_MODELS']
 EXPERIMENT_SUITES = _roster['EXPERIMENT_SUITES']
 ROOT = _roster['ROOT']
 experiment_config = _roster['experiment_config']
@@ -162,23 +163,60 @@ def main(argv=None):
     parser.add_argument('--gate-v7-superiority', action='store_true',
                         default=os.getenv('GATE_V7_SUPERIORITY', '1') in ('1', 'true', 'True'),
                         help='Skip ablation suite if v7 test metric is not strictly higher than all baselines')
+    parser.add_argument('--auto-prerequisites', action='store_true',
+                        default=os.getenv('AUTO_PREREQUISITES', '1') in ('1', 'true', 'True'),
+                        help='Automatically train and evaluate v8 and fresh 30k retrained v7 before running ablations')
+    parser.add_argument('--no-auto-prerequisites', action='store_false', dest='auto_prerequisites')
     args, extra = parser.parse_known_args(argv)
     if args.gpus < 1:
         parser.error('--gpus must be positive')
     if not EVALUATION_PROTOCOLS[args.dataset]['labeled_test'] and args.split == 'test':
         parser.error('Public test labels are private; use --split val')
-    if args.suite in ('v7-ablations', 'v6-ablations') and args.gate_v7_superiority and not args.dry_run:
+    if args.suite in ('v7-ablations', 'v6-ablations') and not args.dry_run:
         work_root_resolved = args.work_root if args.work_root.is_absolute() else ROOT / args.work_root
-        is_superior, v7_score, best_baseline, best_score, baseline_scores = check_v7_superiority(
-            work_root_resolved, args.dataset)
-        if is_superior is False and best_baseline is not None:
-            print(f"[GATE] RPGV v7 test metric ({v7_score:.4f}) is NOT higher than best baseline "
-                  f"{best_baseline} ({best_score:.4f}). "
-                  f"Skipping ablation experiments as requested.", flush=True)
-            return
-        elif is_superior is True:
-            print(f"[GATE] RPGV v7 test metric ({v7_score:.4f}) is higher than best baseline "
-                  f"{best_baseline} ({best_score:.4f}). Proceeding with ablations.", flush=True)
+        if args.suite == 'v7-ablations' and args.dataset == 'wwtp' and args.auto_prerequisites:
+            # 1. Ensure RPGV v8 is trained and evaluated first
+            v8_eval = work_root_resolved / 'wwtp' / 'rpgv_v8' / 'eval' / 'metrics.json'
+            if not v8_eval.is_file():
+                print('[PIPELINE-AUTO] Pre-requisite RPGV v8 evaluation not found. Running RPGV v8 first...', flush=True)
+                v8_cmd = [sys.executable, str(Path(__file__).resolve()), 'train-test', '--dataset', 'wwtp',
+                          '--models', 'rpgv_v8', '--resume', '--work-root', str(work_root_resolved)]
+                if args.cfg_options:
+                    v8_cmd += ['--cfg-options', *args.cfg_options]
+                run_command(v8_cmd, args.dry_run)
+
+            # 2. Ensure RPGV v7 fresh 30k retraining is completed
+            v7_marker = work_root_resolved / 'wwtp' / 'rpgv_v7' / '.retrained_30k_done'
+            if not v7_marker.is_file():
+                print('[PIPELINE-AUTO] Pre-requisite RPGV v7 30k fresh retraining not marked. Archiving and retraining v7...', flush=True)
+                v7_dir = work_root_resolved / 'wwtp' / 'rpgv_v7'
+                archive_dir = work_root_resolved / 'wwtp' / 'rpgv_v7_resumed_archive'
+                if v7_dir.is_dir() and any(v7_dir.iterdir()):
+                    import shutil
+                    if archive_dir.exists():
+                        shutil.rmtree(archive_dir)
+                    shutil.copytree(v7_dir, archive_dir)
+                    print(f'[PIPELINE-AUTO] Archived previous rpgv_v7 to {archive_dir}', flush=True)
+                v7_cmd = [sys.executable, str(Path(__file__).resolve()), 'train-test', '--dataset', 'wwtp',
+                          '--suite', 'v7', '--overwrite', '--work-root', str(work_root_resolved)]
+                if args.cfg_options:
+                    v7_cmd += ['--cfg-options', *args.cfg_options]
+                run_command(v7_cmd, args.dry_run)
+                v7_marker.parent.mkdir(parents=True, exist_ok=True)
+                v7_marker.write_text('done\n')
+                print('[PIPELINE-AUTO] RPGV v7 30k fresh retraining complete.', flush=True)
+
+        if args.gate_v7_superiority:
+            is_superior, v7_score, best_baseline, best_score, baseline_scores = check_v7_superiority(
+                work_root_resolved, args.dataset)
+            if is_superior is False and best_baseline is not None:
+                print(f"[GATE] RPGV v7 test metric ({v7_score:.4f}) is NOT higher than best baseline "
+                      f"{best_baseline} ({best_score:.4f}). "
+                      f"Skipping ablation experiments as requested.", flush=True)
+                return
+            elif is_superior is True:
+                print(f"[GATE] RPGV v7 test metric ({v7_score:.4f}) is higher than best baseline "
+                      f"{best_baseline} ({best_score:.4f}). Proceeding with ablations.", flush=True)
     models = args.models or EXPERIMENT_SUITES[args.suite or 'baselines']
     try:
         configs = [experiment_config(args.dataset, name) for name in models]
@@ -201,7 +239,7 @@ def main(argv=None):
             raise FileNotFoundError(config)
     split = args.split or EVALUATION_PROTOCOLS[args.dataset]['split']
     shared = ['--cfg-options', *args.cfg_options] if args.cfg_options else []
-    geometry_configs = [config for name, config in zip(models, configs) if name in OPTIONAL_MODELS]
+    geometry_configs = [config for name, config in zip(models, configs) if name in OFFLINE_GEOMETRY_MODELS]
     if geometry_configs:
         splits = list(dict.fromkeys((['train', 'val'] if training else []) +
                                     ([split] if args.mode != 'train' else [])))
@@ -222,6 +260,10 @@ def main(argv=None):
             command = [sys.executable, 'tools/test.py', config, str(checkpoint),
                        '--work-dir', str(output / 'eval'), '--split', split]
             run_command(command + (extra if args.mode == 'test' else []) + shared, args.dry_run)
+            if args.dataset == 'wwtp' and args.overwrite and name == 'rpgv_v7' and not args.dry_run:
+                marker = output / '.retrained_30k_done'
+                marker.parent.mkdir(parents=True, exist_ok=True)
+                marker.write_text('done\n')
 
 
 if __name__ == '__main__':

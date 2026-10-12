@@ -24,7 +24,8 @@ class ExperimentRunnerTest(unittest.TestCase):
     def test_roster_and_configs(self):
         self.assertEqual({key: len(value) for key, value in runner.EXPERIMENT_SUITES.items()},
                          {'baselines': 7, 'v6': 1, 'v6-ablations': 5, 'all': 13,
-                          'v7': 1, 'v7-ablations': 6, 'v7-all': 15})
+                          'v7': 1, 'v7-ablations': 6, 'v7-all': 15,
+                          'v8': 1, 'v8-ablations': 4, 'v8-all': 12})
         self.assertEqual(len(set(runner.EXPERIMENT_SUITES['all'])), 13)
         for name in runner.EXPERIMENT_SUITES['all']:
             self.assertTrue(runner.experiment_config('wwtp', name).is_file())
@@ -97,6 +98,34 @@ class ExperimentRunnerTest(unittest.TestCase):
                     config = str(runner.experiment_config('wwtp', name).relative_to(runner.ROOT))
                     self.assertNotIn(config, result.stdout)
                     self.assertNotIn(f'work_dirs/wwtp/{name}', result.stdout)
+
+    def test_v8_dry_runs_need_no_geometry_dependencies(self):
+        script = str(runner.ROOT / 'scripts/run_experiments.py')
+        for dataset in runner.DATASETS:
+            self.assertTrue(runner.experiment_config(dataset, 'rpgv_v8').is_file())
+            result = subprocess.run([sys.executable, '-S', script, 'train-test',
+                                     '--dataset', dataset, '--suite', 'v8', '--dry-run'],
+                                    capture_output=True, text=True, check=True)
+            self.assertNotIn('generate_pseudo_geometry', result.stdout)
+            self.assertEqual(result.stdout.count('tools/train.py'), 1)
+            self.assertEqual(result.stdout.count('tools/test.py'), 1)
+        for suite in ('v8-ablations', 'v8-all'):
+            result = subprocess.run([sys.executable, '-S', script, 'train-test',
+                                     '--suite', suite, '--dry-run'],
+                                    capture_output=True, text=True, check=True)
+            self.assertNotIn('generate_pseudo_geometry', result.stdout)
+            self.assertEqual(result.stdout.count('tools/train.py'), len(runner.EXPERIMENT_SUITES[suite]))
+        self.assertNotIn('rpgv_v8', runner.OFFLINE_GEOMETRY_MODELS)
+        self.assertNotIn('rpgv_v8', runner.EXPERIMENT_SUITES['v7-all'])
+
+    def test_v8_real_planning_skips_depth_and_mixed_selection_is_precise(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(runner, 'prepare_geometry') as prepare:
+            calls = self.run_main(['train', '--suite', 'v8', '--work-root', directory]).call_args_list
+            self.assertEqual(len(calls), 1)
+            prepare.assert_not_called()
+            self.run_main(['train', '--models', 'rpgv_v7', 'rpgv_v8', '--work-root', directory])
+            prepare.assert_called_once()
+            self.assertEqual(prepare.call_args.args[0], [runner.experiment_config('wwtp', 'rpgv_v7')])
 
     def test_train_then_validation_selected_test(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -268,7 +297,8 @@ class ExperimentRunnerTest(unittest.TestCase):
 
             with contextlib.redirect_stdout(io.StringIO()) as stdout, patch.object(
                     runner.subprocess, 'run') as execute:
-                runner.main(['train-test', '--suite', 'v7-ablations', '--work-root', directory])
+                runner.main(['train-test', '--suite', 'v7-ablations', '--work-root', directory,
+                             '--no-auto-prerequisites'])
             self.assertEqual(execute.call_count, 0)
             self.assertIn('[GATE] RPGV v7 test metric (75.0000) is NOT higher than best baseline hrnet (76.5000)',
                           stdout.getvalue())
@@ -292,8 +322,38 @@ class ExperimentRunnerTest(unittest.TestCase):
 
             with patch.object(runner, 'prepare_geometry'):
                 calls = self.run_main(['train-test', '--suite', 'v7-ablations',
-                                       '--work-root', directory], train).call_args_list
+                                       '--work-root', directory, '--no-auto-prerequisites'], train).call_args_list
             self.assertEqual(len(calls), 12)
+
+    def test_v7_ablations_auto_runs_v8_and_fresh_v7_prerequisites(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work_root = Path(directory)
+            baseline_eval = work_root / 'wwtp' / 'hrnet' / 'eval'
+            baseline_eval.mkdir(parents=True)
+            (baseline_eval / 'metrics.json').write_text('{"binary/Foreground_IoU": 75.0}')
+
+            def fake_run(command, **kwargs):
+                cmd_str = ' '.join(str(c) for c in command)
+                if '--models rpgv_v8' in cmd_str:
+                    v8_dir = work_root / 'wwtp' / 'rpgv_v8' / 'eval'
+                    v8_dir.mkdir(parents=True, exist_ok=True)
+                    (v8_dir / 'metrics.json').write_text('{"binary/Foreground_IoU": 82.0}')
+                elif '--suite v7' in cmd_str and '--overwrite' in cmd_str:
+                    v7_dir = work_root / 'wwtp' / 'rpgv_v7' / 'eval'
+                    v7_dir.mkdir(parents=True, exist_ok=True)
+                    (v7_dir / 'metrics.json').write_text('{"binary/Foreground_IoU": 81.0}')
+                elif 'tools/train.py' in cmd_str:
+                    out = Path(command[command.index('--work-dir') + 1])
+                    out.mkdir(parents=True, exist_ok=True)
+                    (out / 'best_binary_Foreground_IoU_iter_1000.pth').touch()
+
+            with patch.object(runner, 'prepare_geometry'):
+                calls = self.run_main(['train-test', '--suite', 'v7-ablations',
+                                       '--work-root', directory], fake_run).call_args_list
+            # Pre-requisite v8 + v7 retrain (2 top calls) + 12 ablation calls (6 models x 2)
+            self.assertEqual(len(calls), 14)
+            self.assertTrue((work_root / 'wwtp' / 'rpgv_v7' / '.retrained_30k_done').is_file())
+            self.assertTrue((work_root / 'wwtp' / 'rpgv_v8' / 'eval' / 'metrics.json').is_file())
 
     def test_deepglobe_nine_models_dependency_free_dry_run(self):
         models = runner.MAINSTREAM_MODELS + ('rpgv_v6', 'rpgv_v7')

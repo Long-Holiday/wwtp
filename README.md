@@ -130,7 +130,7 @@ docker compose run --rm wwtp python tools/test.py configs/wwtp/hrnet.py \
   work_dirs/wwtp/hrnet/iter_20000.pth --split val
 ```
 
-一键入口复用现有配置与正式训练策略，不更改预算或超参数；串行执行，任何训练、选权重或评估失败都会停止，不会静默跳过。默认输出为 `work_dirs/<dataset>/<model>/`，评估指标保存到该目录的 `eval/metrics.json`；消融目录名为 `rpgv_v6_<消融名>`。用 `--work-root` 指定新的整组输出根目录；非空训练目录需显式 `--resume`。`--models` 可选择子集，与 `--suite` 互斥；不指定时仍默认七基线。`train-test` 中额外训练参数（如 `--no-pretrained`）只传给训练，显式 `--cfg-options` 同时传给训练和评估；WWTP与DeepGlobe默认评估有标签test，UAVid/LoveDA默认评估官方val；也可指定 `--split val`。一键 v6/消融会检查并补齐所需的伪几何，已有完整缓存则不加载深度模型；首次生成需要生成工具的依赖与 Depth Anything 权重。数据根目录用 `WWTP_DATA_ROOT`（兼容 `WWTP_V5_DATA_ROOT`）、`UAVID_DATA_ROOT`、`LOVEDA_DATA_ROOT`、`DEEPGLOBE_DATA_ROOT` 指定，伪几何目录用 `WWTP_PSEUDO_ROOT` / `PUBLIC_PSEUDO_ROOT` 指定；真实运行会按配置覆盖后的 pipeline 解析生成路径，dry-run 的几何路径仅展示环境变量默认值。即使 RGB-only 消融，其现有 pipeline 也要求伪几何。此批处理入口的 v6 目录与旧 shell 入口的 `work_dirs/rpgv_v6_siglip_1m` 独立，不会自动复用旧权重。
+一键入口复用现有配置与正式训练策略，不更改预算或超参数；串行执行，任何训练、选权重或评估失败都会停止，不会静默跳过。默认输出为 `work_dirs/<dataset>/<model>/`，评估指标保存到该目录的 `eval/metrics.json`；消融目录名为 `rpgv_v6_<消融名>`、`rpgv_v8_<消融名>`。用 `--work-root` 指定新的整组输出根目录；非空训练目录需显式 `--resume`。`--models` 可选择子集，与 `--suite` 互斥；不指定时仍默认七基线。`train-test` 中额外训练参数（如 `--no-pretrained`）只传给训练，显式 `--cfg-options` 同时传给训练和评估；WWTP与DeepGlobe默认评估有标签test，UAVid/LoveDA默认评估官方val；也可指定 `--split val`。一键 v6/消融会检查并补齐所需的伪几何，已有完整缓存则不加载深度模型；首次生成需要生成工具的依赖与 Depth Anything 权重。**需要离线几何的模型与可选模型是两套清单（`OFFLINE_GEOMETRY_MODELS` / `OPTIONAL_MODELS`）：v8 全系列只输入 RGB，真实运行与 dry-run 都不会为它生成伪几何。** 数据根目录用 `WWTP_DATA_ROOT`（兼容 `WWTP_V5_DATA_ROOT`）、`UAVID_DATA_ROOT`、`LOVEDA_DATA_ROOT`、`DEEPGLOBE_DATA_ROOT` 指定，伪几何目录用 `WWTP_PSEUDO_ROOT` / `PUBLIC_PSEUDO_ROOT` 指定；真实运行会按配置覆盖后的 pipeline 解析生成路径，dry-run 的几何路径仅展示环境变量默认值。即使 RGB-only 消融，其现有 pipeline 也要求伪几何（v8 的 `rgb_only` 不在此列）。此批处理入口的 v6 目录与旧 shell 入口的 `work_dirs/rpgv_v6_siglip_1m` 独立，不会自动复用旧权重。
 
 `--cfg-options` 仍可覆盖配置，但公平比较必须对整组实验应用相同策略，并使用相同GPU数；N卡默认全局有效batch为8N，不能与单卡结果混为等预算。变更batch时同步调整累积和迭代预算，保持全局有效batch、图像曝光与更新数。多卡批处理用 `--gpus N`。新协议必须重新训练并使用新的 `--work-dir`，旧策略的checkpoint/optimizer状态不能直接resume或混入正式结果。
 
@@ -160,14 +160,13 @@ docker compose run --rm wwtp python tools/data/prepare_public.py deepglobe \
 # 先用 --dry-run 检查命令；删除该参数才会真正启动训练
 docker compose run --rm wwtp python scripts/run_experiments.py train-test \
   --dataset deepglobe --models hrnet unetformer segnext segformer deeplabv3plus mask2former hdnet rpgv_v6 rpgv_v7 \
-  --dry-run
-# 也可分组运行（不要与上述正式运行使用相同的非空输出目录）
+  --dry-run# 也可分组运行（不要与上述正式运行使用相同的非空输出目录）
 docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset deepglobe --suite baselines
 docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset deepglobe --suite v6
 docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset deepglobe --suite v7
 ```
 
-新增配置在 `configs/deepglobe/`，七基线及RPGV v6/v7均继承同一30k外部训练策略。根目录由 `DEEPGLOBE_DATA_ROOT` 指定；Docker Compose 使用容器内 `/workspace/...` 路径。RPGV复用 `PUBLIC_PSEUDO_ROOT`（默认 prepared 目录下的 `pseudo_geometry`），批量入口自动准备 train/val/test 所需缓存。默认按 `roadIoU` 保存 `best_roadIoU_iter_*.pth`，指标为全集合累计像素统计的百分数道路IoU/F1及mIoU/mDice/mFscore；道路指标零分母定义为0，不对逐图IoU取平均。本地test不参与选权重，显式 `--split val` 可只评估验证集。
+新增配置在 `configs/deepglobe/`，七基线及RPGV v6/v7/v8均继承同一30k外部训练策略。根目录由 `DEEPGLOBE_DATA_ROOT` 指定；Docker Compose 使用容器内 `/workspace/...` 路径。RPGV v6/v7复用 `PUBLIC_PSEUDO_ROOT`（默认 prepared 目录下的 `pseudo_geometry`），批量入口自动准备 train/val/test 所需缓存；**RPGV v8 只用RGB，不生成也不读取伪几何**。默认按 `roadIoU` 保存 `best_roadIoU_iter_*.pth`，指标为全集合累计像素统计的百分数道路IoU/F1及mIoU/mDice/mFscore；道路指标零分母定义为0，不对逐图IoU取平均。本地test不参与选权重，显式 `--split val` 可只评估验证集。
 
 原始官方valid/test如已提供，准备工具分别导入 `img_dir/official_val` 和 `img_dir/official_test`，与本地test完全分离。导出黑白 `<id>_mask.png`（非本地评估）示例：
 
@@ -278,6 +277,28 @@ docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v7.py \
 
 结构路径使用的相对伪深度由现有 `Depth Anything` 离线生成，本身含额外预训练先验；不把它当作真实三维信息。设计、损失公式、扰动判据、消融含义、合成诊断与已知限制见 [v7 设计说明](docs/rpgv_v7_design.md)。
 
+### RPGV v8
+
+v8 取消对外部伪深度的依赖：只输入三通道 RGB，从 RGB 特征前馈预测高斯基元（中心、各向异性协方差、幅值、相对潜高度、节点内容），经可微正射溅射得到局部几何场与覆盖度，再用两层稠密关系注意力推理节点关系，并把关系更新前/后的高斯特征、高度、覆盖度与方差分别反馈到 F16/F8 和 F8/F4。RGB 解码路径与轮廓残差保留，高斯路径另有稠密辅助与节点语义两项直接监督。**训练、验证、推理与公共导出都不读取 Depth Anything 或伪几何缓存**，因此批量入口不会为 v8 触发生成命令。
+
+这是面向分割的可学习 2.5D 高斯表示，不是多视角 3DGS 重建：没有真实高度、相机位姿、逐场景优化、深度排序或遮挡合成；潜高度是任务驱动的相对量，覆盖率不是标定可靠度。官方 ImageNet 骨干预训练仍保留，但不存在深度教师。**v7 checkpoint 不能作为 v8 resume。**
+
+四数据集主配置为 `configs/rpgv/v8/rpgv_v8.py` 与 `configs/{loveda,uavid,deepglobe}/rpgv_v8.py`，统一沿用 30k 外部训练协议与原有选权重口径。仅 WWTP 的四项核心消融：`rgb_only`（完全不构造高斯路径）、`fixed_gaussians`（固定中心/协方差，其余仍学习）、`no_message_passing`（去掉关系网络）、`no_gaussian_aux`（去掉两项高斯辅助监督）。`v8-all` 为七基线、完整 v8 与四项消融共12组；`all`/`v7-all` 与 v7 superiority gate 均不变。
+
+```bash
+python scripts/run_experiments.py train-test --dataset wwtp --suite v8-all --dry-run
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset wwtp --suite v8
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset wwtp --suite v8-ablations
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset loveda --suite v8
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset uavid --suite v8
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset deepglobe --suite v8
+docker compose run --rm wwtp python -m unittest tests.rpgv.test_rpgv_v8 \
+  tests.test_run_experiments tests.test_experiment_protocol -v
+docker compose run --rm wwtp python tests/smoke_runner.py --config configs/rpgv/v8/rpgv_v8.py --device cpu
+```
+
+设计公式、梯度路径、损失、消融含义、Docker 验证结果与已知限制见 [v8 设计说明](docs/rpgv_v8_design.md)。
+
 ## 小规模验证
 
 无需数据集和预训练权重下载。DeepGlobe 数据、配置、指标、调度与RPGV前后向，以及合成数据短步训练/选best/test，可在现有镜像中用CPU测试（不需要GPU透传）：
@@ -286,7 +307,7 @@ docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v7.py \
 docker run --rm -v "$PWD:/workspace" -w /workspace \
   -e PYTHONPATH=/workspace -e PYTHONDONTWRITEBYTECODE=1 -e OMP_NUM_THREADS=2 \
   wwtp-mmseg:torch2.1.2-cu121 python -m unittest \
-  tests.test_deepglobe_data tests.test_deepglobe_training \
+  tests.rpgv.test_rpgv_v8 tests.test_deepglobe_data tests.test_deepglobe_training \
   tests.test_run_experiments tests.test_experiment_protocol -v
 docker run --rm -v "$PWD:/workspace" -w /workspace \
   -e PYTHONPATH=/workspace -e PYTHONDONTWRITEBYTECODE=1 \

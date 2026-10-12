@@ -85,6 +85,8 @@ class ProtocolTest(unittest.TestCase):
                  for dataset in DATASET_NAMES for name in MAINSTREAM_MODELS]
         paths += list((ROOT / 'configs/rpgv/v6').glob('*.py'))
         paths += list((ROOT / 'configs/rpgv/v7').glob('*.py'))
+        paths += list((ROOT / 'configs/rpgv/v8').glob('*.py'))
+        paths += [experiment_config(dataset, 'rpgv_v8') for dataset in DATASET_NAMES if dataset != 'wwtp']
         paths += [ROOT / 'configs' / dataset / f'rpgv_{variant}.py'
                   for dataset in ('uavid', 'loveda') for variant in ('rgb', 'full', 'v2', 'v6', 'v7')]
         paths += [experiment_config('deepglobe', f'rpgv_{variant}') for variant in ('v6', 'v7')]
@@ -117,12 +119,15 @@ class ProtocolTest(unittest.TestCase):
                 dataset = 'wwtp' if 'configs/rpgv/' in str(path) else Path(path).parent.name
                 metric = {'wwtp': 'binary/Foreground_IoU', 'deepglobe': 'roadIoU'}.get(dataset, 'mIoU')
                 self.assertEqual(checkpoint.save_best, metric)
-                workers = reference.train_dataloader.num_workers if dataset == 'wwtp' and 'configs/rpgv/' not in str(path) else 4
+                rgb_base_workers = dataset == 'wwtp' and (
+                    'configs/rpgv/' not in str(path) or '/v8/' in str(path))
+                workers = reference.train_dataloader.num_workers if rgb_base_workers else 4
                 self.assertEqual(cfg.train_dataloader.num_workers, workers)
 
     def test_optimizer_parameter_groups(self):
         paths = [experiment_config('wwtp', name) for name in MAINSTREAM_MODELS]
         paths.append(ROOT / 'configs/rpgv/v6/rpgv_v6.py')
+        paths.append(experiment_config('wwtp', 'rpgv_v8'))
         norm_types = (torch.nn.modules.batchnorm._BatchNorm,
                       torch.nn.modules.instancenorm._InstanceNorm,
                       torch.nn.GroupNorm, torch.nn.LayerNorm)

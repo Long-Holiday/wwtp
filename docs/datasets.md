@@ -92,8 +92,8 @@ manifest区分 `official_source_counts`（标准官方数量）、`source_files`
 
 ### 训练与评估
 
-七基线与公开RPGV v6/v7配置位于 `configs/deepglobe/`，采用1024整图训练和whole推理，同组统一RGB增强、AdamW与30k共享训练协议。`RoadIoUMetric`复用IoUMetric的累计像素交并统计，额外输出百分数 `roadIoU`/`roadF1`；没有道路且没有道路预测时道路分数为0，不按图平均、不附加边界距离或物理尺度指标。
+七基线与公开RPGV v6/v7/v8配置位于 `configs/deepglobe/`，采用1024整图训练和whole推理，同组统一RGB增强、AdamW与30k共享训练协议。`RoadIoUMetric`复用IoUMetric的累计像素交并统计，额外输出百分数 `roadIoU`/`roadF1`；没有道路且没有道路预测时道路分数为0，不按图平均、不附加边界距离或物理尺度指标。
 
-所有模型按本地**val的roadIoU**保存最佳权重，批量 `train-test` 默认加载 `best_roadIoU_iter_*.pth` 评估本地**test**；缺最佳权重则报错，不回退到最后一次权重。test不能用于权重选择。RPGV伪几何采用已有离线生成工具和 `PUBLIC_PSEUDO_ROOT`，只从RGB计算，不读取标签。
+所有模型按本地**val的roadIoU**保存最佳权重，批量 `train-test` 默认加载 `best_roadIoU_iter_*.pth` 评估本地**test**；缺最佳权重则报错，不回退到最后一次权重。test不能用于权重选择。RPGV v6/v7 伪几何采用已有离线生成工具和 `PUBLIC_PSEUDO_ROOT`，只从RGB计算，不读取标签；RPGV v8 只输入三通道RGB，不生成或读取任何伪深度缓存。
 
-官方无标签导出使用 `tools/evaluation/predict_public.py --split official_test`（或`official_val`），输出原始ID对应的 `<id>_mask.png`，像素0/255。RPGV需要提前为所选官方split准备伪几何缓存；自定义 `PUBLIC_PSEUDO_ROOT` 时，生成工具也要使用一致的 `--output-root`。导出不计算指标，也不自动提交外部评测服务。具体Docker训练、导出及测试命令见 [README](../README.md#deepglobe-road-extraction)。
+官方无标签导出使用 `tools/evaluation/predict_public.py --split official_test`（或`official_val`），输出原始ID对应的 `<id>_mask.png`，像素0/255。RPGV v6/v7 需要提前为所选官方split准备伪几何缓存；自定义 `PUBLIC_PSEUDO_ROOT` 时，生成工具也要使用一致的 `--output-root`。RPGV v8 导出不需要任何几何缓存。导出不计算指标，也不自动提交外部评测服务。具体Docker训练、导出及测试命令见 [README](../README.md#deepglobe-road-extraction)。

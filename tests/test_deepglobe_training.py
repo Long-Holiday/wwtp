@@ -31,9 +31,9 @@ class DeepGlobeTrainingTest(unittest.TestCase):
         torch.set_num_threads(2)
         register_all_modules(init_default_scope=True)
 
-    def test_nine_configs_and_shared_strategy(self):
+    def test_model_configs_and_shared_strategy(self):
         reference = Config.fromfile(experiment_config('loveda', 'hrnet'))
-        for name in MAINSTREAM_MODELS + ('rpgv_v6', 'rpgv_v7'):
+        for name in MAINSTREAM_MODELS + ('rpgv_v6', 'rpgv_v7', 'rpgv_v8'):
             cfg = Config.fromfile(experiment_config('deepglobe', name))
             with self.subTest(model=name):
                 self.assertEqual(cfg.benchmark_dataset, 'deepglobe')
@@ -51,11 +51,15 @@ class DeepGlobeTrainingTest(unittest.TestCase):
                     self.assertEqual(data.data_prefix.img_path, f'img_dir/{split}')
                     self.assertEqual(data.data_prefix.seg_map_path, f'ann_dir/{split}')
                 self.assertNotIn('LoadAnnotations', [s.type for s in cfg.predict_pipeline])
-                if name.startswith('rpgv'):
+                if name in ('rpgv_v6', 'rpgv_v7'):
                     for split in ('train', 'val', 'test'):
                         pipeline = cfg[f'{split}_dataloader'].dataset.pipeline
                         geometry = next(s for s in pipeline if s.type == 'LoadPseudoGeometry')
                         self.assertTrue(geometry.required)
+                elif name == 'rpgv_v8':
+                    for split in ('train', 'val', 'test'):
+                        self.assertNotIn('LoadPseudoGeometry',
+                                         [s.type for s in cfg[f'{split}_dataloader'].dataset.pipeline])
 
     def test_environment_roots(self):
         with patch.dict(os.environ, {'DEEPGLOBE_DATA_ROOT': '/roads', 'PUBLIC_PSEUDO_ROOT': '/geometry'}):
@@ -166,8 +170,8 @@ class DeepGlobeTrainingTest(unittest.TestCase):
                     self.assertEqual(image.size, (1024, 1024))
                     self.assertTrue(set(np.unique(np.asarray(image))).issubset({0, 255}))
 
-    def test_rpgv_v6_v7_binary_forward_backward(self):
-        for name in ('rpgv_v6', 'rpgv_v7'):
+    def test_rpgv_binary_forward_backward(self):
+        for name in ('rpgv_v6', 'rpgv_v7', 'rpgv_v8'):
             with self.subTest(model=name):
                 smoke_model(name, experiment_config('deepglobe', name), 64, backward=True, device='cpu')
 

@@ -31,15 +31,24 @@ V7_LEGACY_ABLATIONS = (
     'rpgv_v7_no_contrastive', 'rpgv_v7_no_relational_supervision',
     'rpgv_v7_no_edges', 'rpgv_v7_no_perturbation', 'rpgv_v7_rgb_capacity',
 )
-OPTIONAL_MODELS = (
+V8_ABLATIONS = (
+    'rpgv_v8_rgb_only', 'rpgv_v8_fixed_gaussians',
+    'rpgv_v8_no_message_passing', 'rpgv_v8_no_gaussian_aux',
+)
+# Model selection and offline geometry requirements are separate capabilities.
+OFFLINE_GEOMETRY_MODELS = (
     ('rpgv_v6',) + V6_ABLATIONS + ('rpgv_v7',)
     + V7_ABLATIONS + V7_ANALYSIS_ABLATIONS + V7_LEGACY_ABLATIONS
 )
+OPTIONAL_MODELS = OFFLINE_GEOMETRY_MODELS + ('rpgv_v8',) + V8_ABLATIONS
 EXPERIMENT_SUITES = {
     'baselines': MAINSTREAM_MODELS,
     'v6': ('rpgv_v6',),
     'v6-ablations': V6_ABLATIONS,
     'all': MAINSTREAM_MODELS + ('rpgv_v6',) + V6_ABLATIONS,
+    'v8': ('rpgv_v8',),
+    'v8-ablations': V8_ABLATIONS,
+    'v8-all': MAINSTREAM_MODELS + ('rpgv_v8',) + V8_ABLATIONS,
     'v7': ('rpgv_v7',),
     'v7-ablations': V7_ABLATIONS,
     'v7-all': MAINSTREAM_MODELS + ('rpgv_v6', 'rpgv_v7') + V7_ABLATIONS,
@@ -51,13 +60,17 @@ def experiment_config(dataset, model):
     model = ALIASES.get(model, model)
     if dataset not in DATASETS:
         raise ValueError(f'Unsupported experiment: {dataset}/{model}')
+    if model in V8_ABLATIONS:
+        if dataset != 'wwtp':
+            raise ValueError(f'V8 ablations are only available for WWTP: {dataset}/{model}')
+        return ROOT / 'configs/rpgv/v8' / f'{model.removeprefix("rpgv_v8_")}.py'
     if (model in V6_ABLATIONS
             or model in V7_ABLATIONS + V7_ANALYSIS_ABLATIONS + V7_LEGACY_ABLATIONS):
         version = 'v6' if model in V6_ABLATIONS else 'v7'
         if dataset != 'wwtp':
             raise ValueError(f'{version.upper()} ablations are only available for WWTP: {dataset}/{model}')
         return ROOT / f'configs/rpgv/{version}' / f'{model.removeprefix(f"rpgv_{version}_")}.py'
-    if model in ('rpgv_v6', 'rpgv_v7'):
+    if model in ('rpgv_v6', 'rpgv_v7', 'rpgv_v8'):
         if dataset == 'wwtp':
             return ROOT / 'configs/rpgv' / model.removeprefix('rpgv_') / f'{model}.py'
     elif model not in MAINSTREAM_MODELS:
