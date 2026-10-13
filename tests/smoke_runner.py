@@ -42,7 +42,9 @@ def main():
         disable_pretraining(cfg.model)
         cfg.model.data_preprocessor.size = (64, 64)
         cfg.optim_wrapper.type = 'OptimWrapper'
-        cfg.optim_wrapper.pop('loss_scale', None)
+        # AMP-only keys are rejected by the plain CPU wrapper.
+        for key in ('loss_scale', 'dtype'):
+            cfg.optim_wrapper.pop(key, None)
         cfg.optim_wrapper.accumulative_counts = 1
         cfg.optim_wrapper.clip_grad = dict(max_norm=10.0, norm_type=2, error_if_nonfinite=True)
         cfg.train_cfg.max_iters = 2
@@ -103,7 +105,7 @@ def main():
             raise AssertionError('Production resume did not preserve iteration counters')
         if not first.get('optimizer', {}).get('state') or not resumed.get('optimizer', {}).get('state'):
             raise AssertionError('Checkpoints must include initialized optimizer state')
-        if cfg.model.type == 'RPGVNetV8':
+        if cfg.model.type in ('RPGVNetV8', 'RPGVNetV81'):
             key = 'gaussian_predictor.center_head.weight'
             if torch.equal(first['state_dict'][key], resumed['state_dict'][key]):
                 raise AssertionError('Gaussian centers did not update during resumed training')
