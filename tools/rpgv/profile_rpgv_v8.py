@@ -29,6 +29,7 @@ from tools.rpgv.profile_rpgv_v6 import synchronize
 # Named children whose completion marks a stage of the single v8 forward pass.
 STAGES = ('rgb_encoder', 'gaussian_predictor', 'gaussian_graph',
           'structure_fusion', 'local_fusion', 'decoder', 'refiner')
+MODEL_TYPES = ('RPGVNetV8', 'RPGVRemoteSensingV8')
 
 
 def synthetic_batch(model, size, batch_size):
@@ -56,6 +57,13 @@ def apply_overrides(cfg, args):
     cfg.model.gaussian_cfg.grid_sizes = grid
     cfg.model.gaussian_cfg.max_size = args.max_size
     cfg.model.graph_cfg.use_contact = bool(getattr(args, 'use_contact', True))
+    # v8.1-only switches; the flag list decides which of them exist.
+    for flag, key, owner in (('content_aware', 'content_aware', 'gaussian_cfg'),
+                             ('use_edge_value', 'use_edge_value', 'graph_cfg'),
+                             ('local_detail', 'local_detail', None)):
+        if hasattr(args, flag):
+            target = cfg.model if owner is None else cfg.model[owner]
+            target[key] = bool(getattr(args, flag))
 
 
 def node_count(cfg, raster):
@@ -100,6 +108,12 @@ def run_steps(model, batch, args, device, timeline=None):
     if training:
         optimizer_cfg = copy.deepcopy(args.optim_wrapper)
         optimizer_cfg.accumulative_counts = 1
+        if device.type != 'cuda':
+            # AMP-only keys are rejected by the plain CPU wrapper; the configured
+            # optimizer, learning rate and clipping are unchanged.
+            optimizer_cfg.type = 'OptimWrapper'
+            for key in ('loss_scale', 'dtype'):
+                optimizer_cfg.pop(key, None)
         optimizer = build_optim_wrapper(model, optimizer_cfg).optimizer
     if device.type == 'cuda':
         torch.cuda.reset_peak_memory_stats(device)
@@ -139,14 +153,32 @@ def run_steps(model, batch, args, device, timeline=None):
 def gradient_report(model, predictor):
     """Per-parameter gradient L2, so the reach scalar is visible by name."""
     report = {}
-    for name, parameter in predictor.named_parameters():
-        report[name] = (None if parameter.grad is None
-                        else float(parameter.grad.float().square().sum().sqrt()))
+    groups = [predictor] + [getattr(model, name) for name in ('gaussian_graph', 'local_fusion')
+                            if hasattr(model, name)]
+    for group in groups:
+        for name, parameter in group.named_parameters():
+            report[name] = (None if parameter.grad is None
+                            else float(parameter.grad.float().square().sum().sqrt()))
     report['__module_l2'] = {
         name: float(torch.stack([p.grad.float().square().sum() for p in module.parameters()
                                  if p.grad is not None]).sum().sqrt())
         for name, module in model.named_children()
         if any(True for _ in module.parameters())}
+    return report
+
+
+def switch_report(model):
+    """Effective v8.1 switches, empty for a model that has none of them."""
+    report = {}
+    predictor = getattr(model, 'gaussian_predictor', None)
+    if hasattr(predictor, 'content_aware'):
+        report['content_aware'] = bool(predictor.content_aware)
+    graph = getattr(model, 'gaussian_graph', None)
+    layers = list(graph.layers) if hasattr(graph, 'layers') else []
+    if layers and hasattr(layers[0], 'use_edge_value'):
+        report['use_edge_value'] = bool(layers[0].use_edge_value)
+    if isinstance(getattr(model, 'local_detail', None), bool):
+        report['local_detail'] = model.local_detail
     return report
 
 
@@ -162,7 +194,7 @@ def profile(args):
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
     cfg = Config.fromfile(args.config)
-    if cfg.model.type not in ('RPGVNetV8', 'RPGVRemoteSensingV8'):
+    if cfg.model.type not in MODEL_TYPES:
         raise ValueError('expected a v8 config')
     disable_pretraining(cfg.model)
     cfg.model.data_preprocessor.size = (args.size, args.size)
@@ -189,6 +221,8 @@ def profile(args):
                   scope='Synthetic random initialization; no data I/O, pretrained download or validation. '
                         'Full optimizer update per step, no accumulation/LR schedule. '
                         'Uniform configured optimizer/clipping. Not accuracy or convergence evidence.')
+    for key, value in switch_report(model).items():
+        result[key] = value
     if training:
         result['gradient_parameter_l2'] = gradient_report(model, model.gaussian_predictor)
     if timeline:
@@ -211,7 +245,7 @@ def matrix(args):
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
     cfg = Config.fromfile(args.config)
-    if cfg.model.type not in ('RPGVNetV8', 'RPGVRemoteSensingV8'):
+    if cfg.model.type not in MODEL_TYPES:
         raise ValueError('expected a v8 config')
     disable_pretraining(cfg.model)
     cfg.model.data_preprocessor.size = (args.size, args.size)
@@ -246,9 +280,9 @@ def matrix(args):
                       'later cells inherit allocator state. Not accuracy evidence.')
 
 
-def main():
+def build_parser(default_config='configs/rpgv/v8/rpgv_v8.py'):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--config', default='configs/rpgv/v8/rpgv_v8.py')
+    parser.add_argument('--config', default=default_config)
     parser.add_argument('--device', choices=('cpu', 'cuda'), default='cuda')
     parser.add_argument('--mode', choices=('train', 'infer', 'matrix'), default='train')
     parser.add_argument('--size', type=int, default=1024)
@@ -261,7 +295,14 @@ def main():
     parser.add_argument('--stages', action='store_true',
                         help='record per-stage completion time and peak allocation')
     parser.add_argument('--output', type=Path)
-    args = parser.parse_args()
+    return parser
+
+
+def main(argv=None, default_config='configs/rpgv/v8/rpgv_v8.py', extra_arguments=None):
+    parser = build_parser(default_config)
+    if extra_arguments is not None:
+        extra_arguments(parser)
+    args = parser.parse_args(argv)
     if args.size < 32 or min(args.batch_size, args.steps) < 1 or args.warmup < 0:
         parser.error('size >= 32, positive batch/steps and nonnegative warmup required')
     if args.max_size < 1:

@@ -5,6 +5,7 @@ from .model_v2 import RPGVRemoteSensingV2
 from .model_v6 import RPGVRemoteSensingV6
 from .model_v7 import RPGVRemoteSensingV7
 from .model_v8 import RPGVRemoteSensingV8
+from .model_v81 import RPGVRemoteSensingV81
 
 __all__ = ['RPGVRemoteSensing', 'RPGVRemoteSensingFull', 'RPGVRemoteSensingV2',
-           'RPGVRemoteSensingV6', 'RPGVRemoteSensingV7', 'RPGVRemoteSensingV8']
+           'RPGVRemoteSensingV6', 'RPGVRemoteSensingV7', 'RPGVRemoteSensingV8', 'RPGVRemoteSensingV81']

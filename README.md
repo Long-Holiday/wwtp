@@ -311,6 +311,30 @@ docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v8.py --size 1024 --
 
 设计公式、梯度路径、损失、消融含义、Docker 验证结果与已知限制见 [v8 设计说明](docs/rpgv_v8_design.md)。
 
+### RPGV v8.1
+
+v8.1 是 v8 的定向修正版，仍是纯 RGB 输入，只改四处：恢复 v7 在最终预测上的**区域一致性 0.05** 与**有符号边界 0.1**；WWTP 二分类恢复 v7 的**前景/背景平衡边界带**；高斯支持由纯空间核改为**高斯先验 + 内容相似度**（`A = softmax(log w + s·cos(q,k))`，覆盖率仍只由高斯质量决定）；关系层把边描述**重新接入消息内容**（`m_i = Σ_j a_ij V h_j + Σ_j a_ij W_e e_ij`，实现上先聚合低维描述再投影，避免 `N×N×C` 边值张量），并让 F8/F4 局部融合读取**高分辨率 C1/C2 特征**。二分类另加一项对软类别比例的稠密高斯 **soft Dice 0.05**（与原有稠密 BCE 0.1 相加）。主/粗、SDF、高斯 dense/node 监督与 v8 相同。
+
+三项新开关（`content_aware`/`use_edge_value`/`local_detail`）同时关闭时，v8.1 与 v8 在数值上等价：`state_dict` 可互相 `strict=True` 加载，输出与各项损失逐位相同。仅 WWTP 的六项单因素消融：`no_edge_value`（去掉边值分支）、`no_content_support`（退回纯高斯核）、`no_local_detail`（退回 v8 局部融合）、`no_pairwise`（关闭恢复的两项配对监督）、`no_dense_dice`（关闭稠密 soft Dice）、`unbalanced_band`（退回 v8 的边界带平均）。`v81-all` 为七基线、完整 v8.1 与六项消融共14组；`v8-all`、`all`/`v7-all` 与 v7 superiority gate 均不变。
+
+训练协议与 v8 逐字相同（batch8×累积1、bf16、7500 更新、同一学习率轨迹与选权重口径），未新增偏离声明；**但 v8.1 的显存/吞吐尚未独立实测**，正式训练前应在训练机上用 `tools/rpgv/profile_rpgv_v81.py --size 1024 --batch-size 8 --stages` 确认，若装不下需按公平协议声明 override 并保持每更新图像预算不变。
+
+```bash
+python scripts/run_experiments.py train-test --dataset wwtp --suite v81-all --dry-run
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset wwtp --suite v81
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset wwtp --suite v81-ablations
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset loveda --suite v81
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset uavid --suite v81
+docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset deepglobe --suite v81
+docker compose run --rm wwtp python -m unittest tests.rpgv.test_rpgv_v81 \
+  tests.test_rpgv_v81_integration tests.test_run_experiments tests.test_experiment_protocol -v
+docker compose run --rm wwtp python tests/smoke_runner.py --config configs/rpgv/v81/rpgv_v81.py --device cpu
+docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v81.py --size 1024 --batch-size 8 \
+  --stages --output work_dirs/profiles/v81_train.json
+```
+
+设计公式、损失、消融含义、Docker 验证结果与已知限制见 [v8.1 设计说明](docs/rpgv_v81_design.md)。**目前没有任何精度证据**：v8.1 是否优于 v8/v7 需要真实数据训练与逐项消融。
+
 ## 小规模验证
 
 无需数据集和预训练权重下载。DeepGlobe 数据、配置、指标、调度与RPGV前后向，以及合成数据短步训练/选best/test，可在现有镜像中用CPU测试（不需要GPU透传）：

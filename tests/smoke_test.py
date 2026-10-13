@@ -22,7 +22,7 @@ from mmseg.utils import register_all_modules
 
 
 ROOT = Path(__file__).resolve().parents[1]
-from wwtpseg.experiments import MAINSTREAM_MODELS, DATASETS as DATASET_NAMES, experiment_config
+from wwtpseg.experiments import MAINSTREAM_MODELS, V81_ABLATIONS, DATASETS as DATASET_NAMES, experiment_config
 EXPERIMENTS = {
     p.stem: p
     for directory in ('wwtp', 'rpgv/v1', 'rpgv/v2')
@@ -186,7 +186,8 @@ def smoke_model(name, config_path, size, backward, device='cpu'):
         sample.gt_sem_seg.data[:, :2] = 255
         sample.global_img = PixelData(data=image.clone())
     if (model_cfg['type'].startswith('RPGV') and model_cfg.get('training_stage') != 'rgb'
-            and model_cfg['type'] not in ('RPGVNetV8', 'RPGVRemoteSensingV8')):
+            and model_cfg['type'] not in ('RPGVNetV8', 'RPGVRemoteSensingV8',
+                                          'RPGVNetV81', 'RPGVRemoteSensingV81')):
         items = [(_add_pseudo_geometry(image), sample) for image, sample in items]
     processed = model.data_preprocessor(dict(inputs=[x for x, _ in items],
                                             data_samples=[s for _, s in items]), training=True)
@@ -456,7 +457,9 @@ def smoke_pseudo_geometry(size: int) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--models', nargs='+', choices=(*MAINSTREAM_MODELS, 'rpgv_v8'), default=MAINSTREAM_MODELS)
+    parser.add_argument('--models', nargs='+',
+                        choices=(*MAINSTREAM_MODELS, 'rpgv_v8', 'rpgv_v81', *V81_ABLATIONS),
+                        default=MAINSTREAM_MODELS)
     parser.add_argument('--dataset', choices=DATASET_NAMES, default='wwtp')
     parser.add_argument('--input-size', type=int, default=64)
     parser.add_argument('--backward', action='store_true')

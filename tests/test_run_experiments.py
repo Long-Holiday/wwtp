@@ -25,7 +25,8 @@ class ExperimentRunnerTest(unittest.TestCase):
         self.assertEqual({key: len(value) for key, value in runner.EXPERIMENT_SUITES.items()},
                          {'baselines': 7, 'v6': 1, 'v6-ablations': 5, 'all': 13,
                           'v7': 1, 'v7-ablations': 6, 'v7-all': 15,
-                          'v8': 1, 'v8-ablations': 7, 'v8-all': 15})
+                          'v8': 1, 'v8-ablations': 7, 'v8-all': 15,
+                          'v81': 1, 'v81-ablations': 6, 'v81-all': 14})
         self.assertEqual(len(set(runner.EXPERIMENT_SUITES['all'])), 13)
         for name in runner.EXPERIMENT_SUITES['all']:
             self.assertTrue(runner.experiment_config('wwtp', name).is_file())
