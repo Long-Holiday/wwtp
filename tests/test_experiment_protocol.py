@@ -21,7 +21,8 @@ from tools.data.prepare_public import OFFICIAL_COUNTS, UAVID_COLORS, inventory, 
 from tools.evaluation.predict_public import submission_mask
 from wwtpseg.datasets.public_protocol import OFFICIAL_COUNTS as RUNTIME_COUNTS, validate_prepared
 from wwtpseg.engine.runtime import disable_pretraining
-from wwtpseg.experiments import DATASETS as DATASET_NAMES, MAINSTREAM_MODELS, ROOT, experiment_config
+from wwtpseg.experiments import (DATASETS as DATASET_NAMES, MAINSTREAM_MODELS, ROOT,
+                                V81_ABLATIONS, experiment_config)
 
 
 class ProtocolTest(unittest.TestCase):
@@ -95,9 +96,11 @@ class ProtocolTest(unittest.TestCase):
         grouped['wwtp'] += list((ROOT / 'configs/rpgv/v6').glob('*.py'))
         grouped['wwtp'] += list((ROOT / 'configs/rpgv/v7').glob('*.py'))
         grouped['wwtp'] += list((ROOT / 'configs/rpgv/v8').glob('*.py'))
+        grouped['wwtp'] += list((ROOT / 'configs/rpgv/v81').glob('*.py'))
         for dataset in DATASET_NAMES:
             if dataset != 'wwtp':
                 grouped[dataset].append(experiment_config(dataset, 'rpgv_v8'))
+                grouped[dataset].append(experiment_config(dataset, 'rpgv_v81'))
         grouped['uavid'] += [ROOT / 'configs' / 'uavid' / f'rpgv_{variant}.py'
                              for variant in ('rgb', 'full', 'v2', 'v6', 'v7')]
         grouped['loveda'] += [ROOT / 'configs' / 'loveda' / f'rpgv_{variant}.py'
@@ -180,7 +183,7 @@ class ProtocolTest(unittest.TestCase):
                     metric = {'wwtp': 'binary/Foreground_IoU', 'deepglobe': 'roadIoU'}.get(dataset, 'mIoU')
                     self.assertEqual(checkpoint.save_best, metric)
                     rgb_base_workers = dataset == 'wwtp' and (
-                        'configs/rpgv/' not in str(path) or '/v8/' in str(path))
+                        'configs/rpgv/' not in str(path) or '/v8/' in str(path) or '/v81/' in str(path))
                     workers = reference.train_dataloader.num_workers if rgb_base_workers else 4
                     self.assertEqual(cfg.train_dataloader.num_workers, workers)
 
@@ -188,6 +191,7 @@ class ProtocolTest(unittest.TestCase):
         paths = [experiment_config('wwtp', name) for name in MAINSTREAM_MODELS]
         paths.append(ROOT / 'configs/rpgv/v6/rpgv_v6.py')
         paths.append(experiment_config('wwtp', 'rpgv_v8'))
+        paths += [experiment_config('wwtp', name) for name in ('rpgv_v81',) + V81_ABLATIONS]
         for name in ('rpgv_v8_bounded_centers', 'rpgv_v8_no_contact', 'rpgv_v8_single_scale_dense'):
             paths.append(experiment_config('wwtp', name))
         norm_types = (torch.nn.modules.batchnorm._BatchNorm,

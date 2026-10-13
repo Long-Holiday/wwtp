@@ -66,10 +66,13 @@ class V81MathTests(unittest.TestCase):
         values = primitives(torch.float64)
         content = torch.randn(1, 2, 12, dtype=torch.float64, requires_grad=True)
         inputs = tuple(value.requires_grad_() for value in values.values()) + (content,)
-        def render(*args):
-            result = ContentGaussianSplatV81()(dict(zip(values, args[:-1])), (3, 4), args[-1])
-            return torch.cat([result[key].flatten() for key in ('support', 'height', 'variance', 'coverage')])
-        self.assertTrue(torch.autograd.gradcheck(render, inputs, eps=1e-6, atol=1e-4))
+        for spatial_support in (True, False):
+            with self.subTest(spatial_support=spatial_support):
+                def render(*args):
+                    result = ContentGaussianSplatV81()(dict(zip(values, args[:-1])), (3, 4), args[-1],
+                                                       spatial_support=spatial_support)
+                    return torch.cat([result[key].flatten() for key in ('support', 'height', 'variance', 'coverage')])
+                self.assertTrue(torch.autograd.gradcheck(render, inputs, eps=1e-6, atol=1e-4))
 
     def test_predictor_switch_is_exact_v8_and_has_no_content_parameters(self):
         before = GaussianPrimitivePredictorV8((8, 16, 32, 64), channels=16, grid_sizes=(2,), max_size=16)
@@ -95,6 +98,68 @@ class V81MathTests(unittest.TestCase):
                      predictor.covariance_head):
             self.assertTrue(torch.isfinite(head.weight.grad).all())
             self.assertGreater(head.weight.grad.abs().sum().item(), 0)
+
+    def test_content_only_support_matches_reference_and_preserves_coverage(self):
+        values = primitives(torch.float64)
+        logits = torch.randn(1, 2, 35, dtype=torch.float64)
+        splat = ContentGaussianSplatV81()
+        hybrid = splat(values, (5, 7), logits)
+        result = splat(values, (5, 7), logits, spatial_support=False)
+        expected = logits.softmax(1)
+        torch.testing.assert_close(result['support'], expected, rtol=0, atol=0)
+        torch.testing.assert_close(result['coverage'], hybrid['coverage'], rtol=0, atol=0)
+        torch.testing.assert_close(result['height'].flatten(2),
+                                   torch.bmm(values['height'].transpose(1, 2), expected))
+        changed_values = {key: value.clone() for key, value in values.items()}
+        changed_values['centers'] += 0.3
+        changed_values['cholesky'] *= 1.5
+        changed_values['amplitude'] *= 2
+        changed = splat(changed_values, (5, 7), logits, spatial_support=False)
+        torch.testing.assert_close(result['support'], changed['support'], rtol=0, atol=0)
+        self.assertFalse(torch.allclose(result['coverage'], changed['coverage']))
+        self.assertFalse(torch.allclose(result['support'], hybrid['support']))
+
+    def test_content_only_support_is_permutation_equivariant(self):
+        values = primitives()
+        logits = torch.randn(1, 2, 35)
+        permutation = torch.tensor([1, 0])
+        splat = ContentGaussianSplatV81()
+        initial = splat(values, (5, 7), logits, spatial_support=False)
+        changed = splat({key: value[:, permutation] for key, value in values.items()},
+                        (5, 7), logits[:, permutation], spatial_support=False)
+        torch.testing.assert_close(initial['support'][:, permutation], changed['support'])
+        for key in ('height', 'coverage', 'variance'):
+            torch.testing.assert_close(initial[key], changed[key])
+
+    def test_missing_support_sources_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'at least one'):
+            GaussianPrimitivePredictorV81((8, 16, 32, 64), channels=16,
+                                          content_aware=False, spatial_support=False)
+        with self.assertRaisesRegex(ValueError, 'content logits'):
+            ContentGaussianSplatV81()(primitives(), (5, 7), spatial_support=False)
+
+    def test_spatial_support_default_and_checkpoint_layout_unchanged(self):
+        options = dict(channels=16, grid_sizes=(2,), max_size=16)
+        default = GaussianPrimitivePredictorV81((8, 16, 32, 64), **options)
+        explicit = GaussianPrimitivePredictorV81((8, 16, 32, 64), spatial_support=True, **options)
+        content_only = GaussianPrimitivePredictorV81((8, 16, 32, 64), spatial_support=False, **options)
+        explicit.load_state_dict(default.state_dict(), strict=True)
+        content_only.load_state_dict(default.state_dict(), strict=True)
+        features = pyramid((16, 16))
+        left, right = default(features), explicit(features)
+        for key in ('support', 'height', 'coverage', 'variance'):
+            torch.testing.assert_close(left[1][key], right[1][key], rtol=0, atol=0)
+        torch.testing.assert_close(left[2], right[2], rtol=0, atol=0)
+        self.assertEqual(set(default.state_dict()), set(content_only.state_dict()))
+
+    def test_core_scale_controls_node_counts(self):
+        for scales, count in (((4, 8, 16), 336), ((20,), 400)):
+            with self.subTest(scales=scales):
+                predictor = GaussianPrimitivePredictorV81((8, 16, 32, 64), channels=16,
+                                                          grid_sizes=scales, max_size=24)
+                _, raster, nodes = predictor(pyramid((24, 24)))
+                self.assertEqual(nodes.shape[1], count)
+                self.assertEqual(raster['support'].shape, (1, count, 576))
 
     def test_relation_aggregation_matches_explicit_edge_value_and_gradients(self):
         layer = GaussianRelationLayerV81(16, 4).double()
@@ -225,6 +290,29 @@ class V81ModelTests(unittest.TestCase):
             self.assertTrue(all(g is not None and torch.isfinite(g).all() for g in gradients), group)
             self.assertGreater(sum(g.abs().sum().item() for g in gradients), 0, group)
 
+    def test_content_only_final_loss_trains_content_and_retained_geometry(self):
+        model = tiny_model(gaussian_cfg=dict(grid_sizes=(2,), max_size=16, spatial_support=False))
+        model.loss(*batch())['loss_final'].backward()
+        for head in ('content_query', 'content_key', 'center_head', 'covariance_head',
+                     'amplitude_head', 'height_head'):
+            parameters = list(getattr(model.gaussian_predictor, head).parameters())
+            self.assertTrue(all(p.grad is not None and torch.isfinite(p.grad).all() for p in parameters), head)
+            self.assertGreater(sum(p.grad.abs().sum().item() for p in parameters), 0, head)
+
+    def test_no_gaussian_aux_has_no_heads_or_auxiliary_losses(self):
+        model = tiny_model(gaussian_dense_weight=0, gaussian_node_weight=0, gaussian_dense_dice_weight=0)
+        self.assertFalse(hasattr(model, 'gaussian_dense_head'))
+        self.assertFalse(hasattr(model, 'gaussian_node_head'))
+        losses = model.loss(*batch())
+        self.assertFalse(any(name.startswith('loss_gaussian') for name in losses))
+        self.assertIn('loss_region_consistency', losses)
+        self.assertIn('loss_final_boundary', losses)
+        objective(losses).backward()
+        for name, parameter in model.named_parameters():
+            self.assertIsNotNone(parameter.grad, name)
+            self.assertTrue(torch.isfinite(parameter.grad).all(), name)
+        self.assertGreater(model.gaussian_predictor.content_query.weight.grad.abs().sum().item(), 0)
+
     def test_all_new_switches_off_reproduce_v8(self):
         before = v8_model().eval()
         after = tiny_model(gaussian_cfg=dict(grid_sizes=(2,), max_size=16, content_aware=False),
@@ -255,6 +343,9 @@ class V81ModelTests(unittest.TestCase):
 
     def test_each_switch_keeps_forward_backward_valid(self):
         settings = [dict(use_gaussians=False), dict(use_message_passing=False),
+                    dict(gaussian_cfg=dict(grid_sizes=(2,), max_size=16, fixed_gaussians=True)),
+                    dict(gaussian_cfg=dict(grid_sizes=(2, 4), max_size=16)),
+                    dict(gaussian_cfg=dict(grid_sizes=(2,), max_size=16, spatial_support=False)),
                     dict(gaussian_cfg=dict(grid_sizes=(2,), max_size=16, content_aware=False)),
                     dict(graph_cfg=dict(heads=4, layers=2, use_edge_value=False)),
                     dict(local_detail=False), dict(region_loss_weight=0, final_boundary_loss_weight=0),

@@ -29,7 +29,7 @@ class RPGVNetV81(RPGVNetV8):
                 raise ValueError('v8.1 loss weights must be finite and nonnegative')
         gaussian_cfg, graph_cfg = dict(gaussian_cfg or {}), dict(graph_cfg or {})
         base_gaussian = {key: value for key, value in gaussian_cfg.items()
-                         if key not in ('content_aware', 'content_scale')}
+                         if key not in ('content_aware', 'content_scale', 'spatial_support')}
         base_graph = {key: value for key, value in graph_cfg.items() if key != 'use_edge_value'}
         super().__init__(rgb_encoder=rgb_encoder, rgb_channels=rgb_channels,
                          decoder_channels=decoder_channels, gaussian_channels=gaussian_channels,

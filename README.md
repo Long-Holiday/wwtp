@@ -315,7 +315,11 @@ docker compose run --rm wwtp python tools/rpgv/profile_rpgv_v8.py --size 1024 --
 
 v8.1 是 v8 的定向修正版，仍是纯 RGB 输入，只改四处：恢复 v7 在最终预测上的**区域一致性 0.05** 与**有符号边界 0.1**；WWTP 二分类恢复 v7 的**前景/背景平衡边界带**；高斯支持由纯空间核改为**高斯先验 + 内容相似度**（`A = softmax(log w + s·cos(q,k))`，覆盖率仍只由高斯质量决定）；关系层把边描述**重新接入消息内容**（`m_i = Σ_j a_ij V h_j + Σ_j a_ij W_e e_ij`，实现上先聚合低维描述再投影，避免 `N×N×C` 边值张量），并让 F8/F4 局部融合读取**高分辨率 C1/C2 特征**。二分类另加一项对软类别比例的稠密高斯 **soft Dice 0.05**（与原有稠密 BCE 0.1 相加）。主/粗、SDF、高斯 dense/node 监督与 v8 相同。
 
-三项新开关（`content_aware`/`use_edge_value`/`local_detail`）同时关闭时，v8.1 与 v8 在数值上等价：`state_dict` 可互相 `strict=True` 加载，输出与各项损失逐位相同。仅 WWTP 的六项单因素消融：`no_edge_value`（去掉边值分支）、`no_content_support`（退回纯高斯核）、`no_local_detail`（退回 v8 局部融合）、`no_pairwise`（关闭恢复的两项配对监督）、`no_dense_dice`（关闭稠密 soft Dice）、`unbalanced_band`（退回 v8 的边界带平均）。`v81-all` 为七基线、完整 v8.1 与六项消融共14组；`v8-all`、`all`/`v7-all` 与 v7 superiority gate 均不变。
+v8.1 默认消融改为**架构导向的七项核心**：`rgb_only`（整体高斯分支）、`fixed_gaussians`（固定中心/协方差）、`no_content_support`（纯高斯支持）、`content_only_support`（仅内容分配）、`no_message_passing`（无关系消息网络）、`single_scale_dense`（单尺度 400 节点 vs 多尺度 336 节点）、`no_gaussian_aux`（同时关闭 dense、node 与 dense Dice 三项辅助）。`v81-all` 为七基线、完整 v8.1 与七项核心消融，共 **15 组**；消融仍限定 WWTP。`v8-all`、`all`/`v7-all` 与 v7 superiority gate 不变。
+
+`content_only_support` 只令 `gaussian_cfg.spatial_support=False`，将支持改为 `A=softmax(content_logits)`；覆盖度仍由高斯质量计算，节点形状编码与几何边保留，**不是完全去几何**。开关默认 True，无新增参数，完整模型原计算路径和 checkpoint 键不变；两个支持来源不能同时关闭。`rgb_only` 等移除模块的任务不是等参数容量对照，`fixed_gaussians` 不能单独证明各向异性，单尺度对照也不是严格等计算量。
+
+原 `no_edge_value`、`no_local_detail`、`no_pairwise`、`no_dense_dice`、`unbalanced_band` 配置、名称与目录均保留，转为 `--models` 显式按需选择，不进入默认队列。不要跨配置恢复优化器。关闭三项前向增强可恢复 v8 前向架构；全部损失等价还需关闭 pairwise、dense Dice 并取消平衡边界带，现有回归测试覆盖此条件，不作为版本性能对比。
 
 训练协议与 v8 逐字相同（batch8×累积1、bf16、7500 更新、同一学习率轨迹与选权重口径），未新增偏离声明；**但 v8.1 的显存/吞吐尚未独立实测**，正式训练前应在训练机上用 `tools/rpgv/profile_rpgv_v81.py --size 1024 --batch-size 8 --stages` 确认，若装不下需按公平协议声明 override 并保持每更新图像预算不变。
 
@@ -323,6 +327,10 @@ v8.1 是 v8 的定向修正版，仍是纯 RGB 输入，只改四处：恢复 v7
 python scripts/run_experiments.py train-test --dataset wwtp --suite v81-all --dry-run
 docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset wwtp --suite v81
 docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset wwtp --suite v81-ablations
+# 按需细粒度分析，不进入默认队列
+python scripts/run_experiments.py train-test --dataset wwtp --models \
+  rpgv_v81_no_edge_value rpgv_v81_no_local_detail rpgv_v81_no_pairwise \
+  rpgv_v81_no_dense_dice rpgv_v81_unbalanced_band --dry-run
 docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset loveda --suite v81
 docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset uavid --suite v81
 docker compose run --rm wwtp python scripts/run_experiments.py train-test --dataset deepglobe --suite v81

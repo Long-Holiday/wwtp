@@ -12,13 +12,22 @@ from unittest.mock import patch
 from mmengine.config import Config
 
 from scripts import run_experiments as runner
-from wwtpseg.experiments import V81_ABLATIONS
+from wwtpseg.experiments import V81_ABLATIONS, V81_ANALYSIS_ABLATIONS
 
 
 class V81IntegrationTest(unittest.TestCase):
     ABLATIONS = {
-        'no_edge_value': {'graph_cfg': {'use_edge_value': False}},
+        'rgb_only': {'use_gaussians': False},
+        'fixed_gaussians': {'gaussian_cfg': {'fixed_gaussians': True}},
         'no_content_support': {'gaussian_cfg': {'content_aware': False}},
+        'content_only_support': {'gaussian_cfg': {'spatial_support': False}},
+        'no_message_passing': {'use_message_passing': False},
+        'single_scale_dense': {'gaussian_cfg': {'grid_sizes': (20,)}},
+        'no_gaussian_aux': {'gaussian_dense_weight': 0.0, 'gaussian_node_weight': 0.0,
+                            'gaussian_dense_dice_weight': 0.0},
+    }
+    ANALYSIS_ABLATIONS = {
+        'no_edge_value': {'graph_cfg': {'use_edge_value': False}},
         'no_local_detail': {'local_detail': False},
         'no_pairwise': {'region_loss_weight': 0.0, 'final_boundary_loss_weight': 0.0},
         'no_dense_dice': {'gaussian_dense_dice_weight': 0.0},
@@ -30,12 +39,18 @@ class V81IntegrationTest(unittest.TestCase):
 
     def test_roster_and_paths(self):
         expected = tuple('rpgv_v81_' + suffix for suffix in self.ABLATIONS)
+        analysis = tuple('rpgv_v81_' + suffix for suffix in self.ANALYSIS_ABLATIONS)
         self.assertEqual(V81_ABLATIONS, expected)
+        self.assertEqual(V81_ANALYSIS_ABLATIONS, analysis)
+        self.assertEqual(len(set(runner.OPTIONAL_MODELS)), len(runner.OPTIONAL_MODELS))
+        for name in analysis:
+            self.assertNotIn(name, runner.EXPERIMENT_SUITES['v81-ablations'])
+            self.assertNotIn(name, runner.EXPERIMENT_SUITES['v81-all'])
         self.assertEqual(runner.EXPERIMENT_SUITES['v81'], ('rpgv_v81',))
         self.assertEqual(runner.EXPERIMENT_SUITES['v81-ablations'], expected)
         self.assertEqual(runner.EXPERIMENT_SUITES['v81-all'],
                          runner.MAINSTREAM_MODELS + ('rpgv_v81',) + expected)
-        for name in ('rpgv_v81',) + expected:
+        for name in ('rpgv_v81',) + expected + analysis:
             self.assertIn(name, runner.OPTIONAL_MODELS)
             self.assertNotIn(name, runner.OFFLINE_GEOMETRY_MODELS)
             self.assertTrue(runner.experiment_config('wwtp', name).is_file())
@@ -43,7 +58,7 @@ class V81IntegrationTest(unittest.TestCase):
                 if not suite.startswith('v81'):
                     self.assertNotIn(name, roster)
         for dataset in ('loveda', 'uavid', 'deepglobe'):
-            for name in expected:
+            for name in expected + analysis:
                 with self.assertRaisesRegex(ValueError, 'only available for WWTP'):
                     runner.experiment_config(dataset, name)
 
@@ -58,6 +73,7 @@ class V81IntegrationTest(unittest.TestCase):
                 self.assertEqual(model.gaussian_cfg.grid_sizes, (4, 8, 16))
                 self.assertEqual(model.gaussian_cfg.max_size, 64)
                 self.assertTrue(model.gaussian_cfg.content_aware)
+                self.assertTrue(model.gaussian_cfg.spatial_support)
                 self.assertEqual(model.gaussian_cfg.content_scale, 2.0)
                 self.assertTrue(model.graph_cfg.use_edge_value)
                 self.assertTrue(model.local_detail)
@@ -94,7 +110,7 @@ class V81IntegrationTest(unittest.TestCase):
 
     def test_ablations_change_only_the_requested_objective_or_module(self):
         full = self.load('wwtp').to_dict()
-        for suffix, changes in self.ABLATIONS.items():
+        for suffix, changes in {**self.ABLATIONS, **self.ANALYSIS_ABLATIONS}.items():
             name = 'rpgv_v81_' + suffix
             with self.subTest(model=name):
                 expected = copy.deepcopy(full)
@@ -107,17 +123,18 @@ class V81IntegrationTest(unittest.TestCase):
                 self.assertEqual(self.load('wwtp', name).to_dict(), expected)
 
     def test_dependency_free_dry_runs(self):
-        selections = [(dataset, 'v81') for dataset in runner.DATASETS]
-        selections += [('wwtp', suite) for suite in ('v81-ablations', 'v81-all')]
+        selections = [(dataset, ['--suite', 'v81'], 1) for dataset in runner.DATASETS]
+        selections += [('wwtp', ['--suite', suite], len(runner.EXPERIMENT_SUITES[suite]))
+                       for suite in ('v81-ablations', 'v81-all')]
+        selections += [('wwtp', ['--models', *V81_ANALYSIS_ABLATIONS], len(V81_ANALYSIS_ABLATIONS))]
         with tempfile.TemporaryDirectory() as directory:
-            for dataset, suite in selections:
-                with self.subTest(dataset=dataset, suite=suite):
+            for dataset, selection, count in selections:
+                with self.subTest(dataset=dataset, selection=selection):
                     result = subprocess.run([
                         sys.executable, '-S', str(runner.ROOT / 'scripts/run_experiments.py'),
-                        'train-test', '--dataset', dataset, '--suite', suite,
+                        'train-test', '--dataset', dataset, *selection,
                         '--work-root', directory, '--dry-run'],
                         cwd=directory, capture_output=True, text=True, check=True)
-                    count = len(runner.EXPERIMENT_SUITES[suite])
                     self.assertEqual(result.stdout.count('tools/train.py'), count)
                     self.assertEqual(result.stdout.count('tools/test.py'), count)
                     self.assertNotIn('generate_pseudo_geometry', result.stdout)

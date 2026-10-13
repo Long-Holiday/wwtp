@@ -22,7 +22,8 @@ from mmseg.utils import register_all_modules
 
 
 ROOT = Path(__file__).resolve().parents[1]
-from wwtpseg.experiments import MAINSTREAM_MODELS, V81_ABLATIONS, DATASETS as DATASET_NAMES, experiment_config
+from wwtpseg.experiments import (MAINSTREAM_MODELS, V81_ABLATIONS, V81_ANALYSIS_ABLATIONS,
+                                DATASETS as DATASET_NAMES, experiment_config)
 EXPERIMENTS = {
     p.stem: p
     for directory in ('wwtp', 'rpgv/v1', 'rpgv/v2')
@@ -458,7 +459,7 @@ def smoke_pseudo_geometry(size: int) -> None:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--models', nargs='+',
-                        choices=(*MAINSTREAM_MODELS, 'rpgv_v8', 'rpgv_v81', *V81_ABLATIONS),
+                        choices=(*MAINSTREAM_MODELS, 'rpgv_v8', 'rpgv_v81', *V81_ABLATIONS, *V81_ANALYSIS_ABLATIONS),
                         default=MAINSTREAM_MODELS)
     parser.add_argument('--dataset', choices=DATASET_NAMES, default='wwtp')
     parser.add_argument('--input-size', type=int, default=64)

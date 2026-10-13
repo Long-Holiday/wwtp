@@ -14,8 +14,10 @@ from .rpgv_v8_modules import (GaussianPrimitivePredictorV8, GaussianRelationLaye
 
 
 class ContentGaussianSplatV81(GaussianSplatV8):
-    def forward(self, primitives, size, content_logits=None):
+    def forward(self, primitives, size, content_logits=None, spatial_support=True):
         if content_logits is None:
+            if not spatial_support:
+                raise ValueError('content logits are required without spatial support')
             return super().forward(primitives, size)
         reference = primitives['centers']
         with torch.autocast(device_type=reference.device.type, enabled=False):
@@ -29,7 +31,9 @@ class ContentGaussianSplatV81(GaussianSplatV8):
             dy = (delta[..., 1] - factor[..., 1, 0, None] * dx) / factor[..., 1, 1, None]
             log_kernel = amplitude.clamp_min(torch.finfo(dtype).tiny).log()
             log_kernel = log_kernel - 0.5 * (dx.square() + dy.square())
-            support = (log_kernel + content_logits.to(dtype)).softmax(dim=1)
+            support_logits = (log_kernel + content_logits.to(dtype)
+                              if spatial_support else content_logits.to(dtype))
+            support = support_logits.softmax(dim=1)
             # Coverage measures Gaussian mass, not content similarity or confidence.
             mass = log_kernel.logsumexp(dim=1, keepdim=True).clamp_max(20.0).exp()
             coverage = -torch.expm1(-mass)
@@ -44,11 +48,14 @@ class ContentGaussianSplatV81(GaussianSplatV8):
 
 class GaussianPrimitivePredictorV81(GaussianPrimitivePredictorV8):
     def __init__(self, in_channels, channels=128, content_aware=True, content_scale=2.0,
-                 **kwargs):
+                 spatial_support=True, **kwargs):
         super().__init__(in_channels, channels=channels, **kwargs)
         if not math.isfinite(content_scale) or content_scale <= 0:
             raise ValueError('content_scale must be finite and positive')
         self.content_aware = bool(content_aware)
+        self.spatial_support = bool(spatial_support)
+        if not self.content_aware and not self.spatial_support:
+            raise ValueError('at least one of content_aware and spatial_support must be enabled')
         self.content_scale = float(content_scale)
         self.splat = ContentGaussianSplatV81()
         if self.content_aware:
@@ -89,7 +96,7 @@ class GaussianPrimitivePredictorV81(GaussianPrimitivePredictorV8):
             query = F.normalize(self.content_query(pixels), dim=-1, eps=1e-8)
             key = F.normalize(self.content_key(seeds), dim=-1, eps=1e-8)
             content_logits = self.content_scale * torch.bmm(key, query.transpose(1, 2))
-            raster = self.splat(primitives, size, content_logits)
+            raster = self.splat(primitives, size, content_logits, spatial_support=self.spatial_support)
             support = raster['support']
             pool = support / support.sum(dim=-1, keepdim=True).clamp_min(1e-8)
             pooled = torch.bmm(pool, pixels)

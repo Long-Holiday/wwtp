@@ -37,8 +37,13 @@ V8_ABLATIONS = (
     'rpgv_v8_bounded_centers', 'rpgv_v8_no_contact', 'rpgv_v8_single_scale_dense',
 )
 V81_ABLATIONS = (
-    'rpgv_v81_no_edge_value', 'rpgv_v81_no_content_support',
-    'rpgv_v81_no_local_detail', 'rpgv_v81_no_pairwise',
+    'rpgv_v81_rgb_only', 'rpgv_v81_fixed_gaussians', 'rpgv_v81_no_content_support',
+    'rpgv_v81_content_only_support', 'rpgv_v81_no_message_passing',
+    'rpgv_v81_single_scale_dense', 'rpgv_v81_no_gaussian_aux',
+)
+# Detailed component/objective analyses remain selectable outside default suites.
+V81_ANALYSIS_ABLATIONS = (
+    'rpgv_v81_no_edge_value', 'rpgv_v81_no_local_detail', 'rpgv_v81_no_pairwise',
     'rpgv_v81_no_dense_dice', 'rpgv_v81_unbalanced_band',
 )
 # Model selection and offline geometry requirements are separate capabilities.
@@ -47,7 +52,7 @@ OFFLINE_GEOMETRY_MODELS = (
     + V7_ABLATIONS + V7_ANALYSIS_ABLATIONS + V7_LEGACY_ABLATIONS
 )
 OPTIONAL_MODELS = (OFFLINE_GEOMETRY_MODELS + ('rpgv_v8',) + V8_ABLATIONS
-                   + ('rpgv_v81',) + V81_ABLATIONS)
+                   + ('rpgv_v81',) + V81_ABLATIONS + V81_ANALYSIS_ABLATIONS)
 EXPERIMENT_SUITES = {
     'baselines': MAINSTREAM_MODELS,
     'v6': ('rpgv_v6',),
@@ -70,7 +75,7 @@ def experiment_config(dataset, model):
     model = ALIASES.get(model, model)
     if dataset not in DATASETS:
         raise ValueError(f'Unsupported experiment: {dataset}/{model}')
-    if model in V81_ABLATIONS:
+    if model in V81_ABLATIONS + V81_ANALYSIS_ABLATIONS:
         if dataset != 'wwtp':
             raise ValueError(f'V81 ablations are only available for WWTP: {dataset}/{model}')
         return ROOT / 'configs/rpgv/v81' / f'{model.removeprefix("rpgv_v81_")}.py'
